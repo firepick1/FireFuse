@@ -24,11 +24,11 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 extern "C" {
 #endif
 
-static const char *STATUS_PATH;
-static const char *PNPCAM_PATH;
+#define STATUS_PATH "/status"
+#define PNPCAM_PATH "/pnpcam"
 
-static char* firepick_status();
-static char* firepick_pnpcam();
+char* firepick_status();
+char* firepick_pnpcam();
 
 #ifdef __cplusplus
 }

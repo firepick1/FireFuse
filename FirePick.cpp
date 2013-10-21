@@ -24,12 +24,11 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <fcntl.h>
 #include "FirePick.h"
 
-static char* firepick_status() {
-		return "FirePick OK!";
+char* firepick_status() {
+  return (char *)"{'message':'FirePick OK!'}\n";
 }
 
-static char* firepick_pnpcam() {
-		return "PNPCAM picture;
+char* firepick_pnpcam() {
+	return (char *)"imagine a PNPCAM picture here\n";
 }
 
-#endif

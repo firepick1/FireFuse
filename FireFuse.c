@@ -29,9 +29,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 #include "FirePick.h"
 
-static const char *status_str = "FireFuse OK!\n";
-static const char *pnpcam_str = "FirePiCam picture\n";
-
 static int firefuse_getattr(const char *path, struct stat *stbuf)
 {
 	int res = 0;
@@ -101,7 +98,7 @@ static int firefuse_read(const char *path, char *buf, size_t size, off_t offset,
 	size_t len;
 	(void) fi;
 	if (strcmp(path, STATUS_PATH) == 0) {
-		char *status_str = firepick_pnpcam();
+		char *status_str = firepick_status();
 		len = strlen(status_str);
 		if (offset < len) {
 			if (offset + size > len)
