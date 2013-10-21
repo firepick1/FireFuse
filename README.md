@@ -1,4 +1,4 @@
 FireFuse
 ========
 
-https://github.com/firepick1/FirePick/wiki/FireFuse
+https://github.com/firepick1/FireFuse/wiki/Home
