@@ -26,8 +26,19 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <sys/syscall.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "FirePick.h"
+
+long bytes_read = 0;
+
+static void * firefuse_init(struct fuse_conn_info *conn)
+{
+	bytes_read = 411;
+	return 0;
+}
 
 static int firefuse_getattr(const char *path, struct stat *stbuf)
 {
@@ -42,11 +53,29 @@ static int firefuse_getattr(const char *path, struct stat *stbuf)
 		stbuf->st_mode = S_IFREG | 0444;
 		stbuf->st_nlink = 1;
 		stbuf->st_size = strlen(status_str);
-	} else if (strcmp(path, PNPCAM_PATH) == 0) {
+	} else if (strcmp(path, GANTRY1_CAM_PATH) == 0) {
 		char *pnpcam_str = firepick_pnpcam();
 		stbuf->st_mode = S_IFREG | 0444;
 		stbuf->st_nlink = 1;
 		stbuf->st_size = strlen(pnpcam_str);
+	} else if (strcmp(path, PID_PATH) == 0) {
+		char sbuf[20];
+		sprintf(sbuf, "%d\n", (int) getpid());
+		stbuf->st_mode = S_IFREG | 0444;
+		stbuf->st_nlink = 1;
+		stbuf->st_size = strlen(sbuf);
+	} else if (strcmp(path, TID_PATH) == 0) {
+		char sbuf[20];
+		sprintf(sbuf, "%ld\n", syscall(SYS_gettid)); //(int) gettid());
+		stbuf->st_mode = S_IFREG | 0444;
+		stbuf->st_nlink = 1;
+		stbuf->st_size = strlen(sbuf);
+	} else if (strcmp(path, BYTES_READ_PATH) == 0) {
+		char sbuf[20];
+		sprintf(sbuf, "%ld\n", bytes_read);
+		stbuf->st_mode = S_IFREG | 0444;
+		stbuf->st_nlink = 1;
+		stbuf->st_size = strlen(sbuf);
 	} else
 		res = -ENOENT;
 
@@ -65,7 +94,10 @@ static int firefuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 	filler(buf, ".", NULL, 0);
 	filler(buf, "..", NULL, 0);
 	filler(buf, STATUS_PATH + 1, NULL, 0);
-	filler(buf, PNPCAM_PATH + 1, NULL, 0);
+	filler(buf, GANTRY1_CAM_PATH + 1, NULL, 0);
+	filler(buf, PID_PATH + 1, NULL, 0);
+	filler(buf, TID_PATH + 1, NULL, 0);
+	filler(buf, BYTES_READ_PATH + 1, NULL, 0);
 
 	return 0;
 }
@@ -76,7 +108,19 @@ static int firefuse_open(const char *path, struct fuse_file_info *fi)
 		if ((fi->flags & 3) != O_RDONLY) {
 			return -EACCES;
 		}
-	} else if (strcmp(path, PNPCAM_PATH) == 0) {
+	} else if (strcmp(path, GANTRY1_CAM_PATH) == 0) {
+		if ((fi->flags & 3) != O_RDONLY) {
+			return -EACCES;
+		}
+	} else if (strcmp(path, PID_PATH) == 0) {
+		if ((fi->flags & 3) != O_RDONLY) {
+			return -EACCES;
+		}
+	} else if (strcmp(path, TID_PATH) == 0) {
+		if ((fi->flags & 3) != O_RDONLY) {
+			return -EACCES;
+		}
+	} else if (strcmp(path, BYTES_READ_PATH) == 0) {
 		if ((fi->flags & 3) != O_RDONLY) {
 			return -EACCES;
 		}
@@ -107,7 +151,7 @@ static int firefuse_read(const char *path, char *buf, size_t size, off_t offset,
 		} else {
 			size = 0;
 		}
-	} else if (strcmp(path, PNPCAM_PATH) == 0) {
+	} else if (strcmp(path, GANTRY1_CAM_PATH) == 0) {
 		char *pnpcam_str = firepick_pnpcam();
 		len = strlen(pnpcam_str);
 		if (offset < len) {
@@ -117,14 +161,49 @@ static int firefuse_read(const char *path, char *buf, size_t size, off_t offset,
 		} else {
 			size = 0;
 		}
+	} else if (strcmp(path, PID_PATH) == 0) {
+		char sbuf[20];
+		sprintf(sbuf, "%d\n", (int) getpid());
+		len = strlen(sbuf);
+		if (offset < len) {
+			if (offset + size > len)
+				size = len - offset;
+			memcpy(buf, sbuf + offset, size);
+		} else {
+			size = 0;
+		}
+	} else if (strcmp(path, TID_PATH) == 0) {
+		char sbuf[20];
+		sprintf(sbuf, "%ld\n", syscall(SYS_gettid)); //(int) gettid());
+		len = strlen(sbuf);
+		if (offset < len) {
+			if (offset + size > len)
+				size = len - offset;
+			memcpy(buf, sbuf + offset, size);
+		} else {
+			size = 0;
+		}
+	} else if (strcmp(path, BYTES_READ_PATH) == 0) {
+		char sbuf[20];
+		sprintf(sbuf, "%ld\n", bytes_read);
+		len = strlen(sbuf);
+		if (offset < len) {
+			if (offset + size > len)
+				size = len - offset;
+			memcpy(buf, sbuf + offset, size);
+		} else {
+			size = 0;
+		}
 	} else {
 		return -ENOENT;
 	}
 
+	bytes_read += size;
 	return size;
 }
 
 static struct fuse_operations firefuse_oper = {
+	.init		= firefuse_init,
 	.getattr	= firefuse_getattr,
 	.readdir	= firefuse_readdir,
 	.open		= firefuse_open,

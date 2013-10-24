@@ -25,7 +25,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "FirePick.h"
 
 char* firepick_status() {
-  return (char *)"{'message':'FirePick OK!'}\n";
+  return (char *)
+    "{'message':'FirePick OK!',\n"
+    " 'version':'FireFuse 1.0'}\n";
 }
 
 char* firepick_pnpcam() {
