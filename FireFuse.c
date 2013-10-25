@@ -29,15 +29,37 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <sys/syscall.h>
 #include <sys/types.h>
 #include <unistd.h>
-
+#include <time.h>
+#include <pthread.h>
 #include "FirePick.h"
 
 long bytes_read = 0;
+long seconds = 0;
+
+pthread_t tidSeconds;
+pthread_t tidCamera;
+
+int resultCode = 0;
+int resultCount = 0;
+#define RESULT(stmt) if (resultCode == 0){resultCount++; resultCode = stmt;}
+
+static void * firefuse_cameraThread(void *arg) {
+	return NULL;
+}
+
+static void * firefuse_secondsThread(void *arg) {
+	for (;;) {
+		seconds++;
+		sleep(1);
+	}
+	return NULL;
+}
 
 static void * firefuse_init(struct fuse_conn_info *conn)
 {
-	bytes_read = 411;
-	return 0;
+	RESULT(pthread_create(&tidSeconds, NULL, &firefuse_secondsThread, NULL));
+	RESULT(pthread_create(&tidCamera, NULL, &firefuse_cameraThread, NULL));
+	return NULL;
 }
 
 static int firefuse_getattr(const char *path, struct stat *stbuf)
@@ -53,20 +75,26 @@ static int firefuse_getattr(const char *path, struct stat *stbuf)
 		stbuf->st_mode = S_IFREG | 0444;
 		stbuf->st_nlink = 1;
 		stbuf->st_size = strlen(status_str);
-	} else if (strcmp(path, GANTRY1_CAM_PATH) == 0) {
+	} else if (strcmp(path, CAM_PATH) == 0) {
 		char *pnpcam_str = firepick_pnpcam();
 		stbuf->st_mode = S_IFREG | 0444;
 		stbuf->st_nlink = 1;
 		stbuf->st_size = strlen(pnpcam_str);
-	} else if (strcmp(path, PID_PATH) == 0) {
+	} else if (strcmp(path, RESULT_PATH) == 0) {
 		char sbuf[20];
-		sprintf(sbuf, "%d\n", (int) getpid());
+		sprintf(sbuf, "%d.%d\n", resultCount, resultCode);
 		stbuf->st_mode = S_IFREG | 0444;
 		stbuf->st_nlink = 1;
 		stbuf->st_size = strlen(sbuf);
-	} else if (strcmp(path, TID_PATH) == 0) {
+	} else if (strcmp(path, PIDTID_PATH) == 0) {
 		char sbuf[20];
-		sprintf(sbuf, "%ld\n", syscall(SYS_gettid)); //(int) gettid());
+		sprintf(sbuf, "%d.%ld\n", (int) getpid(), syscall(SYS_gettid));
+		stbuf->st_mode = S_IFREG | 0444;
+		stbuf->st_nlink = 1;
+		stbuf->st_size = strlen(sbuf);
+	} else if (strcmp(path, SECONDS_PATH) == 0) {
+		char sbuf[20];
+		sprintf(sbuf, "%ld\n", seconds);
 		stbuf->st_mode = S_IFREG | 0444;
 		stbuf->st_nlink = 1;
 		stbuf->st_size = strlen(sbuf);
@@ -94,9 +122,10 @@ static int firefuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 	filler(buf, ".", NULL, 0);
 	filler(buf, "..", NULL, 0);
 	filler(buf, STATUS_PATH + 1, NULL, 0);
-	filler(buf, GANTRY1_CAM_PATH + 1, NULL, 0);
-	filler(buf, PID_PATH + 1, NULL, 0);
-	filler(buf, TID_PATH + 1, NULL, 0);
+	filler(buf, CAM_PATH + 1, NULL, 0);
+	filler(buf, PIDTID_PATH + 1, NULL, 0);
+	filler(buf, RESULT_PATH + 1, NULL, 0);
+	filler(buf, SECONDS_PATH + 1, NULL, 0);
 	filler(buf, BYTES_READ_PATH + 1, NULL, 0);
 
 	return 0;
@@ -108,15 +137,19 @@ static int firefuse_open(const char *path, struct fuse_file_info *fi)
 		if ((fi->flags & 3) != O_RDONLY) {
 			return -EACCES;
 		}
-	} else if (strcmp(path, GANTRY1_CAM_PATH) == 0) {
+	} else if (strcmp(path, CAM_PATH) == 0) {
 		if ((fi->flags & 3) != O_RDONLY) {
 			return -EACCES;
 		}
-	} else if (strcmp(path, PID_PATH) == 0) {
+	} else if (strcmp(path, RESULT_PATH) == 0) {
 		if ((fi->flags & 3) != O_RDONLY) {
 			return -EACCES;
 		}
-	} else if (strcmp(path, TID_PATH) == 0) {
+	} else if (strcmp(path, PIDTID_PATH) == 0) {
+		if ((fi->flags & 3) != O_RDONLY) {
+			return -EACCES;
+		}
+	} else if (strcmp(path, SECONDS_PATH) == 0) {
 		if ((fi->flags & 3) != O_RDONLY) {
 			return -EACCES;
 		}
@@ -151,7 +184,7 @@ static int firefuse_read(const char *path, char *buf, size_t size, off_t offset,
 		} else {
 			size = 0;
 		}
-	} else if (strcmp(path, GANTRY1_CAM_PATH) == 0) {
+	} else if (strcmp(path, CAM_PATH) == 0) {
 		char *pnpcam_str = firepick_pnpcam();
 		len = strlen(pnpcam_str);
 		if (offset < len) {
@@ -161,9 +194,9 @@ static int firefuse_read(const char *path, char *buf, size_t size, off_t offset,
 		} else {
 			size = 0;
 		}
-	} else if (strcmp(path, PID_PATH) == 0) {
+	} else if (strcmp(path, RESULT_PATH) == 0) {
 		char sbuf[20];
-		sprintf(sbuf, "%d\n", (int) getpid());
+		sprintf(sbuf, "%d.%d\n", resultCount, resultCoDe);
 		len = strlen(sbuf);
 		if (offset < len) {
 			if (offset + size > len)
@@ -172,9 +205,20 @@ static int firefuse_read(const char *path, char *buf, size_t size, off_t offset,
 		} else {
 			size = 0;
 		}
-	} else if (strcmp(path, TID_PATH) == 0) {
+	} else if (strcmp(path, PIDTID_PATH) == 0) {
 		char sbuf[20];
-		sprintf(sbuf, "%ld\n", syscall(SYS_gettid)); //(int) gettid());
+		sprintf(sbuf, "%d.%ld\n", (int) getpid(), syscall(SYS_gettid));
+		len = strlen(sbuf);
+		if (offset < len) {
+			if (offset + size > len)
+				size = len - offset;
+			memcpy(buf, sbuf + offset, size);
+		} else {
+			size = 0;
+		}
+	} else if (strcmp(path, SECONDS_PATH) == 0) {
+		char sbuf[20];
+		sprintf(sbuf, "%ld\n", seconds);
 		len = strlen(sbuf);
 		if (offset < len) {
 			if (offset + size > len)

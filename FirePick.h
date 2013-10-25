@@ -25,10 +25,11 @@ extern "C" {
 #endif
 
 #define STATUS_PATH "/status"
-#define PID_PATH "/pid"
-#define TID_PATH "/tid"
+#define RESULT_PATH "/result"
+#define SECONDS_PATH "/seconds"
+#define PIDTID_PATH "/pid.tid"
 #define BYTES_READ_PATH "/bytes_read"
-#define GANTRY1_CAM_PATH "/gantry1.cam.jpg"
+#define CAM_PATH "/cam.jpg"
 
 char* firepick_status();
 char* firepick_pnpcam();
