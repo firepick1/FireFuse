@@ -18,6 +18,8 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+#include "FireFuse.h"
+
 #ifndef FIREPICK_H
 #define FIREPICK_H
 #ifdef __cplusplus

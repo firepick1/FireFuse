@@ -196,7 +196,7 @@ static int firefuse_read(const char *path, char *buf, size_t size, off_t offset,
 		}
 	} else if (strcmp(path, RESULT_PATH) == 0) {
 		char sbuf[20];
-		sprintf(sbuf, "%d.%d\n", resultCount, resultCoDe);
+		sprintf(sbuf, "%d.%d\n", resultCount, resultCode);
 		len = strlen(sbuf);
 		if (offset < len) {
 			if (offset + size > len)

@@ -24,10 +24,16 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <fcntl.h>
 #include "FirePick.h"
 
+#define STATUS_BUFFER_SIZE 1024
+
+char status_buffer[STATUS_BUFFER_SIZE];
+
 char* firepick_status() {
-  return (char *)
+  sprintf(status_buffer, 
     "{'message':'FirePick OK!',\n"
-    " 'version':'FireFuse 1.0'}\n";
+    " 'version':'FireFuse version %d.%d'}\n",
+    FireFuse_VERSION_MAJOR, FireFuse_VERSION_MINOR);
+  return status_buffer;
 }
 
 char* firepick_pnpcam() {
