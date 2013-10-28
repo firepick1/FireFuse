@@ -33,8 +33,13 @@ extern "C" {
 #define BYTES_READ_PATH "/bytes_read"
 #define CAM_PATH "/cam.jpg"
 
+typedef struct {
+  char *pData;
+  int length;
+} JPG;
+
 char* firepick_status();
-char* firepick_pnpcam();
+int firepick_camera_daemon(JPG *pJPG);
 
 #ifdef __cplusplus
 }

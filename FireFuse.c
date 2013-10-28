@@ -32,19 +32,25 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <time.h>
 #include <pthread.h>
 #include "FirePick.h"
+#include "FirePiCam.h"
 
 long bytes_read = 0;
 long seconds = 0;
 
+JPG headcam_image;
+
 pthread_t tidSeconds;
 pthread_t tidCamera;
-
+char* jpg_pData;
+int jpg_length;
 int resultCode = 0;
 int resultCount = 0;
+
 #define RESULT(stmt) if (resultCode == 0){resultCount++; resultCode = stmt;}
 
 static void * firefuse_cameraThread(void *arg) {
-	return NULL;
+  firepick_camera_daemon(&headcam_image);
+  return NULL;
 }
 
 static void * firefuse_secondsThread(void *arg) {
@@ -57,6 +63,9 @@ static void * firefuse_secondsThread(void *arg) {
 
 static void * firefuse_init(struct fuse_conn_info *conn)
 {
+	headcam_image.pData = NULL;
+	headcam_image.length = 0;
+
 	RESULT(pthread_create(&tidSeconds, NULL, &firefuse_secondsThread, NULL));
 	RESULT(pthread_create(&tidCamera, NULL, &firefuse_cameraThread, NULL));
 	return NULL;
@@ -76,10 +85,9 @@ static int firefuse_getattr(const char *path, struct stat *stbuf)
 		stbuf->st_nlink = 1;
 		stbuf->st_size = strlen(status_str);
 	} else if (strcmp(path, CAM_PATH) == 0) {
-		char *pnpcam_str = firepick_pnpcam();
 		stbuf->st_mode = S_IFREG | 0444;
 		stbuf->st_nlink = 1;
-		stbuf->st_size = strlen(pnpcam_str);
+		stbuf->st_size = headcam_image.length;
 	} else if (strcmp(path, RESULT_PATH) == 0) {
 		char sbuf[20];
 		sprintf(sbuf, "%d.%d\n", resultCount, resultCode);
@@ -185,12 +193,11 @@ static int firefuse_read(const char *path, char *buf, size_t size, off_t offset,
 			size = 0;
 		}
 	} else if (strcmp(path, CAM_PATH) == 0) {
-		char *pnpcam_str = firepick_pnpcam();
-		len = strlen(pnpcam_str);
+		len = headcam_image.length;
 		if (offset < len) {
 			if (offset + size > len)
 				size = len - offset;
-			memcpy(buf, pnpcam_str + offset, size);
+			memcpy(buf, headcam_image.pData + offset, size);
 		} else {
 			size = 0;
 		}

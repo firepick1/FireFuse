@@ -24,6 +24,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <errno.h>
 #include <fcntl.h>
 #include "FirePick.h"
+#include "FirePiCam.h"
 
 #define STATUS_BUFFER_SIZE 1024
 
@@ -46,7 +47,20 @@ char* firepick_status() {
   return status_buffer;
 }
 
-char* firepick_pnpcam() {
-	return (char *)"imagine a PNPCAM picture here\n";
+int firepick_camera_daemon(JPG *pJPG) {
+  int status = firepicam_create(0, NULL);
+
+  for (;;) {
+    JPG_Buffer buffer;
+    buffer.pData = NULL;
+    buffer.length = 0;
+    
+    status = firepicam_acquireImage(&buffer);
+    pJPG->pData = buffer.pData;
+    pJPG->length = buffer.length;
+  }
+
+  firepicam_destroy(status);
 }
+
 
