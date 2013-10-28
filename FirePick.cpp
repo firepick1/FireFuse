@@ -19,6 +19,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include <stdio.h>
+#include <time.h>
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -29,9 +30,18 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 char status_buffer[STATUS_BUFFER_SIZE];
 
 char* firepick_status() {
+  time_t current_time = time(NULL);
+  char timebuf[70];
+  strcpy(timebuf, ctime(&current_time));
+  timebuf[strlen(timebuf)-1] = 0;
+
   sprintf(status_buffer, 
-    "{'message':'FirePick OK!',\n"
-    " 'version':'FireFuse version %d.%d'}\n",
+    "{\n"
+    " 'timestamp':'%s'\n"
+    " 'message':'FirePick OK!',\n"
+    " 'version':'FireFuse version %d.%d'\n"
+    "}\n",
+    timebuf,
     FireFuse_VERSION_MAJOR, FireFuse_VERSION_MINOR);
   return status_buffer;
 }
