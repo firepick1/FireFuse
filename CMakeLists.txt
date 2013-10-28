@@ -23,6 +23,8 @@ configure_file (
 add_executable(firefuse FireFuse.c FirePick.cpp)
 target_link_libraries(firefuse /usr/local/lib/libfirepicam.so libfuse.so)
 
+install (TARGETS firefuse DESTINATION bin)
+
 #OPENCV
 #find_package( OpenCV REQUIRED )
 #add_executable(fpc RaspiCamControl.c RaspiCLI.c RaspiPreview.c fpc.cpp)
