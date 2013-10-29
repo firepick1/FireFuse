@@ -15,6 +15,7 @@
 # Other stuff
 firefuse
 CMakeCache.txt
+install_manifest.txt
 FireFuse.h
 CMakeFiles/*
 *.cmake
