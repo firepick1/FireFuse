@@ -45,7 +45,7 @@ int firelog_destroy() {
   return rc;
 }
 
-void firelog(char *fmt, int level, void * value1, void * value2, void * value3) {
+void firelog(const char *fmt, int level, const void * value1, const void * value2, const void * value3) {
   if (logFile) {
     time_t now = time(NULL);
     struct tm *pLocalNow = localtime(&now);

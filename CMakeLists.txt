@@ -20,7 +20,7 @@ configure_file (
 
 #include_directories(/usr/local/include)
 
-add_executable(firefuse FireFuse.c FireLog.c FirePick.cpp)
+add_executable(firefuse FireFuse.c FireLog.c FireStep.cpp FirePick.cpp)
 target_link_libraries(firefuse /usr/local/lib/libfirepicam.so libfuse.so)
 
 INSTALL(TARGETS firefuse DESTINATION bin)

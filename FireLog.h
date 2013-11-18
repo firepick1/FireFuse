@@ -48,12 +48,22 @@ extern "C" {
 #define LOGDEBUG1(fmt,v1) if (logLevel >= LOG_LEVEL_DEBUG) {firelog(fmt, LOG_LEVEL_DEBUG, (void *)v1, fmt, fmt);}
 #define LOGDEBUG(fmt) if (logLevel >= LOG_LEVEL_DEBUG) {firelog(fmt, LOG_LEVEL_DEBUG, fmt, fmt, fmt);}
 
+#define LOGRC(rc, msg,stmt) \
+  if (rc == 0){\
+    rc = stmt; \
+    if (rc){\
+      LOGERROR2("%s result:%d", msg, rc); \
+    }else{\
+      LOGINFO1("%s ok",msg);\
+    }\
+  }
+
 extern int logLevel;
 extern FILE *logFile;
 
 int firelog_init(char *path, int level);
 int firelog_destroy();
-void firelog(char *fmt, int level, void * value1, void * value2, void * value3);
+void firelog(const char *fmt, int level, const void * value1, const void * value2, const void * value3);
 
 #ifdef __cplusplus
 }

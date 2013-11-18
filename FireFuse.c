@@ -34,6 +34,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <pthread.h>
 #include "FirePick.h"
 #include "FirePiCam.h"
+#include "FireStep.h"
 #include "FireLog.h"
 
 long bytes_read = 0;
@@ -48,14 +49,15 @@ int imageFree = 0;
 int camOpen = 0;
 struct fuse_file_info *pCamFileInfo = 0;
 
+
 pthread_t tidSeconds;
 pthread_t tidCamera;
+pthread_t tidFireStep;
+
 char* jpg_pData;
 int jpg_length;
 int resultCode = 0;
 int resultCount = 0;
-
-#define RESULT(stmt) if (resultCode == 0){resultCount++; resultCode = stmt;}
 
 static void * firefuse_cameraThread(void *arg) {
   firepick_camera_daemon(&headcam_image);
@@ -72,16 +74,22 @@ static void * firefuse_secondsThread(void *arg) {
 
 static void * firefuse_init(struct fuse_conn_info *conn)
 {
-	firelog_init("/var/log/firefuse.log", LOG_LEVEL_INFO);
-	LOGINFO2("Initialized FireFuse %d.%d", FireFuse_VERSION_MAJOR, FireFuse_VERSION_MINOR);
-	headcam_image.pData = NULL;
-	headcam_image.length = 0;
-	headcam_image_fstat.pData = NULL;
-	headcam_image_fstat.length = 0;
+  int rc = 0;
 
-	RESULT(pthread_create(&tidSeconds, NULL, &firefuse_secondsThread, NULL));
-	RESULT(pthread_create(&tidCamera, NULL, &firefuse_cameraThread, NULL));
-	return NULL; /* initData */
+  firelog_init("/var/log/firefuse.log", LOG_LEVEL_INFO);
+  LOGINFO2("Initialized FireFuse %d.%d", FireFuse_VERSION_MAJOR, FireFuse_VERSION_MINOR);
+  headcam_image.pData = NULL;
+  headcam_image.length = 0;
+  headcam_image_fstat.pData = NULL;
+  headcam_image_fstat.length = 0;
+
+  firestep_init();
+
+  LOGRC(rc, "pthread_create(&tidSeconds...) -> ", pthread_create(&tidSeconds, NULL, &firefuse_secondsThread, NULL));
+  LOGRC(rc, "pthread_create(&tidCamera...) -> ", pthread_create(&tidCamera, NULL, &firefuse_cameraThread, NULL));
+  LOGRC(rc, "pthread_create(&tidFireStep...) -> ", pthread_create(&tidFireStep, NULL, &firestep_thread, NULL));
+
+  return NULL; /* init */
 }
 
 static void firefuse_destroy(void * initData)
