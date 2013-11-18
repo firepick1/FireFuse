@@ -36,6 +36,7 @@ extern "C" {
 typedef struct {
   char *pData;
   int length;
+  long reserved;
 } JPG;
 
 char* firepick_status();

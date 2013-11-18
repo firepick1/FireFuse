@@ -1,0 +1,6 @@
+#! /bin/sh
+fusermount -u /dev/firefuse
+rm -rf CMakeFiles CMakeFiles.txt
+make install
+firefuse -o allow_other /dev/firefuse
+cat /dev/firefuse/status
