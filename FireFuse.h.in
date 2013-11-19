@@ -24,8 +24,20 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 extern "C" {
 #endif
 
+#define MAX_GCODE_LEN 255 /* maximum characters in a gcode instruction */
+
 #define FireFuse_VERSION_MAJOR @FireFuse_VERSION_MAJOR@
 #define FireFuse_VERSION_MINOR @FireFuse_VERSION_MINOR@
+
+#define STATUS_PATH "/status"
+#define GCODE_PATH "/gcode"
+#define CAM_PATH "/cam.jpg"
+
+typedef struct {
+  char *pData;
+  int length;
+  long reserved;
+} JPG;
 
 #ifdef __cplusplus
 }

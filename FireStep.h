@@ -25,7 +25,8 @@ extern "C" {
 #endif
 
 int firestep_init();
-void * firestep_thread(void *arg);
+void firestep_destroy();
+int firestep_write(char *str);
 
 #ifdef __cplusplus
 }

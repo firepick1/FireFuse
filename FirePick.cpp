@@ -24,6 +24,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <errno.h>
 #include <fcntl.h>
 #include "FirePick.h"
+#include "FireLog.h"
 #include "FirePiCam.h"
 
 #define STATUS_BUFFER_SIZE 1024
@@ -50,6 +51,8 @@ char* firepick_status() {
 int firepick_camera_daemon(JPG *pJPG) {
   int status = firepicam_create(0, NULL);
 
+  LOGINFO1("firepick_camera_daemon start -> %d", status);
+
   for (;;) {
     JPG_Buffer buffer;
     buffer.pData = NULL;
@@ -60,6 +63,7 @@ int firepick_camera_daemon(JPG *pJPG) {
     pJPG->length = buffer.length;
   }
 
+  LOGINFO1("firepick_camera_daemon exit -> %d", status);
   firepicam_destroy(status);
 }
 

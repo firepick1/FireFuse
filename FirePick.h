@@ -26,19 +26,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 extern "C" {
 #endif
 
-#define STATUS_PATH "/status"
-#define RESULT_PATH "/result"
-#define SECONDS_PATH "/seconds"
-#define PIDTID_PATH "/pid.tid"
-#define BYTES_READ_PATH "/bytes_read"
-#define CAM_PATH "/cam.jpg"
-
-typedef struct {
-  char *pData;
-  int length;
-  long reserved;
-} JPG;
-
 char* firepick_status();
 int firepick_camera_daemon(JPG *pJPG);
 

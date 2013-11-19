@@ -18,65 +18,101 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+#include <errno.h>
+#include <pthread.h>
 #include "FireStep.h"
 #include "FireLog.h"
-#include <errno.h>
 
-FILE *fTinyG = NULL;
-#define LINEMAX 3000
+pthread_t tidReader;
+pthread_t tidWriter;
+
+FILE *finTinyG = NULL;
+#define INBUFMAX 3000
+char inbuf[INBUFMAX+1];
+int inbuflen = 0;
+
+static void * firestep_reader(void *arg);
 
 int firestep_init(){
   int rc = 0;
   const char * path = "/dev/ttyUSB0";
-  fTinyG = fopen(path,"ra");
-  LOGINFO1("fTinyG %lx", fTinyG);
-  if (!fTinyG) {
+  finTinyG = fopen(path,"r");
+  if (!finTinyG) {
     rc = errno;
     LOGERROR2("Cannot open %s (errno %d)", path, rc);
     return rc;
   }
+  setbuf(finTinyG, NULL); // probably redundant
   LOGINFO1("firestep_init %s", path);
+
+  LOGRC(rc, "pthread_create(firestep_reader) -> ", pthread_create(&tidReader, NULL, &firestep_reader, NULL));
 
   return rc;
 }
 
 void firestep_destroy() {
   LOGINFO("firestep_destroy");
-  if (fTinyG) {
-    fclose(fTinyG);
-    fTinyG = NULL;
+  if (finTinyG) {
+    fclose(finTinyG);
+    finTinyG = NULL;
   }
 }
 
-void * firestep_thread(void *arg) {
-  LOGINFO("firestep_thread listening...");
-  for (;fTinyG;) {
-    char c = fgetc(fTinyG);
-    if (c == EOF && feof(fTinyG)) {
-      LOGINFO("TINYG> EOF");
+int firestep_write(char *str) {
+  LOGINFO1("firestep_write %s start", str);
+  char *s;
+  for (s = str; *s; s++) {
+    LOGINFO1("firestep_write %c", (long) *s);
+    int rc = fputc(*s, finTinyG);
+    if (rc != *s) {
+      LOGERROR1("firestep_write %d", ferror(finTinyG));
       break;
-    } else if (c == NULL) {
-      LOGINFO("TINYG> NULL ");
-    } else if (c == '\t') {
-      LOGINFO("TINYG> \\t ");
-    } else if (c == '\r') {
-      LOGINFO("TINYG> \\r ");
-    } else if (c == '\n') {
-      LOGINFO("TINYG> \\n ");
-    } else {
-      LOGINFO1("TINYG> %c ", (int) c);
     }
-  /*
-    char line[LINEMAX];
-    char *pLine = fgets(line, LINEMAX, fTinyG);
-    if (pLine) {
-      LOGINFO1("TINYG> %s", pLine);
-    } else {
-      LOGWARN2("firestep_thread ferror:%d feof:%d", ferror(fTinyG), feof(fTinyG));
-    }
-    */
   }
-  LOGINFO("firestep_thread exit");
+  //fprintf(finTinyG, "%s", str);
+  LOGINFO1("firestep_write %s", str);
+}
+
+static void * firestep_reader(void *arg) {
+  LOGINFO("firestep_reader listening...");
+
+  while (finTinyG && !feof(finTinyG)) {
+    char c = fgetc(finTinyG);
+    if (c == EOF) {
+      inbuf[inbuflen] = 0;
+      inbuflen = 0;
+      LOGERROR1("firestep_reader %s[EOF]", inbuf);
+      break;
+    } else if (c == '\0') {
+      inbuf[inbuflen] = 0;
+      inbuflen = 0;
+      LOGERROR1("firestep_reader %s[NULL]", inbuf);
+    } else if (c == '\n') {
+      inbuf[inbuflen] = 0;
+      if (inbuflen) {
+	LOGINFO2("firestep_reader %s %dB", inbuf, inbuflen);
+      }
+      inbuflen = 0;
+    } else if (c == '\r') {
+      // skip
+    } else {
+      if (inbuflen >= INBUFMAX) {
+	inbuf[INBUFMAX] = 0;
+        LOGERROR1("firestep_reader overflow %s", inbuf);
+	break;
+      } else {
+        inbuf[inbuflen] = c;
+        inbuflen++;
+	LOGDEBUG1("firestep_reader %c", (int) c);
+      }
+    }
+    if (ferror(finTinyG)) {
+      LOGERROR1("firestep_reader ferror:%d", ferror(finTinyG));
+      break;
+    }
+  }
+  
+  LOGINFO("firestep_reader exit");
   return NULL;
 }
 
