@@ -26,7 +26,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <sys/syscall.h>
 
 FILE *logFile = NULL;
-int logLevel = LOG_LEVEL_WARN;
+int logLevel = FIRELOG_WARN;
 
 int firelog_init(char *path, int level) {
   logLevel = level;
@@ -46,6 +46,13 @@ int firelog_destroy() {
   return rc;
 }
 
+int firelog_level(int newLevel) {
+  int oldLevel = logLevel;
+  logLevel = newLevel;
+  LOGINFO1("firelog_level(%d)", newLevel);
+  return oldLevel;
+}
+
 void firelog(const char *fmt, int level, const void * value1, const void * value2, const void * value3) {
   if (logFile) {
     time_t now = time(NULL);
@@ -53,11 +60,12 @@ void firelog(const char *fmt, int level, const void * value1, const void * value
     int tid = syscall(SYS_gettid);
     fprintf(logFile, "%02d:%02d:%02d ", pLocalNow->tm_hour, pLocalNow->tm_min, pLocalNow->tm_sec);
     switch (level) {
-      case LOG_LEVEL_ERROR: fprintf(logFile, "[ERROR%d] ", tid); break;
-      case LOG_LEVEL_WARN: fprintf(logFile, "[WARN%d] ", tid); break;
-      case LOG_LEVEL_INFO: fprintf(logFile, "[INFO%d] ", tid); break;
-      case LOG_LEVEL_DEBUG: fprintf(logFile, "[DEBUG%d] ", tid); break;
-      default: fprintf(logFile, "[%d?%d] ", level, tid); break;
+      case FIRELOG_ERROR: fprintf(logFile, "ERROR %d ", tid); break;
+      case FIRELOG_WARN: fprintf(logFile, "WARN %d ", tid); break;
+      case FIRELOG_INFO: fprintf(logFile, "INFO %d ", tid); break;
+      case FIRELOG_DEBUG: fprintf(logFile, "DEBUG %d ", tid); break;
+      case FIRELOG_TRACE: fprintf(logFile, "TRACE %d ", tid); break;
+      default: fprintf(logFile, "?%d? %d ", level, tid); break;
     }
     fprintf(logFile, fmt, value1, value2, value3);
     fprintf(logFile, "\n", tid);

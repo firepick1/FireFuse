@@ -55,20 +55,10 @@ int jpg_length;
 /////////////////////// THREADS ////////////////////////
 
 pthread_t tidCamera;
-pthread_t tidGCode;
 
 static void * firefuse_cameraThread(void *arg) {
   LOGINFO("firefuse_cameraThread start");
   firepick_camera_daemon(&headcam_image);
-  return NULL;
-}
-
-static void * firefuse_gcodeThread(void *arg) {
-  LOGINFO("firefuse_gcodeThread start");
-  for (;;) {
-    sleep(1);
-  }
-  LOGINFO("firefuse_gcodeThread end");
   return NULL;
 }
 
@@ -78,7 +68,7 @@ static void * firefuse_init(struct fuse_conn_info *conn)
 {
   int rc = 0;
 
-  firelog_init("/var/log/firefuse.log", LOG_LEVEL_INFO);
+  firelog_init("/var/log/firefuse.log", FIRELOG_INFO);
   LOGINFO3("Initialized FireFuse %d.%d PID%d", FireFuse_VERSION_MAJOR, FireFuse_VERSION_MINOR, (int) getpid());
 
   headcam_image.pData = NULL;
@@ -89,7 +79,6 @@ static void * firefuse_init(struct fuse_conn_info *conn)
   firestep_init();
 
   LOGRC(rc, "pthread_create(&tidCamera...) -> ", pthread_create(&tidCamera, NULL, &firefuse_cameraThread, NULL));
-  LOGRC(rc, "pthread_create(&tidGCode...) -> ", pthread_create(&tidGCode, NULL, &firefuse_gcodeThread, NULL));
 
   return NULL; /* init */
 }
@@ -125,7 +114,11 @@ static int firefuse_getattr(const char *path, struct stat *stbuf)
     stbuf->st_mode = S_IFREG | 0444;
     stbuf->st_nlink = 1;
     stbuf->st_size = headcam_image_fstat.length;
-  } else if (strcmp(path, GCODE_PATH) == 0) {
+  } else if (strcmp(path, FIRELOG_PATH) == 0) {
+    stbuf->st_mode = S_IFREG | 0666;
+    stbuf->st_nlink = 1;
+    stbuf->st_size = 1;
+  } else if (strcmp(path, FIRESTEP_PATH) == 0) {
     stbuf->st_mode = S_IFREG | 0666;
     stbuf->st_nlink = 1;
     stbuf->st_size = 1;
@@ -136,7 +129,7 @@ static int firefuse_getattr(const char *path, struct stat *stbuf)
   if (res) {
     LOGERROR3("firefuse_getattr %s st_size:%ldB -> %d", path, (long) stbuf->st_size, res);
   } else {
-    LOGINFO3("firefuse_getattr %s st_size:%ldB -> %d", path, (long) stbuf->st_size, res);
+    LOGDEBUG3("firefuse_getattr %s st_size:%ldB -> %d", path, (long) stbuf->st_size, res);
   }
   return res;
 }
@@ -154,7 +147,8 @@ static int firefuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
   filler(buf, "..", NULL, 0);
   filler(buf, STATUS_PATH + 1, NULL, 0);
   filler(buf, CAM_PATH + 1, NULL, 0);
-  filler(buf, GCODE_PATH + 1, NULL, 0);
+  filler(buf, FIRELOG_PATH + 1, NULL, 0);
+  filler(buf, FIRESTEP_PATH + 1, NULL, 0);
 
   return 0;
 }
@@ -187,7 +181,13 @@ static int firefuse_open(const char *path, struct fuse_file_info *fi)
     //fi->nonseekable = 1;
     fi->fh = (uint64_t) (size_t) pImage;
     pCamFileInfo = fi;
-  } else if (strcmp(path, GCODE_PATH) == 0) {
+  } else if (strcmp(path, FIRELOG_PATH) == 0) {
+    if ((fi->flags & O_DIRECTORY)) {
+      LOGERROR1("firefuse_open %s -> O_DIRECTORY not allowed ", path);
+      return -EACCES;
+    }
+    LOGINFO2("firefuse_open %s %0x", path, fi->flags);
+  } else if (strcmp(path, FIRESTEP_PATH) == 0) {
     if ((fi->flags & O_DIRECTORY)) {
       LOGERROR1("firefuse_open %s -> O_DIRECTORY not allowed ", path);
       return -EACCES;
@@ -203,18 +203,24 @@ static int firefuse_open(const char *path, struct fuse_file_info *fi)
 
 static int firefuse_release(const char *path, struct fuse_file_info *fi)
 {
-	if (strcmp(path, STATUS_PATH) == 0) {
-	} else if (strcmp(path, CAM_PATH) == 0) {
-	  camOpen--;
-	  if (fi->fh) {
-	    JPG *pImage = (JPG *)(size_t) fi->fh;
-	    LOGINFO1("firefuse_release releasing image memory: %ldB", pImage->length);
-	    free(pImage);
-	    imageFree++;
-	    fi->fh = 0;
-	  }
-	}
-	return 0;
+  LOGDEBUG1("firefuse_release %s", path);
+  if (strcmp(path, STATUS_PATH) == 0) {
+    // NOP
+  } else if (strcmp(path, FIRELOG_PATH) == 0) {
+    // NOP
+  } else if (strcmp(path, FIRESTEP_PATH) == 0) {
+    // NOP
+  } else if (strcmp(path, CAM_PATH) == 0) {
+    camOpen--;
+    if (fi->fh) {
+      JPG *pImage = (JPG *)(size_t) fi->fh;
+      LOGINFO2("firefuse_release %s freeing image: %ldB", path, pImage->length);
+      free(pImage);
+      imageFree++;
+      fi->fh = 0;
+    }
+  }
+  return 0;
 }
 
 static int firefuse_read(const char *path, char *buf, size_t size, off_t offset,
@@ -250,7 +256,9 @@ static int firefuse_read(const char *path, char *buf, size_t size, off_t offset,
       size = 0;
     }
     LOGDEBUG1("firefuse_read reading image: %ldB", size);
-  } else if (strcmp(path, GCODE_PATH) == 0) {
+  } else if (strcmp(path, FIRELOG_PATH) == 0) {
+    size = 0;
+  } else if (strcmp(path, FIRESTEP_PATH) == 0) {
     buf[0] = 0;
     size = 1;
   } else {
@@ -271,30 +279,37 @@ static int firefuse_write(const char *pathname, const char *buf, size_t bufsize,
     LOGERROR1("firefuse_write %s -> null buffer", pathname);
     return EINVAL;
   }
-  if (bufsize > MAX_GCODE_LEN) {
-    LOGERROR2("firefuse_write %s -> buffer exceeds %d bytes", pathname, MAX_GCODE_LEN);
-  }
-  char gcode[MAX_GCODE_LEN+1];
-  memcpy(gcode, buf, bufsize); 
-  gcode[bufsize] = 0;
-  int trimming = 1;
-  char *s;
-  for (s = gcode+bufsize-1; s >= gcode; s--) {
-    switch (*s) {
-      case ' ': 
-      case '\t': 
-      case '\n': 
-      case '\r':
-        *s = trimming ? '\0' : ' ';
+  if (strcmp(pathname, FIRELOG_PATH) == 0) {
+    switch (buf[0]) {
+      case 'E': 
+      case 'e': 
+      case '0': 
+      	firelog_level(FIRELOG_ERROR); 
 	break;
-      default:
-        trimming = 0;
+      case 'W': 
+      case 'w': 
+      case '1': 
+      	firelog_level(FIRELOG_WARN); 
+	break;
+      case 'I': 
+      case 'i': 
+      case '2': 
+      	firelog_level(FIRELOG_INFO); 
+      	break;
+      case 'D': 
+      case 'd': 
+      case '3': 
+      	firelog_level(FIRELOG_DEBUG); 
+	break;
+      case 'T': 
+      case 't': 
+      case '4': 
+      	firelog_level(FIRELOG_TRACE); 
 	break;
     }
-  }
-  LOGINFO3("firefuse_write %s %s %ldB", pathname, gcode, bufsize);
-  gcode[strlen(gcode)] = '\n';
-  firestep_write(gcode);
+  } else if (strcmp(pathname, FIRESTEP_PATH) == 0) {
+    firestep_write(buf, bufsize);
+  }  
 
   return bufsize;
 }
@@ -304,12 +319,14 @@ static int firefuse_truncate(const char *path, off_t size)
   (void) size;
   if (strcmp(path, "/") == 0) {
     // directory
-  } else if (strcmp(path, GCODE_PATH) == 0) {
-    // gcode is writable
+  } else if (strcmp(path, FIRELOG_PATH) == 0) {
+    // NOP
+  } else if (strcmp(path, FIRESTEP_PATH) == 0) {
+    // NOP
   } else {
     return -ENOENT;
   }
-  LOGINFO1("firefuse_truncate %s", path);
+  LOGDEBUG1("firefuse_truncate %s", path);
   return 0;
 }
 

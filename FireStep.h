@@ -26,7 +26,7 @@ extern "C" {
 
 int firestep_init();
 void firestep_destroy();
-int firestep_write(char *str);
+int firestep_write(const char *buf, size_t bufsize);
 
 #ifdef __cplusplus
 }
