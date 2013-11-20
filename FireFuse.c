@@ -173,7 +173,7 @@ static int firefuse_open(const char *path, struct fuse_file_info *fi)
       pImage->length = length;
       pImage->pData = (void *) &pImage->reserved; 
       memcpy(pImage->pData, headcam_image_fstat.pData, length);
-      LOGINFO1("firefuse_open allocated image memory: %ldB", length);
+      LOGDEBUG1("firefuse_open allocated image memory: %ldB", length);
     } else {
       LOGERROR2("firefuse_open %s Could not allocate image memory: %ldB", path, length);
     }
@@ -186,13 +186,13 @@ static int firefuse_open(const char *path, struct fuse_file_info *fi)
       LOGERROR1("firefuse_open %s -> O_DIRECTORY not allowed ", path);
       return -EACCES;
     }
-    LOGINFO2("firefuse_open %s %0x", path, fi->flags);
+    LOGDEBUG2("firefuse_open %s %0x", path, fi->flags);
   } else if (strcmp(path, FIRESTEP_PATH) == 0) {
     if ((fi->flags & O_DIRECTORY)) {
       LOGERROR1("firefuse_open %s -> O_DIRECTORY not allowed ", path);
       return -EACCES;
     }
-    LOGINFO2("firefuse_open %s %0x", path, fi->flags);
+    LOGDEBUG2("firefuse_open %s %0x", path, fi->flags);
   } else {
     LOGERROR1("firefuse_open Unknown path %s", path);
     return -ENOENT;
