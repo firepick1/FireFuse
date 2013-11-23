@@ -174,7 +174,7 @@ static int firefuse_open(const char *path, struct fuse_file_info *fi)
       pImage->length = length;
       pImage->pData = (void *) &pImage->reserved; 
       memcpy(pImage->pData, headcam_image_fstat.pData, length);
-      LOGDEBUG1("firefuse_open allocated image memory: %ldB", length);
+      LOGTRACE1("firefuse_open allocated image memory: %ldB", length);
     } else {
       LOGERROR2("firefuse_open %s Could not allocate image memory: %ldB", path, length);
     }
@@ -205,7 +205,7 @@ static int firefuse_open(const char *path, struct fuse_file_info *fi)
 
 static int firefuse_release(const char *path, struct fuse_file_info *fi)
 {
-  LOGDEBUG1("firefuse_release %s", path);
+  LOGTRACE1("firefuse_release %s", path);
   if (strcmp(path, STATUS_PATH) == 0) {
     // NOP
   } else if (strcmp(path, FIRELOG_PATH) == 0) {
@@ -216,7 +216,7 @@ static int firefuse_release(const char *path, struct fuse_file_info *fi)
     camOpen--;
     if (fi->fh) {
       JPG *pImage = (JPG *)(size_t) fi->fh;
-      LOGINFO2("firefuse_release %s freeing image: %ldB", path, pImage->length);
+      LOGTRACE2("firefuse_release %s freeing image: %ldB", path, pImage->length);
       free(pImage);
       imageFree++;
       fi->fh = 0;
