@@ -69,16 +69,17 @@ static void * firefuse_init(struct fuse_conn_info *conn)
   int rc = 0;
 
   firelog_init("/var/log/firefuse.log", FIRELOG_INFO);
-  LOGINFO3("Initialized FireFuse %d.%d PID%d", FireFuse_VERSION_MAJOR, FireFuse_VERSION_MINOR, (int) getpid());
+  LOGINFO2("Initialized FireFuse %d.%d", FireFuse_VERSION_MAJOR, FireFuse_VERSION_MINOR);
+  LOGINFO2("PID%d UID%d", (int) getpid(), (int)getuid());
 
   headcam_image.pData = NULL;
   headcam_image.length = 0;
   headcam_image_fstat.pData = NULL;
   headcam_image_fstat.length = 0;
 
-  firestep_init();
-
   LOGRC(rc, "pthread_create(&tidCamera...) -> ", pthread_create(&tidCamera, NULL, &firefuse_cameraThread, NULL));
+
+  firestep_init();
 
   return NULL; /* init */
 }
@@ -192,6 +193,7 @@ static int firefuse_open(const char *path, struct fuse_file_info *fi)
       LOGERROR1("firefuse_open %s -> O_DIRECTORY not allowed ", path);
       return -EACCES;
     }
+
     LOGDEBUG2("firefuse_open %s %0x", path, fi->flags);
   } else {
     LOGERROR1("firefuse_open Unknown path %s", path);

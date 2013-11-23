@@ -1,7 +1,7 @@
 #! /bin/sh
 ### BEGIN INIT INFO
-# Provides:          mountfirefuse
-# Required-Start:    $local_fs
+# Provides:          firefuse
+# Required-Start:    
 # Required-Stop:
 # Should-Start:      
 # Default-Start:     2 3 4 5
@@ -17,11 +17,12 @@
 
 # PATH should only include /usr/* if it runs after the mountnfs.sh script
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-DESC="Install userspace FUSE driver for FirePick"
+DESC="Mounting /dev/firefuse FUSE application"
 NAME=mountfirefuse.sh
 DAEMON=/usr/local/bin/firefuse
 PIDFILE=/var/run/$NAME.pid
 SCRIPTNAME=/etc/init.d/$NAME
+INIT_VERBOSE=yes
 
 # Exit if the package is not installed
 [ -x "$DAEMON" ] || exit 0
@@ -31,6 +32,7 @@ SCRIPTNAME=/etc/init.d/$NAME
 
 # Load the VERBOSE setting and other rcS variables
 . /lib/init/vars.sh
+VERBOSE=yes
 
 # Define LSB log_* functions.
 # Depend on lsb-base (>= 3.2-14) to ensure that this file is present
@@ -84,6 +86,7 @@ do_reload() {
 
 case "$1" in
   start)
+	log_daemon_msg "DEBUG Starting $DESC" "$NAME"
 	[ "$VERBOSE" != no ] && log_daemon_msg "Starting $DESC" "$NAME"
 	do_start
 	case "$?" in

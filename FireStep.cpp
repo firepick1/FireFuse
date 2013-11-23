@@ -44,16 +44,46 @@ int inbufEmptyLine = 0;
 
 static void * firestep_reader(void *arg);
 
+int callSystem(char *cmdbuf) {
+  int rc = 0;
+  rc = system(cmdbuf);
+  if (rc == -1) {
+    LOGERROR2("callSystem(%s) -> %d", cmdbuf, rc);
+    return rc;
+  }
+  if (WIFEXITED(rc)) {
+    if (WEXITSTATUS(rc)) {
+      LOGERROR2("callSystem(%s) -> EXIT %d", cmdbuf, WEXITSTATUS(rc));
+      return rc;
+    }
+  } else if (WIFSTOPPED(rc)) {
+      LOGERROR2("callSystem(%s) -> STOPPED %d", cmdbuf, WSTOPSIG(rc));
+      return rc;
+  } else if (WIFSIGNALED(rc)) {
+      LOGERROR2("callSystem(%s) -> SIGNALED %d", cmdbuf, WTERMSIG(rc));
+      return rc;
+  }
+  LOGINFO1("callSystem(%s)", cmdbuf);
+  return 0;
+}
+
 int firestep_init(){
+  if (fdrTinyG >= 0) {
+    return 0; // already started
+  }
+
   const char * path = "/dev/ttyUSB0";
   char cmdbuf[500];
+  sprintf(cmdbuf, "stty 115200 -F %s", path);
+  int rc = callSystem(cmdbuf);
+  if (rc) {
+    return rc;
+  }
   sprintf(cmdbuf, 
   	"stty 1400:4:1cb2:a00:3:1c:7f:15:4:1:1:0:11:13:1a:0:12:f:17:16:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0 -F %s", 
 	path);
-  int rc = 0;
-  rc = system(cmdbuf);
+  rc = callSystem(cmdbuf);
   if (rc) {
-    LOGERROR2("%s -> %d", cmdbuf, rc);
     return rc;
   }
   fdwTinyG = fdrTinyG = open(path, O_RDWR | O_ASYNC | O_NONBLOCK);
