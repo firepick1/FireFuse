@@ -72,6 +72,23 @@ static int callSystem(char *cmdbuf) {
   return 0;
 }
 
+static int firestep_config() {
+  int rc = 0;
+  char cmdbuf[CMDMAX+1];
+
+  LOGINFO("Configure TinyG");
+
+  sprintf(cmdbuf, "{\"jv\":5,\"sv\":2, \"tv\":0}\n");
+	rc = firestep_write(cmdbuf, strlen(cmdbuf));
+  if (rc) { return rc; }
+
+  sprintf(cmdbuf, "{\"sr\":{\"mpox\":t,\"mpoy\":t,\"mpoz\":t,\"vel\":t,\"stat\":t}}\n");
+	rc = firestep_write(cmdbuf, strlen(cmdbuf));
+  if (rc) { return rc; }
+
+	return rc;
+}
+
 int firestep_init(){
   if (fdrTinyG >= 0) {
     return 0; // already started
@@ -95,28 +112,13 @@ int firestep_init(){
     LOGERROR2("Cannot open %s (errno %d)", path, rc);
     return rc;
   }
-  LOGINFO1("firestep_init %s (open) ", path);
+  LOGINFO1("firestep_init %s (open for write) ", path);
 
   LOGRC(rc, "pthread_create(firestep_reader) -> ", pthread_create(&tidReader, NULL, &firestep_reader, NULL));
 
+	firestep_config();
+
   return rc;
-}
-
-static int firestep_config() {
-  int rc = 0;
-  char cmdbuf[CMDMAX+1];
-
-  LOGINFO("Configure TinyG");
-
-  sprintf(cmdbuf, "{\"jv\":5,\"sv\":2, \"tv\":0}\n");
-	rc = firestep_write(cmdbuf, strlen(cmdbuf));
-  if (rc) { return rc; }
-
-  sprintf(cmdbuf, "{\"sr\":{\"mpox\":t,\"mpoy\":t,\"mpoz\":t,\"vel\":t,\"stat\":t}}\n");
-	rc = firestep_write(cmdbuf, strlen(cmdbuf));
-  if (rc) { return rc; }
-
-	return rc;
 }
 
 const char * firestep_json() {
@@ -282,8 +284,6 @@ static int firestep_readchar(int c) {
 static void * firestep_reader(void *arg) {
 #define READBUFLEN 100
   char readbuf[READBUFLEN];
-
-	firestep_config();
 
   LOGINFO("firestep_reader listening...");
 

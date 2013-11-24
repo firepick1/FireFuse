@@ -1,7 +1,7 @@
 #! /bin/sh
 ### BEGIN INIT INFO
 # Provides:          firefuse
-# Required-Start:    
+# Required-Start:    udev udev-mtab
 # Required-Stop:
 # Should-Start:      
 # Default-Start:     2 3 4 5
@@ -86,7 +86,7 @@ do_reload() {
 
 case "$1" in
   start)
-	log_daemon_msg "DEBUG Starting $DESC" "$NAME"
+	log_daemon_msg "SWIZZLE Starting $DESC" "$NAME"
 	[ "$VERBOSE" != no ] && log_daemon_msg "Starting $DESC" "$NAME"
 	do_start
 	case "$?" in

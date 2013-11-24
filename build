@@ -1,6 +1,22 @@
 #! /bin/sh
-fusermount -u /dev/firefuse
-rm -rf CMakeFiles CMakeFiles.txt
+if [ -e /dev/firefuse/firestep ] 
+then 
+	echo fusermount -u /dev/firefuse 
+	fusermount -u /dev/firefuse 
+fi
+
+if [ ! -e /dev/firefuse ] 
+then 
+	echo mkdir /dev/firefuse 
+	mkdir /dev/firefuse 
+fi
+
+if [ -e CMakeFiles ] 
+then 
+	echo rm -rf CMakeFiles CMakeFiles.txt 
+	rm -rf CMakeFiles CMakeFiles.txt 
+fi
+
 cmake .
 make install
 firefuse -o allow_other /dev/firefuse
