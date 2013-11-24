@@ -98,7 +98,15 @@ int firestep_init(){
 
   LOGRC(rc, "pthread_create(firestep_reader) -> ", pthread_create(&tidReader, NULL, &firestep_reader, NULL));
 
-  sprintf(cmdbuf, "{\"jv\":5,\"sv\":2}\n");
+  return rc;
+}
+
+static int firestep_config() {
+  int rc = 0;
+
+  LOGINFO1("Configure TinyG");
+
+  sprintf(cmdbuf, "{\"jv\":5,\"sv\":2, \"tv\":0}\n");
 	rc = firestep_write(cmdbuf, strlen(cmdbuf));
   if (rc) { return rc; }
 
@@ -106,7 +114,7 @@ int firestep_init(){
 	rc = firestep_write(cmdbuf, strlen(cmdbuf));
   if (rc) { return rc; }
 
-  return rc;
+	return rc;
 }
 
 const char * firestep_json() {
@@ -208,7 +216,40 @@ static int firestep_readchar(int c) {
 		case '\r':
       // skip
 			break;
-		default:
+		case 'a': case 'A':
+		case 'b': case 'B':
+		case 'c': case 'C':
+		case 'd': case 'D':
+		case 'e': case 'E':
+		case 'f': case 'F':
+		case 'g': case 'G':
+		case 'h': case 'H':
+		case 'i': case 'I':
+		case 'j': case 'J':
+		case 'k': case 'K':
+		case 'l': case 'L':
+		case 'm': case 'M':
+		case 'n': case 'N':
+		case 'o': case 'O':
+		case 'p': case 'P':
+		case 'q': case 'Q':
+		case 'r': case 'R':
+		case 's': case 'S':
+		case 't': case 'T':
+		case 'u': case 'U':
+		case 'v': case 'V':
+		case 'w': case 'W':
+		case 'x': case 'X':
+		case 'y': case 'Y':
+		case 'z': case 'Z':
+		case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9':
+		case '.': case '-': case '_': case '/':
+		case '{': case '}':
+		case '(': case ')':
+		case '[': case ']':
+		case '<': case '>':
+		case '"': case '\'': case ':': case ',':
+		case ' ': case '\t':
 			if (c == '{') {
 				if (jsonDepth++ <= 0) {
 					jsonLen = 0;
@@ -230,9 +271,13 @@ static int firestep_readchar(int c) {
       } else {
         inbuf[inbuflen] = c;
         inbuflen++;
-				LOGTRACE1("firestep_readchar %c", (int) c);
+				LOGTRACE2("firestep_readchar %x %c", (int) c, (int) c);
       }
 			break;
+		default:
+		  // probably wrong baud rate
+			LOGTRACE2("firestep_readchar %x ?", (int) c, (int) c);
+		  break;
 	}
 	return 1;
 }
@@ -240,6 +285,9 @@ static int firestep_readchar(int c) {
 static void * firestep_reader(void *arg) {
 #define READBUFLEN 100
   char readbuf[READBUFLEN];
+
+	firestep_config();
+
   LOGINFO("firestep_reader listening...");
 
 	if (fdrTinyG >= 0) {
