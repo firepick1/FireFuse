@@ -38,11 +38,11 @@ int fdwTinyG = -1;
 #define WRITEBUFMAX 100
 #define INBUFMAX 3000
 #define JSONMAX 3000
-char jsonBuf[JSONMAX+1];
+char jsonBuf[JSONMAX+3]; // +nl, cr, EOS
 int jsonLen = 0;
 int jsonDepth = 0;
 
-char inbuf[INBUFMAX+1];
+char inbuf[INBUFMAX+1]; // +EOS
 int inbuflen = 0;
 int inbufEmptyLine = 0;
 
@@ -78,18 +78,16 @@ int firestep_init(){
 
   const char * path = "/dev/ttyUSB0";
   char cmdbuf[500];
+	int rc;
+
   sprintf(cmdbuf, "stty 115200 -F %s", path);
-  int rc = callSystem(cmdbuf);
-  if (rc) {
-    return rc;
-  }
-  sprintf(cmdbuf, 
-  	"stty 1400:4:1cb2:a00:3:1c:7f:15:4:1:1:0:11:13:1a:0:12:f:17:16:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0 -F %s", 
-	path);
   rc = callSystem(cmdbuf);
-  if (rc) {
-    return rc;
-  }
+  if (rc) { return rc; }
+
+  sprintf(cmdbuf, "stty 1400:4:1cb2:a00:3:1c:7f:15:4:1:1:0:11:13:1a:0:12:f:17:16:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0 -F %s", path);
+  rc = callSystem(cmdbuf);
+  if (rc) { return rc; }
+
   fdwTinyG = fdrTinyG = open(path, O_RDWR | O_ASYNC | O_NONBLOCK);
   if (fdrTinyG < 0) {
     rc = errno;
@@ -100,20 +98,32 @@ int firestep_init(){
 
   LOGRC(rc, "pthread_create(firestep_reader) -> ", pthread_create(&tidReader, NULL, &firestep_reader, NULL));
 
+  sprintf(cmdbuf, "{\"jv\":5,\"sv\":2}\n");
+	rc = firestep_write(cmdbuf, strlen(cmdbuf));
+  if (rc) { return rc; }
+
+  sprintf(cmdbuf, "{\"sr\":{\"mpox\":t,\"mpoy\":t,\"mpoz\":t,\"vel\":t,\"stat\":t}}\n");
+	rc = firestep_write(cmdbuf, strlen(cmdbuf));
+  if (rc) { return rc; }
+
   return rc;
 }
 
-char * firestep_json() {
+const char * firestep_json() {
 	int wait = 0;
-	while (json_depth > 0) {
-		LOGDEBUG("firestep_json() waiting for JSON %d", wait++);
-		thread_yield(); // wait for completion
+	while (jsonDepth > 0) {
+		LOGDEBUG1("firestep_json() waiting for JSON %d", wait++);
+		sched_yield(); // wait for completion
 		if (wait > 10) {
 			LOGERROR("firestep_json() unterminated JSON");
 			return "{\"error\":\"unterminated JSON\"}";
 		}
 	}
 	jsonBuf[jsonLen] = 0;
+	if (jsonLen > 0) {
+		jsonBuf[jsonLen++] = '\n';
+		jsonBuf[jsonLen++] = 0;
+	}
 	return jsonBuf;
 }
 
@@ -143,7 +153,7 @@ int firestep_write(const char *buf, size_t bufsize) {
       case '\n':
       case '\r':
         *s = ' ';
-	break;
+				break;
     }
   }
   LOGDEBUG1("firestep_write %s start", message);
@@ -153,36 +163,44 @@ int firestep_write(const char *buf, size_t bufsize) {
   } else {
     LOGERROR2("firestep_write %s -> [%ld]", message, rc);
   }
+	return rc < 0 ? rc : 0;
 }
 
+// Add the given character to jsonBuf if it is the inner part of the json response 
 #define ADD_JSON(c) \
-			jsonBuf[jsonLen++] = c; \
-			if (jsonLen >= JSONMAX) { \
-				LOGWARN1("Maximum JSON length is %d", JSONMAX); \
-				return 0; \
-			} \
-			jsonBuf[jsonLen] = 0
+			if (jsonDepth > 1) {\
+				jsonBuf[jsonLen++] = c; \
+				if (jsonLen >= JSONMAX) { \
+					LOGWARN1("Maximum JSON length is %d", JSONMAX); \
+					return 0; \
+				} \
+				jsonBuf[jsonLen] = 0;\
+			}
 
-static int process_char(char c) {
+static int firestep_readchar(int c) {
 	switch (c) {
 		case EOF:
       inbuf[inbuflen] = 0;
       inbuflen = 0;
-      LOGERROR1("firestep_reader %s[EOF]", inbuf);
+      LOGERROR1("firestep_readchar %s[EOF]", inbuf);
       return 0;
 		case '\0':
       inbuf[inbuflen] = 0;
       inbuflen = 0;
-      LOGERROR1("firestep_reader %s[NULL]", inbuf);
-			break;
+      LOGERROR1("firestep_readchar %s[NULL]", inbuf);
+      return 0;
 		case '\n':
       inbuf[inbuflen] = 0;
       if (inbuflen) { // discard blank lines
-				LOGINFO2("firestep_reader %s (%dB)", inbuf, inbuflen);
+				if (strncmp("{\"sr\"",inbuf, 5) == 0) {
+					LOGDEBUG2("firestep_readchar %s (%dB)", inbuf, inbuflen);
+				} else {
+					LOGINFO2("firestep_readchar %s (%dB)", inbuf, inbuflen);
+				}
       } else {
         inbufEmptyLine++;
 				if (inbufEmptyLine % 1000 == 0) {
-					LOGWARN1("firestep_reader skipped %ld blank lines", inbufEmptyLine);
+					LOGWARN1("firestep_readchar skipped %ld blank lines", inbufEmptyLine);
 				}
 			}
       inbuflen = 0;
@@ -190,31 +208,29 @@ static int process_char(char c) {
 		case '\r':
       // skip
 			break;
-		case '{':
-			if (jsonDepth++ == 0) {
-				jsonLen = 0;
-			}
-			ADD_JSON(c);
-			break;
-		case '}':
-			ADD_JSON(c);
-			if (--jsonDepth < 0) {
-				LOGWARN1("Invalid JSON %s", jsonBuf);
-				return 0;
-			}
-			break;
 		default:
-			if (jsonDepth > 0) {
+			if (c == '{') {
+				if (jsonDepth++ <= 0) {
+					jsonLen = 0;
+				}
+				ADD_JSON(c);
+			} else if (c == '}') {
+				ADD_JSON(c);
+				if (--jsonDepth < 0) {
+					LOGWARN1("Invalid JSON %s", jsonBuf);
+					return 0;
+				}
+			} else {
 				ADD_JSON(c);
 			}
       if (inbuflen >= INBUFMAX) {
 				inbuf[INBUFMAX] = 0;
-        LOGERROR1("firestep_reader overflow %s", inbuf);
+        LOGERROR1("firestep_readchar overflow %s", inbuf);
 				break;
       } else {
         inbuf[inbuflen] = c;
         inbuflen++;
-				LOGTRACE1("firestep_reader %c", (int) c);
+				LOGTRACE1("firestep_readchar %c", (int) c);
       }
 			break;
 	}
@@ -222,13 +238,15 @@ static int process_char(char c) {
 }
 
 static void * firestep_reader(void *arg) {
-  char readbuf[1];
+#define READBUFLEN 100
+  char readbuf[READBUFLEN];
   LOGINFO("firestep_reader listening...");
 
 	if (fdrTinyG >= 0) {
 		char c;
-		do {
-			int rc = read(fdrTinyG, readbuf, 1);
+		char loop = true;
+		while (loop) {
+			int rc = read(fdrTinyG, readbuf, READBUFLEN);
 			if (rc < 0) {
 				if (errno == EAGAIN) {
 					sched_yield();
@@ -238,10 +256,18 @@ static void * firestep_reader(void *arg) {
 				break;
 			}
 			if (rc == 0) {
-				sched_yield();
+				sched_yield(); // nothing available to read
 				continue;
+			} else  {
+			  int i;
+				for (i = 0; i < rc; i++) {
+					if (!firestep_readchar(readbuf[i])) {
+						loop = false;
+						break;
+					}
+				}
 			}
-		} while (process_char(readbuf[0]));
+		}
 	}
   
   LOGINFO("firestep_reader exit");

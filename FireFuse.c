@@ -106,7 +106,7 @@ static int firefuse_getattr(const char *path, struct stat *stbuf)
     stbuf->st_mode = S_IFDIR | 0755;
     stbuf->st_nlink = 2;
   } else if (strcmp(path, STATUS_PATH) == 0) {
-    char *status_str = firepick_status();
+    const char *status_str = firepick_status();
     stbuf->st_mode = S_IFREG | 0444;
     stbuf->st_nlink = 1;
     stbuf->st_size = strlen(status_str);
@@ -233,13 +233,7 @@ static int firefuse_read(const char *path, char *buf, size_t size, off_t offset,
 	LOGTRACE2("firefuse_read(%s, %ldB)", path, size);
 
   if (strcmp(path, STATUS_PATH) == 0) {
-    char *status_str = firepick_status();
-    /*TMP*/sprintf(status_str, "imageAlloc:%d imageFree:%d camOpen:%ld fi:%lx staticImage:%lx\n", 
-	    imageAlloc,
-	    imageFree,
-	    camOpen,
-	    (long)pCamFileInfo,
-	    (long)pDebugImage);
+    const char *status_str = firepick_status();
     len = strlen(status_str);
     if (offset < len) {
 	    if (offset + size > len)
@@ -262,7 +256,7 @@ static int firefuse_read(const char *path, char *buf, size_t size, off_t offset,
   } else if (strcmp(path, FIRELOG_PATH) == 0) {
     size = 0;
   } else if (strcmp(path, FIRESTEP_PATH) == 0) {
-		char *json = firestep_json();
+		const char *json = firestep_json();
     len = strlen(json);
     if (offset < len) {
       if (offset + size > len) {

@@ -25,8 +25,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <string.h>
 #include <sys/syscall.h>
 
+#define LOGMAX 255
+
 FILE *logFile = NULL;
 int logLevel = FIRELOG_WARN;
+char lastMessage[5][LOGMAX+1];
+
 
 int firelog_init(char *path, int level) {
   logLevel = level;
@@ -35,6 +39,7 @@ int firelog_init(char *path, int level) {
     return errno;
   }
   LOGINFO1("FireLog %s", path);
+	firelog_lastMessageClear();
   return 0;
 }
 
@@ -44,6 +49,21 @@ int firelog_destroy() {
     rc = fclose(logFile);
   }
   return rc;
+}
+
+/* Last message up to given level*/
+const char * firelog_lastMessage(int level) {
+	int i;
+	for (i = 0; i<FIRELOG_TRACE; i++) {
+	  if (lastMessage[i]) {
+		  return lastMessage[i];
+		}
+	}
+  return "";
+}
+
+void firelog_lastMessageClear() {
+	memset(lastMessage, 0, sizeof(lastMessage));
 }
 
 int firelog_level(int newLevel) {
@@ -58,6 +78,8 @@ void firelog(const char *fmt, int level, const void * value1, const void * value
     time_t now = time(NULL);
     struct tm *pLocalNow = localtime(&now);
     int tid = syscall(SYS_gettid);
+		char logBuf[LOGMAX+1];
+
     fprintf(logFile, "%02d:%02d:%02d ", pLocalNow->tm_hour, pLocalNow->tm_min, pLocalNow->tm_sec);
     switch (level) {
       case FIRELOG_ERROR: fprintf(logFile, "ERROR %d ", tid); break;
@@ -67,6 +89,7 @@ void firelog(const char *fmt, int level, const void * value1, const void * value
       case FIRELOG_TRACE: fprintf(logFile, "TRACE %d ", tid); break;
       default: fprintf(logFile, "?%d? %d ", level, tid); break;
     }
+		sprintf(lastMessage[level], fmt, value1, value2, value3);
     fprintf(logFile, fmt, value1, value2, value3);
     fprintf(logFile, "\n", tid);
     fflush(logFile);

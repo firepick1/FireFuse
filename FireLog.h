@@ -69,6 +69,8 @@ extern FILE *logFile;
 int firelog_init(char *path, int level);
 int firelog_destroy();
 int firelog_level(int newLevel);
+const char * firelog_lastMessage(int level);
+void firelog_lastMessageClear();
 void firelog(const char *fmt, int level, const void * value1, const void * value2, const void * value3);
 
 #ifdef __cplusplus

@@ -31,11 +31,16 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 char status_buffer[STATUS_BUFFER_SIZE];
 
-char* firepick_status() {
+const char* firepick_status() {
   time_t current_time = time(NULL);
   char timebuf[70];
   strcpy(timebuf, ctime(&current_time));
   timebuf[strlen(timebuf)-1] = 0;
+
+	const char *errorOrWarn = firelog_lastMessage(FIRELOG_WARN);
+	if (strlen(errorOrWarn)) {
+		return errorOrWarn;
+	}
 
   sprintf(status_buffer, 
     "{\n"

@@ -26,7 +26,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 extern "C" {
 #endif
 
-char* firepick_status();
+const char* firepick_status();
 int firepick_camera_daemon(JPG *pJPG);
 
 #ifdef __cplusplus
