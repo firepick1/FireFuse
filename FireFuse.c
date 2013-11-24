@@ -122,7 +122,7 @@ static int firefuse_getattr(const char *path, struct stat *stbuf)
   } else if (strcmp(path, FIRESTEP_PATH) == 0) {
     stbuf->st_mode = S_IFREG | 0666;
     stbuf->st_nlink = 1;
-    stbuf->st_size = 1;
+    stbuf->st_size = strlen(firestep_json());
   } else {
     res = -ENOENT;
   }
@@ -230,6 +230,8 @@ static int firefuse_read(const char *path, char *buf, size_t size, off_t offset,
 {
   size_t len;
   (void) fi;
+	LOGTRACE2("firefuse_read(%s, %ldB)", path, size);
+
   if (strcmp(path, STATUS_PATH) == 0) {
     char *status_str = firepick_status();
     /*TMP*/sprintf(status_str, "imageAlloc:%d imageFree:%d camOpen:%ld fi:%lx staticImage:%lx\n", 
@@ -251,18 +253,26 @@ static int firefuse_read(const char *path, char *buf, size_t size, off_t offset,
     len = pImage->length;
     if (offset < len) {
       if (offset + size > len) {
-	size = len - offset;
+				size = len - offset;
       }
       memcpy(buf, pImage->pData + offset, size);
     } else {
       size = 0;
     }
-    LOGDEBUG1("firefuse_read reading image: %ldB", size);
   } else if (strcmp(path, FIRELOG_PATH) == 0) {
     size = 0;
   } else if (strcmp(path, FIRESTEP_PATH) == 0) {
-    buf[0] = 0;
-    size = 1;
+		char *json = firestep_json();
+    len = strlen(json);
+    if (offset < len) {
+      if (offset + size > len) {
+				size = len - offset;
+      }
+      memcpy(buf, json + offset, size);
+			size = len;
+    } else {
+      size = 0;
+    }
   } else {
     return -ENOENT;
   }
