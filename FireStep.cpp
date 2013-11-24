@@ -35,6 +35,7 @@ pthread_t tidReader;
 int fdrTinyG = -1;
 int fdwTinyG = -1;
 
+#define CMDMAX 255
 #define WRITEBUFMAX 100
 #define INBUFMAX 3000
 #define JSONMAX 3000
@@ -77,7 +78,7 @@ int firestep_init(){
   }
 
   const char * path = "/dev/ttyUSB0";
-  char cmdbuf[500];
+  char cmdbuf[CMDMAX+1];
 	int rc;
 
   sprintf(cmdbuf, "stty 115200 -F %s", path);
@@ -103,8 +104,9 @@ int firestep_init(){
 
 static int firestep_config() {
   int rc = 0;
+  char cmdbuf[CMDMAX+1];
 
-  LOGINFO1("Configure TinyG");
+  LOGINFO("Configure TinyG");
 
   sprintf(cmdbuf, "{\"jv\":5,\"sv\":2, \"tv\":0}\n");
 	rc = firestep_write(cmdbuf, strlen(cmdbuf));
