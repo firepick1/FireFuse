@@ -194,11 +194,6 @@ static int firestep_readchar(int c) {
       inbuflen = 0;
       LOGERROR1("firestep_readchar %s[EOF]", inbuf);
       return 0;
-		case '\0':
-      inbuf[inbuflen] = 0;
-      inbuflen = 0;
-      LOGERROR1("firestep_readchar %s[NULL]", inbuf);
-      return 0;
 		case '\n':
       inbuf[inbuflen] = 0;
       if (inbuflen) { // discard blank lines
@@ -277,7 +272,7 @@ static int firestep_readchar(int c) {
       }
 			break;
 		default:
-		  // probably wrong baud rate
+		  // discard unexpected character (probably wrong baud rate)
 			LOGTRACE2("firestep_readchar %x ?", (int) c, (int) c);
 		  break;
 	}
