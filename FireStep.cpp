@@ -48,6 +48,7 @@ int inbuflen = 0;
 int inbufEmptyLine = 0;
 
 static void * firestep_reader(void *arg);
+static int firestep_writeCore(const char *buf, size_t bufsize);
 
 static int callSystem(char *cmdbuf) {
   int rc = 0;
@@ -79,11 +80,16 @@ static int firestep_config() {
   LOGINFO("Configure TinyG");
 
   sprintf(cmdbuf, "{\"jv\":5,\"sv\":2, \"tv\":0}\n");
-	rc = firestep_write(cmdbuf, strlen(cmdbuf));
+	rc = firestep_writeCore(cmdbuf, strlen(cmdbuf));
   if (rc) { return rc; }
 
   sprintf(cmdbuf, "{\"sr\":{\"mpox\":t,\"mpoy\":t,\"mpoz\":t,\"vel\":t,\"stat\":t}}\n");
-	rc = firestep_write(cmdbuf, strlen(cmdbuf));
+	rc = firestep_writeCore(cmdbuf, strlen(cmdbuf));
+  if (rc) { return rc; }
+
+	char *yInit = "{\"y\":{\"am\":1,\"vm\":35000,\"fr\":40000,\"tm\":400,\"jm\":20000000000,\"jh\":40000000000,\"jd\":0.050,\"sn\":3,\"sx\":0,\"sv\":3000,\"lv\":1000,\"lb\":2,\"zb\":1}";
+	sprintf(cmdbuf, "%s", yInit);
+	rc = firestep_writeCore(cmdbuf, strlen(cmdbuf));
   if (rc) { return rc; }
 
 	return rc;
@@ -116,7 +122,7 @@ int firestep_init(){
 
   LOGRC(rc, "pthread_create(firestep_reader) -> ", pthread_create(&tidReader, NULL, &firestep_reader, NULL));
 
-	firestep_config();
+	//firestep_config();
 
   return rc;
 }
@@ -147,7 +153,7 @@ void firestep_destroy() {
   }
 }
 
-int firestep_write(const char *buf, size_t bufsize) {
+static int firestep_writeCore(const char *buf, size_t bufsize) {
   char message[WRITEBUFMAX+4];
   if (bufsize > WRITEBUFMAX) {
     memcpy(message, buf, WRITEBUFMAX);
@@ -176,6 +182,14 @@ int firestep_write(const char *buf, size_t bufsize) {
     LOGERROR2("firestep_write %s -> [%ld]", message, rc);
   }
 	return rc < 0 ? rc : 0;
+}
+
+int firestep_write(const char *buf, size_t bufsize) {
+  if (strncmp("config", buf, 6) == 0) {
+	  firestep_config();
+	} else {
+		return firestep_writeCore(buf, bufsize);
+	}
 }
 
 // Add the given character to jsonBuf if it is the inner part of the json response 

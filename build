@@ -1,4 +1,5 @@
 #! /bin/sh
+echo building FireFuse...
 if [ -e /dev/firefuse/firestep ] 
 then 
 	echo fusermount -u /dev/firefuse 
