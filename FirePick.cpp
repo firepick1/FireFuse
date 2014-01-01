@@ -28,6 +28,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "FirePiCam.h"
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
+#include "opencv2/features2d/features2d.hpp"
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 
@@ -39,12 +40,31 @@ const void* firepick_circles(JPG *pJPG) {
 	CvMat* cvJpg = cvCreateMatHeader(1, pJPG->length, CV_8UC1);
 	cvSetData(cvJpg, pJPG->pData, pJPG->length);
 	IplImage *pCvImg = cvDecodeImage(cvJpg, CV_LOAD_IMAGE_GRAYSCALE);
-	cv::Mat matImage(pCvImg);
-	cv::Mat matOutput;
+	cv::Mat matGray(pCvImg);
 
-	cv::threshold(matImage, matOutput, 128, 255, cv::THRESH_BINARY);
+  //GaussianBlur( matGray, matGray, cv::Size(9, 9), 2, 2 );
+	int threshold_value = 64;
+	int max_BINARY_value = 255;
+	int threshold_type = 3;
+	
+	//matGray.convertTo(matGray, -1, .5, 0);
+	threshold( matGray, matGray, threshold_value, max_BINARY_value, cv::THRESH_BINARY );
+  cv::vector<cv::Vec3f> circles;
+	HoughCircles(matGray, circles, CV_HOUGH_GRADIENT, 2, 16, 200, 100, 4, 32 );
 
-	imwrite("/home/pi/camcv.bmp", matOutput);
+	for( size_t i = 0; i < circles.size(); i++ ) {
+		int x = cvRound(circles[i][0]);
+		int y = cvRound(circles[i][1]);
+		int radius = cvRound(circles[i][2]);
+		cv::Point center(x, y);
+		LOGINFO3("firepick_circles (%d,%d,%d)", x, y, radius);
+		// draw the circle center
+		circle( matGray, center, 3, cv::Scalar(0,255,0), -1, 8, 0 );
+		// draw the circle outline
+		circle( matGray, center, radius, cv::Scalar(0,0,255), 3, 8, 0 );
+	}
+
+	imwrite("/home/pi/camcv.bmp", matGray);
 
 	cvReleaseMatHeader(&cvJpg);
 
