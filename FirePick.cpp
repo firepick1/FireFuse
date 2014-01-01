@@ -26,10 +26,30 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "FirePick.h"
 #include "FireLog.h"
 #include "FirePiCam.h"
+#include <opencv/cv.h>
+#include <opencv/highgui.h>
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
 
 #define STATUS_BUFFER_SIZE 1024
 
 char status_buffer[STATUS_BUFFER_SIZE];
+
+const void* firepick_circles(JPG *pJPG) {
+	CvMat* cvJpg = cvCreateMatHeader(1, pJPG->length, CV_8UC1);
+	cvSetData(cvJpg, pJPG->pData, pJPG->length);
+	IplImage *pCvImg = cvDecodeImage(cvJpg, CV_LOAD_IMAGE_GRAYSCALE);
+	cv::Mat matImage(pCvImg);
+	cv::Mat matOutput;
+
+	cv::threshold(matImage, matOutput, 128, 255, cv::THRESH_BINARY);
+
+	imwrite("/home/pi/camcv.bmp", matOutput);
+
+	cvReleaseMatHeader(&cvJpg);
+
+  return pJPG;
+}
 
 const char* firepick_status() {
   time_t current_time = time(NULL);

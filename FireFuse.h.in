@@ -34,6 +34,7 @@ extern "C" {
 #define FireFuse_VERSION_MINOR @FireFuse_VERSION_MINOR@
 
 #define STATUS_PATH "/status"
+#define CIRCLES_PATH "/circles"
 #define FIRESTEP_PATH "/firestep"
 #define FIRELOG_PATH "/firelog"
 #define CAM_PATH "/cam.jpg"

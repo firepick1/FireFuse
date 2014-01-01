@@ -20,15 +20,15 @@ configure_file (
 	)
 
 #include_directories(/usr/local/include)
+find_package( OpenCV REQUIRED )
 
 add_executable(firefuse FireFuse.c FireLog.c FireStep.cpp FirePick.cpp)
-target_link_libraries(firefuse /usr/local/lib/libfirepicam.so libfuse.so)
+target_link_libraries(firefuse /usr/local/lib/libfirepicam.so libfuse.so ${OpenCV_LIBS})
 
 INSTALL(TARGETS firefuse DESTINATION bin)
 INSTALL(PROGRAMS mountfirefuse.sh DESTINATION /etc/init.d/)
 
 #OPENCV
-#find_package( OpenCV REQUIRED )
 #add_executable(fpc RaspiCamControl.c RaspiCLI.c RaspiPreview.c fpc.cpp)
 #target_link_libraries(fpc /opt/vc/lib/libmmal_core.so /opt/vc/lib/libmmal_util.so /opt/vc/lib/libmmal_vc_client.so /opt/vc/lib/libvcos.so /opt/vc/lib/libbcm_host.so ${OpenCV_LIBS})
 

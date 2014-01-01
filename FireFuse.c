@@ -43,11 +43,7 @@ long seconds = 0;
 JPG headcam_image; 		// perpetually changing image
 JPG headcam_image_fstat;	// image at time of most recent fstat()
 
-/* TMP */ JPG *pDebugImage;
-int imageAlloc = 0;
-int imageFree = 0;
-int camOpen = 0;
-struct fuse_file_info *pCamFileInfo = 0;
+#define FIRELOG_FILE "/var/log/firefuse.log"
 
 char* jpg_pData;
 int jpg_length;
@@ -68,7 +64,7 @@ static void * firefuse_init(struct fuse_conn_info *conn)
 {
   int rc = 0;
 
-  firelog_init("/var/log/firefuse.log", FIRELOG_INFO);
+  firelog_init(FIRELOG_FILE, FIRELOG_INFO);
   LOGINFO2("Initialized FireFuse %d.%d", FireFuse_VERSION_MAJOR, FireFuse_VERSION_MINOR);
   LOGINFO2("PID%d UID%d", (int) getpid(), (int)getuid());
 
@@ -110,6 +106,12 @@ static int firefuse_getattr(const char *path, struct stat *stbuf)
     stbuf->st_mode = S_IFREG | 0444;
     stbuf->st_nlink = 1;
     stbuf->st_size = strlen(status_str);
+  } else if (strcmp(path, CIRCLES_PATH) == 0) {
+    memcpy(&headcam_image_fstat, &headcam_image, sizeof(JPG));
+    stbuf->st_mode = S_IFREG | 0444;
+    stbuf->st_nlink = 1;
+    stbuf->st_size = 1;
+    stbuf->st_size = headcam_image_fstat.length;
   } else if (strcmp(path, CAM_PATH) == 0) {
     memcpy(&headcam_image_fstat, &headcam_image, sizeof(JPG));
     stbuf->st_mode = S_IFREG | 0444;
@@ -118,7 +120,7 @@ static int firefuse_getattr(const char *path, struct stat *stbuf)
   } else if (strcmp(path, FIRELOG_PATH) == 0) {
     stbuf->st_mode = S_IFREG | 0666;
     stbuf->st_nlink = 1;
-    stbuf->st_size = 1;
+    stbuf->st_size = 10000;
   } else if (strcmp(path, FIRESTEP_PATH) == 0) {
     stbuf->st_mode = S_IFREG | 0666;
     stbuf->st_nlink = 1;
@@ -147,6 +149,7 @@ static int firefuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
   filler(buf, ".", NULL, 0);
   filler(buf, "..", NULL, 0);
   filler(buf, STATUS_PATH + 1, NULL, 0);
+  filler(buf, CIRCLES_PATH + 1, NULL, 0);
   filler(buf, CAM_PATH + 1, NULL, 0);
   filler(buf, FIRELOG_PATH + 1, NULL, 0);
   filler(buf, FIRESTEP_PATH + 1, NULL, 0);
@@ -154,34 +157,49 @@ static int firefuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
   return 0;
 }
 
+static JPG* firefuse_allocImage(const char *path, struct fuse_file_info *fi) {
+  int result = 0;
+	int length = headcam_image_fstat.length;
+	JPG *pJPG = calloc(sizeof(JPG) + length, 1);
+	if (pJPG) {
+		pJPG->length = length;
+		pJPG->pData = (void *) &pJPG->reserved; 
+		memcpy(pJPG->pData, headcam_image_fstat.pData, length);
+		LOGTRACE1("firefuse_allocImage allocated image memory: %ldB", length);
+	} else {
+		LOGERROR2("firefuse_allocImage %s Could not allocate image memory: %ldB", path, length);
+		result = -ENOMEM;
+	}
+	fi->direct_io = 1;
+	//fi->nonseekable = 1;
+	fi->fh = (uint64_t) (size_t) pJPG;
+	return pJPG;
+}
 
-static int firefuse_open(const char *path, struct fuse_file_info *fi)
-{
+static int firefuse_open(const char *path, struct fuse_file_info *fi) {
+	int result = 0;
+	
   if (strcmp(path, STATUS_PATH) == 0) {
     if ((fi->flags & 3) != O_RDONLY) {
 	    return -EACCES;
     }
+  } else if (strcmp(path, CIRCLES_PATH) == 0) {
+    if ((fi->flags & 3) != O_RDONLY) {
+	    return -EACCES;
+    }
+		JPG *pJPG = firefuse_allocImage(path, fi);
+		if (!pJPG) {
+			return -ENOMEM;
+		}
+		firepick_circles(pJPG);
   } else if (strcmp(path, CAM_PATH) == 0) {
     if ((fi->flags & 3) != O_RDONLY) {
 	    return -EACCES;
     }
-    camOpen++;
-    int length = headcam_image_fstat.length;
-    JPG *pImage = calloc(sizeof(JPG) + length, 1);
-    if (pImage) {
-      pDebugImage = pImage;
-      imageAlloc++;
-      pImage->length = length;
-      pImage->pData = (void *) &pImage->reserved; 
-      memcpy(pImage->pData, headcam_image_fstat.pData, length);
-      LOGTRACE1("firefuse_open allocated image memory: %ldB", length);
-    } else {
-      LOGERROR2("firefuse_open %s Could not allocate image memory: %ldB", path, length);
-    }
-    fi->direct_io = 1;
-    //fi->nonseekable = 1;
-    fi->fh = (uint64_t) (size_t) pImage;
-    pCamFileInfo = fi;
+		JPG *pJPG = firefuse_allocImage(path, fi);
+		if (!pJPG) {
+			return -ENOMEM;
+		}
   } else if (strcmp(path, FIRELOG_PATH) == 0) {
     if ((fi->flags & O_DIRECTORY)) {
       LOGERROR1("firefuse_open %s -> O_DIRECTORY not allowed ", path);
@@ -200,27 +218,30 @@ static int firefuse_open(const char *path, struct fuse_file_info *fi)
     return -ENOENT;
   }
 
-  return 0;
+  return result;
 }
 
-static int firefuse_release(const char *path, struct fuse_file_info *fi)
-{
+static void firefuse_freeImage(const char *path, struct fuse_file_info *fi) {
+	if (fi->fh) {
+		JPG *pJPG = (JPG *)(size_t) fi->fh;
+		LOGTRACE2("firefuse_release %s freeing image: %ldB", path, pJPG->length);
+		free(pJPG);
+		fi->fh = 0;
+  }
+}
+
+static int firefuse_release(const char *path, struct fuse_file_info *fi) {
   LOGTRACE1("firefuse_release %s", path);
   if (strcmp(path, STATUS_PATH) == 0) {
     // NOP
+  } else if (strcmp(path, CIRCLES_PATH) == 0) {
+		firefuse_freeImage(path, fi);
   } else if (strcmp(path, FIRELOG_PATH) == 0) {
     // NOP
   } else if (strcmp(path, FIRESTEP_PATH) == 0) {
     // NOP
   } else if (strcmp(path, CAM_PATH) == 0) {
-    camOpen--;
-    if (fi->fh) {
-      JPG *pImage = (JPG *)(size_t) fi->fh;
-      LOGTRACE2("firefuse_release %s freeing image: %ldB", path, pImage->length);
-      free(pImage);
-      imageFree++;
-      fi->fh = 0;
-    }
+		firefuse_freeImage(path, fi);
   }
   return 0;
 }
@@ -242,19 +263,37 @@ static int firefuse_read(const char *path, char *buf, size_t size, off_t offset,
     } else {
 	    size = 0;
     }
+  } else if (strcmp(path, CIRCLES_PATH) == 0) {
+    const char *circles_str = "circles";
+    len = strlen(circles_str);
+    if (offset < len) {
+	    if (offset + size > len)
+		    size = len - offset;
+	    memcpy(buf, circles_str + offset, size);
+    } else {
+	    size = 0;
+    }
   } else if (strcmp(path, CAM_PATH) == 0) {
-    JPG *pImage = (JPG *) (size_t) fi->fh;
-    len = pImage->length;
+    JPG *pJPG = (JPG *) (size_t) fi->fh;
+    len = pJPG->length;
     if (offset < len) {
       if (offset + size > len) {
 				size = len - offset;
       }
-      memcpy(buf, pImage->pData + offset, size);
+      memcpy(buf, pJPG->pData + offset, size);
     } else {
       size = 0;
     }
   } else if (strcmp(path, FIRELOG_PATH) == 0) {
-    size = 0;
+	  char *str = "Actual log is " FIRELOG_FILE "\n";
+    len = strlen(str);
+    if (offset < len) {
+	    if (offset + size > len)
+		    size = len - offset;
+	    memcpy(buf, str + offset, size);
+    } else {
+	    size = 0;
+    }
   } else if (strcmp(path, FIRESTEP_PATH) == 0) {
 		const char *json = firestep_json();
     len = strlen(json);

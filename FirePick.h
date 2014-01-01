@@ -27,6 +27,7 @@ extern "C" {
 #endif
 
 const char* firepick_status();
+const void* firepick_circles(JPG *pJPG);
 int firepick_camera_daemon(JPG *pJPG);
 
 #ifdef __cplusplus

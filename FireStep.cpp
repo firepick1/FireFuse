@@ -87,7 +87,7 @@ static int firestep_config() {
 	rc = firestep_writeCore(cmdbuf, strlen(cmdbuf));
   if (rc) { return rc; }
 
-	char *yInit = "{\"y\":{\"am\":1,\"vm\":35000,\"fr\":40000,\"tm\":400,\"jm\":20000000000,\"jh\":40000000000,\"jd\":0.050,\"sn\":3,\"sx\":0,\"sv\":3000,\"lv\":1000,\"lb\":2,\"zb\":1}";
+	const char *yInit = "{\"y\":{\"am\":1,\"vm\":35000,\"fr\":40000,\"tm\":400,\"jm\":20000000000,\"jh\":40000000000,\"jd\":0.050,\"sn\":3,\"sx\":0,\"sv\":3000,\"lv\":1000,\"lb\":2,\"zb\":1}";
 	sprintf(cmdbuf, "%s", yInit);
 	rc = firestep_writeCore(cmdbuf, strlen(cmdbuf));
   if (rc) { return rc; }
