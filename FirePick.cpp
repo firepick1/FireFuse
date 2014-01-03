@@ -40,9 +40,9 @@ static void circles_MSER(cv::Mat &matGray, cv::Mat &matRGB){
 	int threshold_value = 64;
   int delta = 5;
 	int minArea = 400; // 60;
-	int maxArea = 600; //14400;
+	int maxArea = 620; //14400;
 	double maxVariation = 0.25;
-	double minDiversity = 0.2;
+	double minDiversity = 0.3; // 0.2;
 	int max_evolution = 200;
 	double area_threshold = 1.01;
 	double min_margin = .003;
@@ -61,9 +61,9 @@ static void circles_MSER(cv::Mat &matGray, cv::Mat &matRGB){
 	for( int i = 0; i < nBlobs; i++) {
 		cv::vector<cv::Point> pts = contours[i];
 		int nPts = pts.size();
-		int red = (i & 1) ? 128 : 192;
-		int green = (i & 4) ? 128 : 192;
-		int blue = (i & 2) ? 128 : 192;
+		int red = (i & 1) ? 0 : 255;
+		int green = (i & 2) ? 128 : 255 ;
+		int blue = (i & 1) ? 255 : 0;
 		int minX = 0x7fff;
 		int maxX = 0;
 		int minY = 0x7fff;
@@ -80,9 +80,11 @@ static void circles_MSER(cv::Mat &matGray, cv::Mat &matRGB){
 		}
 		avgX = avgX / nPts;
 		avgY = avgY / nPts;
-		LOGINFO3("circles_MSER (%d,%d) %d pts", (int)(avgX * 10+.5), (int)(avgY*10 +.5), nPts);
-		if (maxX - minX < 40 && maxY - minY < 40) {
+		if (maxX - minX < 30 && maxY - minY < 30) {
 			red = 255; green = 0; blue = 255;
+			LOGINFO3("circles_MSER (%d,%d) %d pts MATCH", (int)(avgX * 10+.5), (int)(avgY*10 +.5), nPts);
+		} else {
+			LOGINFO3("circles_MSER (%d,%d) %d pts (other)", (int)(avgX * 10+.5), (int)(avgY*10 +.5), nPts);
 		}
 		for (int j = 0; j < nPts; j++) {
 			matRGB.at<cv::Vec3b>(pts[j])[0] = red;
@@ -90,7 +92,6 @@ static void circles_MSER(cv::Mat &matGray, cv::Mat &matRGB){
 			matRGB.at<cv::Vec3b>(pts[j])[2] = blue;
 		}
 	}
-	//circle( matRGB, cv::Point(400,100), 50, mark, 3, 8, 0 ); 
 }
 
 static void circles_Hough(cv::Mat matGray){
