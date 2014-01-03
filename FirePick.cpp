@@ -36,13 +36,15 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 char status_buffer[STATUS_BUFFER_SIZE];
 
-static void circles_MSER(cv::Mat &matGray, cv::Mat &matRGB){
-	int threshold_value = 64;
+static void circles_MSER(cv::Mat &matGray, cv::Mat &matRGB, int diameter){
+	float tolerance = 1.15;
+	float area = (diameter*diameter*3.141592)/4;
+	int maxDiam = (int)(diameter * tolerance);
   int delta = 5;
-	int minArea = 400; // 60;
-	int maxArea = 620; //14400;
+	int minArea = (int)(area/tolerance); // 60;
+	int maxArea = (int)(area*tolerance); //14400;
 	double maxVariation = 0.25;
-	double minDiversity = 0.3; // 0.2;
+	double minDiversity = tolerance * tolerance - 1; // 0.2;
 	int max_evolution = 200;
 	double area_threshold = 1.01;
 	double min_margin = .003;
@@ -50,8 +52,6 @@ static void circles_MSER(cv::Mat &matGray, cv::Mat &matRGB){
 	cv::vector<cv::vector<cv::Point> > contours;
 	cv::Mat mask;
 	
-	//threshold( matGray, matGray, threshold_value, 255, cv::THRESH_TOZERO );
-	//matGray.convertTo(matGray, -1, 2, 0); // contrast
 	cv::MSER(delta, minArea, maxArea, maxVariation, minDiversity,
 		max_evolution, area_threshold, min_margin, edge_blur_size)(matGray, contours, mask);
 
@@ -80,7 +80,7 @@ static void circles_MSER(cv::Mat &matGray, cv::Mat &matRGB){
 		}
 		avgX = avgX / nPts;
 		avgY = avgY / nPts;
-		if (maxX - minX < 30 && maxY - minY < 30) {
+		if (maxX - minX < maxDiam && maxY - minY < maxDiam) {
 			red = 255; green = 0; blue = 255;
 			LOGINFO3("circles_MSER (%d,%d) %d pts MATCH", (int)(avgX * 10+.5), (int)(avgY*10 +.5), nPts);
 		} else {
@@ -124,7 +124,7 @@ const void* firepick_circles(JPG *pJPG) {
 	cvtColor(matRGB, matGray, CV_RGB2GRAY);
 
   //circles_Hough(matGray);
-  circles_MSER(matGray, matRGB);
+  circles_MSER(matGray, matRGB, 26);
 
 	imwrite("/home/pi/camcv.bmp", matRGB);
 	cvReleaseMatHeader(&cvJpg);
