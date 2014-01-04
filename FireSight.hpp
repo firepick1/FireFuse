@@ -25,16 +25,15 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 using namespace cv;
 
-typedef class MSER_holes {
+typedef class HoleRecognizer {
   public: 
-		MSER_holes(int diameter);
+		HoleRecognizer(float minDiameter, float maxDiameter);
 		void scan(Mat &matRGB);
 
 	private:
-		int diameter;
-		float tolerance;
-		float area;
-		int maxDiam;
+		MSER mser;
+		float minDiam;
+		float maxDiam;
 		int delta;
 		int minArea;
 		int maxArea;

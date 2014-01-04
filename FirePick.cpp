@@ -39,7 +39,7 @@ const void* firepick_circles(JPG *pJPG) {
 	cv::Mat jpg(1, pJPG->length, CV_8UC1, pJPG->pData);
 	cv::Mat matRGB = imdecode(jpg, CV_LOAD_IMAGE_COLOR);
 
-	MSER_holes recognizer(26);
+	HoleRecognizer recognizer(26/1.15, 26*1.15);
   recognizer.scan(matRGB);
 
 	imwrite("/home/pi/camcv.bmp", matRGB);

@@ -27,30 +27,29 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 using namespace cv;
 
-MSER_holes::MSER_holes(int diameter) {
-  this->diameter = diameter;
-	tolerance = 1.15;
-	area = (diameter*diameter*3.141592)/4;
-	maxDiam = (int)(diameter * tolerance);
+HoleRecognizer::HoleRecognizer(float minDiameter, float maxDiameter) {
+	maxDiam = maxDiameter;
+	minDiam = minDiameter;
   delta = 5;
-	minArea = (int)(area/tolerance); // 60;
-	maxArea = (int)(area*tolerance); //14400;
+	minArea = (int)(minDiameter*minDiameter*3.141592/4); // 60;
+	maxArea = (int)(maxDiameter*maxDiameter*3.141592/4); // 14400;
 	maxVariation = 0.25;
-	minDiversity = tolerance * tolerance - 1; // 0.2;
+	minDiversity = (maxArea - minArea)/minArea - 1; // 0.2;
 	max_evolution = 200;
 	area_threshold = 1.01;
 	min_margin = .003;
 	edge_blur_size = 5;
+	mser = MSER(delta, minArea, maxArea, maxVariation, minDiversity,
+		max_evolution, area_threshold, min_margin, edge_blur_size);
 }
 
-void MSER_holes::scan(Mat &matRGB){
+void HoleRecognizer::scan(Mat &matRGB){
 	Mat matGray;
 	cvtColor(matRGB, matGray, CV_RGB2GRAY);
 	
 	Mat mask;
 	vector<vector<Point> > contours;
-	MSER(delta, minArea, maxArea, maxVariation, minDiversity,
-		max_evolution, area_threshold, min_margin, edge_blur_size)(matGray, contours, mask);
+	mser(matGray, contours, mask);
 
 	int nBlobs = (int) contours.size();
 	Scalar mark(255,0,255);
