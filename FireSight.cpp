@@ -1,0 +1,93 @@
+/*
+FireSight.cpp https://github.com/firepick1/FirePick/wiki
+
+Copyright (C) 2013  Karl Lew, <karl@firepick.org>
+
+This library is free software; you can redistribute it and/or
+modify it under the terms of the GNU Lesser General Public
+License as published by the Free Software Foundation; either
+version 2.1 of the License, or (at your option) any later version.
+
+This library is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+Lesser General Public License for more details.
+
+You should have received a copy of the GNU Lesser General Public
+License along with this library; if not, write to the Free Software
+Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+*/
+
+#include <string.h>
+#include "FireLog.h"
+#include "FireSight.hpp"
+#include "opencv2/features2d/features2d.hpp"
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
+
+using namespace cv;
+
+MSER_holes::MSER_holes(int diameter) {
+  this->diameter = diameter;
+	tolerance = 1.15;
+	area = (diameter*diameter*3.141592)/4;
+	maxDiam = (int)(diameter * tolerance);
+  delta = 5;
+	minArea = (int)(area/tolerance); // 60;
+	maxArea = (int)(area*tolerance); //14400;
+	maxVariation = 0.25;
+	minDiversity = tolerance * tolerance - 1; // 0.2;
+	max_evolution = 200;
+	area_threshold = 1.01;
+	min_margin = .003;
+	edge_blur_size = 5;
+}
+
+void MSER_holes::scan(Mat &matRGB){
+	Mat matGray;
+	cvtColor(matRGB, matGray, CV_RGB2GRAY);
+	
+	Mat mask;
+	vector<vector<Point> > contours;
+	MSER(delta, minArea, maxArea, maxVariation, minDiversity,
+		max_evolution, area_threshold, min_margin, edge_blur_size)(matGray, contours, mask);
+
+	int nBlobs = (int) contours.size();
+	Scalar mark(255,0,255);
+	LOGINFO1("circles_MSER %d blobs", nBlobs);
+	for( int i = 0; i < nBlobs; i++) {
+		vector<Point> pts = contours[i];
+		int nPts = pts.size();
+		int red = (i & 1) ? 0 : 255;
+		int green = (i & 2) ? 128 : 255 ;
+		int blue = (i & 1) ? 255 : 0;
+		int minX = 0x7fff;
+		int maxX = 0;
+		int minY = 0x7fff;
+		int maxY = 0;
+		float avgX = 0;
+		float avgY = 0;
+		for (int j = 0; j < nPts; j++) {
+			if (pts[j].x < minX) { minX = pts[j].x; }
+			if (pts[j].y < minY) { minY = pts[j].y; }
+			if (pts[j].x > maxX) { maxX = pts[j].x; }
+			if (pts[j].y > maxY) { maxY = pts[j].y; }
+			avgX += pts[j].x;
+			avgY += pts[j].y;
+		}
+		avgX = avgX / nPts;
+		avgY = avgY / nPts;
+		if (maxX - minX < maxDiam && maxY - minY < maxDiam) {
+			red = 255; green = 0; blue = 255;
+			LOGINFO3("circles_MSER (%d,%d) %d pts MATCH", (int)(avgX * 10+.5), (int)(avgY*10 +.5), nPts);
+		} else {
+			LOGINFO3("circles_MSER (%d,%d) %d pts (other)", (int)(avgX * 10+.5), (int)(avgY*10 +.5), nPts);
+		}
+		for (int j = 0; j < nPts; j++) {
+			matRGB.at<Vec3b>(pts[j])[0] = red;
+			matRGB.at<Vec3b>(pts[j])[1] = green;
+			matRGB.at<Vec3b>(pts[j])[2] = blue;
+		}
+	}
+}
+
