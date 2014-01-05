@@ -26,6 +26,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "opencv2/imgproc/imgproc.hpp"
 
 using namespace cv;
+using namespace std;
 
 HoleRecognizer::HoleRecognizer(float minDiameter, float maxDiameter) {
 	maxDiam = maxDiameter;
@@ -34,7 +35,8 @@ HoleRecognizer::HoleRecognizer(float minDiameter, float maxDiameter) {
 	minArea = (int)(minDiameter*minDiameter*3.141592/4); // 60;
 	maxArea = (int)(maxDiameter*maxDiameter*3.141592/4); // 14400;
 	maxVariation = 0.25;
-	minDiversity = (maxArea - minArea)/minArea - 1; // 0.2;
+	minDiversity = (maxDiam - minDiam)/(float)minDiam; // 0.2;
+	LOGDEBUG3("MSER minArea:%d maxArea:%d minDiversity:%d/100", minArea, maxArea, (int)(minDiversity*100+0.5));
 	max_evolution = 200;
 	area_threshold = 1.01;
 	min_margin = .003;
@@ -45,7 +47,11 @@ HoleRecognizer::HoleRecognizer(float minDiameter, float maxDiameter) {
 
 void HoleRecognizer::scan(Mat &matRGB){
 	Mat matGray;
-	cvtColor(matRGB, matGray, CV_RGB2GRAY);
+	if (matRGB.channels() == 1) {
+		matRGB = matGray;
+	} else {
+		cvtColor(matRGB, matGray, CV_RGB2GRAY);
+	}
 	
 	Mat mask;
 	vector<vector<Point> > contours;
@@ -53,7 +59,7 @@ void HoleRecognizer::scan(Mat &matRGB){
 
 	int nBlobs = (int) contours.size();
 	Scalar mark(255,0,255);
-	LOGINFO1("circles_MSER %d blobs", nBlobs);
+	LOGDEBUG1("circles_MSER %d blobs", nBlobs);
 	for( int i = 0; i < nBlobs; i++) {
 		vector<Point> pts = contours[i];
 		int nPts = pts.size();
@@ -78,10 +84,12 @@ void HoleRecognizer::scan(Mat &matRGB){
 		avgY = avgY / nPts;
 		if (maxX - minX < maxDiam && maxY - minY < maxDiam) {
 			red = 255; green = 0; blue = 255;
-			LOGINFO3("circles_MSER (%d,%d) %d pts MATCH", (int)(avgX * 10+.5), (int)(avgY*10 +.5), nPts);
+			Vec3f hole(avgX, avgY, nPts);
+			LOGDEBUG3("circles_MSER (%d/10,%d/10)mm %d pts MATCH", (int)(hole[0] * 10+.5), (int)(hole[1]*10 +.5), (int)hole[2]);
 		} else {
-			LOGINFO3("circles_MSER (%d,%d) %d pts (other)", (int)(avgX * 10+.5), (int)(avgY*10 +.5), nPts);
+			LOGDEBUG3("circles_MSER (%d/10,%d/10)mm %d pts (other)", (int)(avgX * 10+.5), (int)(avgY*10 +.5), nPts);
 		}
+
 		for (int j = 0; j < nPts; j++) {
 			matRGB.at<Vec3b>(pts[j])[0] = red;
 			matRGB.at<Vec3b>(pts[j])[1] = green;
