@@ -2,7 +2,7 @@
 FireFuse.c https://github.com/firepick1/FirePick/wiki
 
 Copyright (C) 2001-2007  Miklos Szeredi <miklos@szeredi.hu>
-Copyright (C) 2013  Karl Lew, <karl@firepick.org>, changes adapted from hello.c by Miklos Szeredi
+Copyright (C) 2013,2014  Karl Lew, <karl@firepick.org>, changes adapted from hello.c by Miklos Szeredi
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public
@@ -32,6 +32,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <unistd.h>
 #include <time.h>
 #include <pthread.h>
+#include "version.h"
 #include "FirePick.h"
 #include "FirePiCam.h"
 #include "FireStep.h"
@@ -106,7 +107,7 @@ static int firefuse_getattr(const char *path, struct stat *stbuf)
     stbuf->st_mode = S_IFREG | 0444;
     stbuf->st_nlink = 1;
     stbuf->st_size = strlen(status_str);
-  } else if (strcmp(path, CIRCLES_PATH) == 0) {
+  } else if (strcmp(path, HOLES_PATH) == 0) {
     memcpy(&headcam_image_fstat, &headcam_image, sizeof(JPG));
     stbuf->st_mode = S_IFREG | 0444;
     stbuf->st_nlink = 1;
@@ -149,7 +150,7 @@ static int firefuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
   filler(buf, ".", NULL, 0);
   filler(buf, "..", NULL, 0);
   filler(buf, STATUS_PATH + 1, NULL, 0);
-  filler(buf, CIRCLES_PATH + 1, NULL, 0);
+  filler(buf, HOLES_PATH + 1, NULL, 0);
   filler(buf, CAM_PATH + 1, NULL, 0);
   filler(buf, FIRELOG_PATH + 1, NULL, 0);
   filler(buf, FIRESTEP_PATH + 1, NULL, 0);
@@ -183,7 +184,7 @@ static int firefuse_open(const char *path, struct fuse_file_info *fi) {
     if ((fi->flags & 3) != O_RDONLY) {
 	    return -EACCES;
     }
-  } else if (strcmp(path, CIRCLES_PATH) == 0) {
+  } else if (strcmp(path, HOLES_PATH) == 0) {
     if ((fi->flags & 3) != O_RDONLY) {
 	    return -EACCES;
     }
@@ -191,7 +192,7 @@ static int firefuse_open(const char *path, struct fuse_file_info *fi) {
 		if (!pJPG) {
 			return -ENOMEM;
 		}
-		firepick_circles(pJPG);
+		firepick_holes(pJPG);
   } else if (strcmp(path, CAM_PATH) == 0) {
     if ((fi->flags & 3) != O_RDONLY) {
 	    return -EACCES;
@@ -234,7 +235,7 @@ static int firefuse_release(const char *path, struct fuse_file_info *fi) {
   LOGTRACE1("firefuse_release %s", path);
   if (strcmp(path, STATUS_PATH) == 0) {
     // NOP
-  } else if (strcmp(path, CIRCLES_PATH) == 0) {
+  } else if (strcmp(path, HOLES_PATH) == 0) {
 		firefuse_freeImage(path, fi);
   } else if (strcmp(path, FIRELOG_PATH) == 0) {
     // NOP
@@ -263,13 +264,13 @@ static int firefuse_read(const char *path, char *buf, size_t size, off_t offset,
     } else {
 	    size = 0;
     }
-  } else if (strcmp(path, CIRCLES_PATH) == 0) {
-    const char *circles_str = "circles";
-    len = strlen(circles_str);
+  } else if (strcmp(path, HOLES_PATH) == 0) {
+    const char *holes_str = "holes";
+    len = strlen(holes_str);
     if (offset < len) {
 	    if (offset + size > len)
 		    size = len - offset;
-	    memcpy(buf, circles_str + offset, size);
+	    memcpy(buf, holes_str + offset, size);
     } else {
 	    size = 0;
     }

@@ -1,7 +1,7 @@
 /*
 FireSight.cpp https://github.com/firepick1/FirePick/wiki
 
-Copyright (C) 2013  Karl Lew, <karl@firepick.org>
+Copyright (C) 2013,2014  Karl Lew, <karl@firepick.org>
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public
@@ -19,6 +19,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include <string.h>
+#include <boost/format.hpp>
 #include "FireLog.h"
 #include "FireSight.hpp"
 #include "opencv2/features2d/features2d.hpp"
@@ -27,6 +28,32 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 using namespace cv;
 using namespace std;
+using namespace FireSight;
+
+MatchedRegion::MatchedRegion(Range xRange, Range yRange, Point2f average, int pointCount) {
+	this->xRange = xRange;
+	this->yRange = yRange;
+	this->average = average;
+	this->pointCount = pointCount;
+}
+
+string MatchedRegion::asJson() {
+	boost::format fmt(
+		"{"
+			" \"x\":{\"min\":%d,\"max\":%d,\"avg\":%.2f}"
+			",\"y\":{\"min\":%d,\"max\":%d,\"avg\":%.2f}"
+			",\"pts\":%d"
+		" }"
+	);
+	fmt % xRange.start;
+	fmt % xRange.end;
+	fmt % average.x;
+	fmt % yRange.start;
+	fmt % yRange.end;
+	fmt % average.y;
+	fmt % pointCount;
+	return fmt.str();
+}
 
 HoleRecognizer::HoleRecognizer(float minDiameter, float maxDiameter) {
 	maxDiam = maxDiameter;
@@ -45,7 +72,7 @@ HoleRecognizer::HoleRecognizer(float minDiameter, float maxDiameter) {
 		max_evolution, area_threshold, min_margin, edge_blur_size);
 }
 
-void HoleRecognizer::scan(Mat &matRGB){
+void HoleRecognizer::scan(Mat &matRGB, vector<MatchedRegion> &matches) {
 	Mat matGray;
 	if (matRGB.channels() == 1) {
 		matRGB = matGray;
@@ -54,46 +81,46 @@ void HoleRecognizer::scan(Mat &matRGB){
 	}
 	
 	Mat mask;
-	vector<vector<Point> > contours;
-	mser(matGray, contours, mask);
+	vector<vector<Point> > regions;
+	mser(matGray, regions, mask);
 
-	int nBlobs = (int) contours.size();
+	int nRegions = (int) regions.size();
 	Scalar mark(255,0,255);
-	LOGDEBUG1("circles_MSER %d blobs", nBlobs);
-	for( int i = 0; i < nBlobs; i++) {
-		vector<Point> pts = contours[i];
+	LOGTRACE1("HoleRecognizer::scan() -> matched %d regions", nRegions);
+	for( int i = 0; i < nRegions; i++) {
+		vector<Point> pts = regions[i];
 		int nPts = pts.size();
-		int red = (i & 1) ? 0 : 255;
-		int green = (i & 2) ? 128 : 255 ;
-		int blue = (i & 1) ? 255 : 0;
 		int minX = 0x7fff;
 		int maxX = 0;
 		int minY = 0x7fff;
 		int maxY = 0;
-		float avgX = 0;
-		float avgY = 0;
+		int totalX = 0;
+		int totalY = 0;
 		for (int j = 0; j < nPts; j++) {
 			if (pts[j].x < minX) { minX = pts[j].x; }
 			if (pts[j].y < minY) { minY = pts[j].y; }
 			if (pts[j].x > maxX) { maxX = pts[j].x; }
 			if (pts[j].y > maxY) { maxY = pts[j].y; }
-			avgX += pts[j].x;
-			avgY += pts[j].y;
+			totalX += pts[j].x;
+			totalY += pts[j].y;
 		}
-		avgX = avgX / nPts;
-		avgY = avgY / nPts;
+		float avgX = totalX / (float) nPts;
+		float avgY = totalY / (float) nPts;
 		if (maxX - minX < maxDiam && maxY - minY < maxDiam) {
-			red = 255; green = 0; blue = 255;
-			Vec3f hole(avgX, avgY, nPts);
-			LOGDEBUG3("circles_MSER (%d/10,%d/10)mm %d pts MATCH", (int)(hole[0] * 10+.5), (int)(hole[1]*10 +.5), (int)hole[2]);
+			MatchedRegion match(Range(minX, maxX), Range(minY, maxY), Point2f(avgX, avgY), nPts);
+			matches.push_back(match);
+			if (matRGB.channels() >= 3) {
+				for (int j = 0; j < nPts; j++) {
+					matRGB.at<Vec3b>(pts[j])[0] = 255;
+					matRGB.at<Vec3b>(pts[j])[1] = 0;
+					matRGB.at<Vec3b>(pts[j])[2] = 255;
+				}
+				string json = match.asJson();
+				LOGINFO2("HoleRecognizer %d. %s", matches.size(), json.c_str());
+			}
+			LOGTRACE3("circles_MSER (%d/10,%d/10)mm %d pts MATCHED", (int)(avgX * 10+.5), (int)(avgY*10 +.5), nPts);
 		} else {
-			LOGDEBUG3("circles_MSER (%d/10,%d/10)mm %d pts (other)", (int)(avgX * 10+.5), (int)(avgY*10 +.5), nPts);
-		}
-
-		for (int j = 0; j < nPts; j++) {
-			matRGB.at<Vec3b>(pts[j])[0] = red;
-			matRGB.at<Vec3b>(pts[j])[1] = green;
-			matRGB.at<Vec3b>(pts[j])[2] = blue;
+			LOGTRACE3("circles_MSER (%d/10,%d/10)mm %d pts (culled)", (int)(avgX * 10+.5), (int)(avgY*10 +.5), nPts);
 		}
 	}
 }

@@ -15,8 +15,8 @@ SET(CPACK_PACKAGE_VERSION_MINOR "${FireFuse_VERSION_MINOR}")
 include (CPack)
 
 configure_file (
-	"${PROJECT_SOURCE_DIR}/FireFuse.h.in"
-	"${PROJECT_BINARY_DIR}/FireFuse.h"
+	"${PROJECT_SOURCE_DIR}/version.h.in"
+	"${PROJECT_BINARY_DIR}/version.h"
 	)
 
 #include_directories(/usr/local/include)

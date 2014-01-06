@@ -1,5 +1,5 @@
 /*
-FireFuse.h https://github.com/firepick1/FireFuse/wiki
+version.h https://github.com/firepick1/FireFuse/wiki
 
 Copyright (C) 2013  Karl Lew, <karl@firepick.org>
 
@@ -18,36 +18,22 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#ifndef FIREFUSE_H
-#define FIREFUSE_H
+#ifndef VERSION_H
+#define VERSION_H
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-//////////// GENERATED FILE (from FireFuse.h.in) /////////////////
-//////////// GENERATED FILE (from FireFuse.h.in) /////////////////
-//////////// GENERATED FILE (from FireFuse.h.in) /////////////////
-
-#define MAX_GCODE_LEN 255 /* maximum characters in a gcode instruction */
+//////////// GENERATED FILE (from version.h.in) /////////////////
+//////////// GENERATED FILE (from version.h.in) /////////////////
+//////////// GENERATED FILE (from version.h.in) /////////////////
 
 #define FireFuse_VERSION_MAJOR @FireFuse_VERSION_MAJOR@
 #define FireFuse_VERSION_MINOR @FireFuse_VERSION_MINOR@
 
-#define STATUS_PATH "/status"
-#define CIRCLES_PATH "/circles"
-#define FIRESTEP_PATH "/firestep"
-#define FIRELOG_PATH "/firelog"
-#define CAM_PATH "/cam.jpg"
-
-typedef struct {
-  char *pData;
-  int length;
-  long reserved;
-} JPG;
-
-//////////// GENERATED FILE (from FireFuse.h.in) /////////////////
-//////////// GENERATED FILE (from FireFuse.h.in) /////////////////
-//////////// GENERATED FILE (from FireFuse.h.in) /////////////////
+//////////// GENERATED FILE (from version.h.in) /////////////////
+//////////// GENERATED FILE (from version.h.in) /////////////////
+//////////// GENERATED FILE (from version.h.in) /////////////////
 
 #ifdef __cplusplus
 }

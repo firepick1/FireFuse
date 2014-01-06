@@ -1,7 +1,7 @@
 /*
 FireSight.hpp https://github.com/firepick1/FirePick/wiki
 
-Copyright (C) 2013  Karl Lew, <karl@firepick.org>
+Copyright (C) 2013,2014  Karl Lew, <karl@firepick.org>
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public
@@ -25,25 +25,38 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 using namespace cv;
 
-typedef class HoleRecognizer {
-  public: 
-		HoleRecognizer(float minDiameter, float maxDiameter);
-		void scan(Mat &matRGB);
+namespace FireSight {
+	typedef struct MatchedRegion {
+		Range xRange;
+		Range yRange;
+		Point2f	average;
+		int pointCount;
 
-	private:
-		MSER mser;
-		float minDiam;
-		float maxDiam;
-		int delta;
-		int minArea;
-		int maxArea;
-		double maxVariation;
-		double minDiversity;
-		int max_evolution;
-		double area_threshold;
-		double min_margin;
-		int edge_blur_size;
+		MatchedRegion(Range xRange, Range yRange, Point2f average, int pointCount);
+		string asJson();
+	} MatchedRegion;
 
-} MSER_holes;
+	typedef class HoleRecognizer {
+		public: 
+			HoleRecognizer(float minDiameter, float maxDiameter);
+			void scan(Mat &matRGB, vector<MatchedRegion> &matches);
+
+		private:
+			MSER mser;
+			float minDiam;
+			float maxDiam;
+			int delta;
+			int minArea;
+			int maxArea;
+			double maxVariation;
+			double minDiversity;
+			int max_evolution;
+			double area_threshold;
+			double min_margin;
+			int edge_blur_size;
+
+	} MSER_holes;
+
+} // namespace FireSight
 
 #endif

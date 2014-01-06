@@ -1,7 +1,7 @@
 /*
-FirePick.h https://github.com/firepick1/FirePick/wiki
+version.h https://github.com/firepick1/FireFuse/wiki
 
-Copyright (C) 2013,2014  Karl Lew, <karl@firepick.org>
+Copyright (C) 2013  Karl Lew, <karl@firepick.org>
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public
@@ -18,17 +18,22 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#include "FireFuse.h"
-
-#ifndef FIREPICK_H
-#define FIREPICK_H
+#ifndef VERSION_H
+#define VERSION_H
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-const char* firepick_status();
-const void* firepick_holes(JPG *pJPG);
-int firepick_camera_daemon(JPG *pJPG);
+//////////// GENERATED FILE (from version.h.in) /////////////////
+//////////// GENERATED FILE (from version.h.in) /////////////////
+//////////// GENERATED FILE (from version.h.in) /////////////////
+
+#define FireFuse_VERSION_MAJOR 0
+#define FireFuse_VERSION_MINOR 1
+
+//////////// GENERATED FILE (from version.h.in) /////////////////
+//////////// GENERATED FILE (from version.h.in) /////////////////
+//////////// GENERATED FILE (from version.h.in) /////////////////
 
 #ifdef __cplusplus
 }

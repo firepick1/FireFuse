@@ -1,7 +1,7 @@
 /*
 FirePick.cpp https://github.com/firepick1/FirePick/wiki
 
-Copyright (C) 2013  Karl Lew, <karl@firepick.org>
+Copyright (C) 2013,2014  Karl Lew, <karl@firepick.org>
 
 This library is free software; you can redistribute it and/or
 modify it under the terms of the GNU Lesser General Public
@@ -23,6 +23,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
+#include "version.h"
 #include "FirePick.h"
 #include "FireLog.h"
 #include "FirePiCam.h"
@@ -31,16 +32,20 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 #include "opencv2/highgui/highgui.hpp"
 #include "opencv2/imgproc/imgproc.hpp"
 
+using namespace cv;
+using namespace FireSight;
+
 #define STATUS_BUFFER_SIZE 1024
 
 char status_buffer[STATUS_BUFFER_SIZE];
 
-const void* firepick_circles(JPG *pJPG) {
-	cv::Mat jpg(1, pJPG->length, CV_8UC1, pJPG->pData);
-	cv::Mat matRGB = imdecode(jpg, CV_LOAD_IMAGE_COLOR);
+const void* firepick_holes(JPG *pJPG) {
+	Mat jpg(1, pJPG->length, CV_8UC1, pJPG->pData);
+	Mat matRGB = imdecode(jpg, CV_LOAD_IMAGE_COLOR);
+	vector<MatchedRegion> matches;
 
 	HoleRecognizer recognizer(26/1.15, 26*1.15);
-  recognizer.scan(matRGB);
+  recognizer.scan(matRGB, matches);
 
 	imwrite("/home/pi/camcv.bmp", matRGB);
 
