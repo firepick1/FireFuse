@@ -31,6 +31,7 @@ namespace FireSight {
 		Range yRange;
 		Point2f	average;
 		int pointCount;
+		float ellipse; // area of ellipse that covers {xRange, yRange}
 
 		MatchedRegion(Range xRange, Range yRange, Point2f average, int pointCount);
 		string asJson();
@@ -39,7 +40,7 @@ namespace FireSight {
 	typedef class HoleRecognizer {
 		public: 
 			HoleRecognizer(float minDiameter, float maxDiameter);
-			void scan(Mat &matRGB, vector<MatchedRegion> &matches);
+			void scan(Mat &matRGB, vector<MatchedRegion> &matches, float maxEllipse = 1.03);
 
 		private:
 			MSER mser;
