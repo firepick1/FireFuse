@@ -34,12 +34,13 @@ using namespace FireSight;
 
 float pi = boost::math::constants::pi<float>();
 
-MatchedRegion::MatchedRegion(Range xRange, Range yRange, Point2f average, int pointCount) {
+MatchedRegion::MatchedRegion(Range xRange, Range yRange, Point2f average, int pointCount, float covar) {
 	this->xRange = xRange;
 	this->yRange = yRange;
 	this->average = average;
 	this->pointCount = pointCount;
 	this->ellipse = (xRange.end-xRange.start+1) * (yRange.end-yRange.start+1) * pi/4;
+	this->covar = covar;
 }
 
 string MatchedRegion::asJson() {
@@ -49,6 +50,7 @@ string MatchedRegion::asJson() {
 			",\"y\":{\"min\":%d,\"max\":%d,\"avg\":%.2f}"
 			",\"pts\":%d"
 			",\"ellipse\":%.2f"
+			",\"covar\":%.2f"
 		" }"
 	);
 	fmt % xRange.start;
@@ -59,6 +61,7 @@ string MatchedRegion::asJson() {
 	fmt % average.y;
 	fmt % pointCount;
 	fmt % ellipse;
+	fmt % covar;
 	return fmt.str();
 }
 
@@ -79,7 +82,67 @@ HoleRecognizer::HoleRecognizer(float minDiameter, float maxDiameter) {
 		max_evolution, area_threshold, min_margin, edge_blur_size);
 }
 
-void HoleRecognizer::scan(Mat &matRGB, vector<MatchedRegion> &matches, float maxEllipse) {
+void HoleRecognizer::scanRegion(vector<Point> &pts, int i, 
+	Mat &matRGB, vector<MatchedRegion> &matches, float maxEllipse, float maxCovar) 
+{
+	int nPts = pts.size();
+	int minX = 0x7fff;
+	int maxX = 0;
+	int minY = 0x7fff;
+	int maxY = 0;
+	int totalX = 0;
+	int totalY = 0;
+	float totalXY = 0;
+	for (int j = 0; j < nPts; j++) {
+		if (pts[j].x < minX) { minX = pts[j].x; }
+		if (pts[j].y < minY) { minY = pts[j].y; }
+		if (pts[j].x > maxX) { maxX = pts[j].x; }
+		if (pts[j].y > maxY) { maxY = pts[j].y; }
+		totalX += pts[j].x;
+		totalY += pts[j].y;
+		totalXY += pts[j].x * pts[j].y;
+	}
+	float avgX = totalX / (float) nPts;
+	float avgY = totalY / (float) nPts;
+	float covar = abs(totalXY / nPts - avgX * avgY);
+	MatchedRegion match(Range(minX, maxX), Range(minY, maxY), Point2f(avgX, avgY), nPts, covar);
+	string json;
+	int red = (i & 1) ? 0 : 255;
+	int green = (i & 2) ? 128 : 192;
+	int blue = (i & 1) ? 255 : 0;
+	if (matRGB.channels() >= 3) {
+		json = match.asJson();
+		LOGTRACE2("HoleRecognizer pts[%d] %s", i, json.c_str());
+	}
+
+	int duplicate = 0;
+	if (covar < maxCovar && maxX - minX < maxDiam && maxY - minY < maxDiam) {
+		for (int j = 0; !duplicate && j < matches.size(); j++) {
+			if (abs(match.average.x - matches[j].average.x) < maxDiam &&
+					abs(match.average.y - matches[j].average.y) < maxDiam) 
+			{ duplicate++; }
+		}
+		if (!duplicate && abs(match.ellipse-match.pointCount)/match.ellipse <= maxEllipse) {
+			if (matRGB.channels() >= 3) {
+				red = 255;
+				green = 0;
+				blue = 255;
+				int n = matches.size() + 1;
+				LOGDEBUG2("HoleRecognizer %d. %s", n, json.c_str());
+			}
+			matches.push_back(match);
+		}
+	}
+	if (!duplicate && matRGB.channels() >= 3) {
+		for (int j = 0; j < nPts; j++) {
+			matRGB.at<Vec3b>(pts[j])[0] = red;
+			matRGB.at<Vec3b>(pts[j])[1] = green;
+			matRGB.at<Vec3b>(pts[j])[2] = blue;
+		}
+	}
+}
+
+void HoleRecognizer::scan(Mat &matRGB, vector<MatchedRegion> &matches, float maxEllipse, float maxCovar) {
 	Mat matGray;
 	if (matRGB.channels() == 1) {
 		matRGB = matGray;
@@ -92,62 +155,9 @@ void HoleRecognizer::scan(Mat &matRGB, vector<MatchedRegion> &matches, float max
 	mser(matGray, regions, mask);
 
 	int nRegions = (int) regions.size();
-	Scalar mark(255,0,255);
 	LOGTRACE1("HoleRecognizer::scan() -> matched %d regions", nRegions);
 	for( int i = 0; i < nRegions; i++) {
-		vector<Point> pts = regions[i];
-		int nPts = pts.size();
-		int minX = 0x7fff;
-		int maxX = 0;
-		int minY = 0x7fff;
-		int maxY = 0;
-		int totalX = 0;
-		int totalY = 0;
-		for (int j = 0; j < nPts; j++) {
-			if (pts[j].x < minX) { minX = pts[j].x; }
-			if (pts[j].y < minY) { minY = pts[j].y; }
-			if (pts[j].x > maxX) { maxX = pts[j].x; }
-			if (pts[j].y > maxY) { maxY = pts[j].y; }
-			totalX += pts[j].x;
-			totalY += pts[j].y;
-		}
-		float avgX = totalX / (float) nPts;
-		float avgY = totalY / (float) nPts;
-		MatchedRegion match(Range(minX, maxX), Range(minY, maxY), Point2f(avgX, avgY), nPts);
-		string json;
-		int red = (i & 1) ? 0 : 255;
-		int green = (i & 2) ? 128 : 192;
-		int blue = (i & 1) ? 255 : 0;
-		if (matRGB.channels() >= 3) {
-			json = match.asJson();
-			LOGTRACE2("HoleRecognizer pts[%d] %s", i, json.c_str());
-		}
-
-		if (maxX - minX < maxDiam && maxY - minY < maxDiam) {
-			int duplicate = 0;
-			for (int j = 0; !duplicate && j < matches.size(); j++) {
-				if (abs(match.average.x - matches[j].average.x) < maxDiam &&
-					  abs(match.average.y - matches[j].average.y) < maxDiam) 
-				{ duplicate++; }
-			}
-			if (!duplicate && match.ellipse/match.pointCount <= maxEllipse) {
-				if (matRGB.channels() >= 3) {
-					red = 255;
-					green = 0;
-					blue = 255;
-					int n = matches.size() + 1;
-					LOGDEBUG2("HoleRecognizer %d. %s", n, json.c_str());
-				}
-				matches.push_back(match);
-			}
-		}
-		if (matRGB.channels() >= 3) {
-			for (int j = 0; j < nPts; j++) {
-				matRGB.at<Vec3b>(pts[j])[0] = red;
-				matRGB.at<Vec3b>(pts[j])[1] = green;
-				matRGB.at<Vec3b>(pts[j])[2] = blue;
-			}
-		}
+		scanRegion(regions[i], i, matRGB, matches, maxEllipse, maxCovar);
 	}
 }
 
