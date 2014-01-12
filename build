@@ -1,8 +1,35 @@
-#! /bin/sh
-echo building FireFuse...
+#! /bin/bash
+if [ ! -e /usr/include/boost ]
+then
+	echo "++++++++++++++++++ INSTALLING BOOST C++ LIBRARIES ++++++++++++"
+	apt-get -y install libboost1.50-all
+fi
+if [ ! -e /usr/include/fuse.h ] 
+then
+	echo "++++++++++++++++++ INSTALLING FUSE C LIBRARIES ++++++++++++"
+	apt-get -y install libfuse-dev
+fi
+if [ ! -e /usr/lib/libopencv_features2d.so ] 
+then
+	echo "++++++++++++++++++ INSTALLING OPENCV C++ LIBRARIES ++++++++++++"
+	apt-get -y install libopencv-dev
+fi
+if [ ! -e /opt/node ] 
+then
+	echo installing Nodejs...
+	mkdir /opt/node
+	pushd /opt/node
+	wget http://nodejs.org/dist/v0.10.22/node-v0.10.22-linux-arm-pi.tar.gz
+	tar xvzf node-*-linux-arm-pi.tar.gz
+	rm node-v0.10.22-linux-arm-pi.tar.gz
+	mv node*/* .
+	ex -s -c 'g/PATH/s/"$/:\/opt\/node\/bin"/' -c wq /etc/profile
+	source /etc/profile
+	popd
+fi
 if [ -e /dev/firefuse/firestep ] 
 then 
-	echo fusermount -u /dev/firefuse 
+	echo Uninstalling /dev/firefuse...
 	fusermount -u /dev/firefuse 
 fi
 
@@ -14,11 +41,13 @@ fi
 
 if [ -e CMakeFiles ] 
 then 
-	echo rm -rf CMakeFiles CMakeFiles.txt 
+	echo removing existing makefiles
 	rm -rf CMakeFiles CMakeFiles.txt 
 fi
 
+echo creating makefiles
 cmake .
+echo building and installing FireFuse...
 make install
 firefuse -o allow_other /dev/firefuse
 cat /dev/firefuse/status
