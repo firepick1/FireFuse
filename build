@@ -1,4 +1,17 @@
 #! /bin/bash
+if [ ! -e /usr/local/include/jansson.h ]
+then
+	echo "++++++++++++++++++ INSTALLING JANNSON C LIBRARY ++++++++++++"
+	apt-get -y install dh-autoreconf
+	git clone git://github.com/akheron/jansson ~pi/jannson
+	pushd ~pi/jannson
+	autoreconf -i
+	./configure
+	cmake .
+	make install
+	popd
+	
+fi
 if [ ! -e /usr/include/boost ]
 then
 	echo "++++++++++++++++++ INSTALLING BOOST C++ LIBRARIES ++++++++++++"
@@ -54,4 +67,14 @@ cmake .
 echo building and installing FireFuse...
 make install
 firefuse -o allow_other /dev/firefuse
-cat /dev/firefuse/status
+
+if [ -e /dev/firefuse/status ]
+then
+	if [ ! -e /etc/rc5.d/S01mountfirefuse.sh ] 
+	then
+		./postinst
+	fi
+	echo "FireFuse installed at startup in /dev/firefuse"
+else
+	echo "COULD NOT BUILD FIREFUSE"
+fi
