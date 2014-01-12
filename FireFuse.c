@@ -49,6 +49,9 @@ JPG headcam_image_fstat;	// image at time of most recent fstat()
 char* jpg_pData;
 int jpg_length;
 
+#define MAX_ECHO 255
+char echoBuf[MAX_ECHO+1];
+
 /////////////////////// THREADS ////////////////////////
 
 pthread_t tidCamera;
@@ -68,6 +71,8 @@ static void * firefuse_init(struct fuse_conn_info *conn)
   firelog_init(FIRELOG_FILE, FIRELOG_INFO);
   LOGINFO2("Initialized FireFuse %d.%d", FireFuse_VERSION_MAJOR, FireFuse_VERSION_MINOR);
   LOGINFO2("PID%d UID%d", (int) getpid(), (int)getuid());
+
+  memset(echoBuf, 0, sizeof(echoBuf));
 
   headcam_image.pData = NULL;
   headcam_image.length = 0;
@@ -109,7 +114,7 @@ static int firefuse_getattr(const char *path, struct stat *stbuf)
     stbuf->st_size = strlen(status_str);
   } else if (strcmp(path, HOLES_PATH) == 0) {
     memcpy(&headcam_image_fstat, &headcam_image, sizeof(JPG));
-    stbuf->st_mode = S_IFREG | 0444;
+    stbuf->st_mode = S_IFREG | 0666;
     stbuf->st_nlink = 1;
     stbuf->st_size = 1;
     stbuf->st_size = headcam_image_fstat.length;
@@ -118,6 +123,10 @@ static int firefuse_getattr(const char *path, struct stat *stbuf)
     stbuf->st_mode = S_IFREG | 0444;
     stbuf->st_nlink = 1;
     stbuf->st_size = headcam_image_fstat.length;
+  } else if (strcmp(path, ECHO_PATH) == 0) {
+    stbuf->st_mode = S_IFREG | 0666;
+    stbuf->st_nlink = 1;
+    stbuf->st_size = strlen(echoBuf);
   } else if (strcmp(path, FIRELOG_PATH) == 0) {
     stbuf->st_mode = S_IFREG | 0666;
     stbuf->st_nlink = 1;
@@ -153,6 +162,7 @@ static int firefuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
   filler(buf, HOLES_PATH + 1, NULL, 0);
   filler(buf, CAM_PATH + 1, NULL, 0);
   filler(buf, FIRELOG_PATH + 1, NULL, 0);
+  filler(buf, ECHO_PATH + 1, NULL, 0);
   filler(buf, FIRESTEP_PATH + 1, NULL, 0);
 
   return 0;
@@ -201,6 +211,12 @@ static int firefuse_open(const char *path, struct fuse_file_info *fi) {
 		if (!pJPG) {
 			return -ENOMEM;
 		}
+  } else if (strcmp(path, ECHO_PATH) == 0) {
+    if ((fi->flags & O_DIRECTORY)) {
+      LOGERROR1("firefuse_open %s -> O_DIRECTORY not allowed ", path);
+      return -EACCES;
+    }
+    LOGDEBUG2("firefuse_open %s %0x", path, fi->flags);
   } else if (strcmp(path, FIRELOG_PATH) == 0) {
     if ((fi->flags & O_DIRECTORY)) {
       LOGERROR1("firefuse_open %s -> O_DIRECTORY not allowed ", path);
@@ -237,6 +253,8 @@ static int firefuse_release(const char *path, struct fuse_file_info *fi) {
     // NOP
   } else if (strcmp(path, HOLES_PATH) == 0) {
 		firefuse_freeImage(path, fi);
+  } else if (strcmp(path, ECHO_PATH) == 0) {
+    // NOP
   } else if (strcmp(path, FIRELOG_PATH) == 0) {
     // NOP
   } else if (strcmp(path, FIRESTEP_PATH) == 0) {
@@ -285,6 +303,16 @@ static int firefuse_read(const char *path, char *buf, size_t size, off_t offset,
     } else {
       size = 0;
     }
+  } else if (strcmp(path, ECHO_PATH) == 0) {
+	  char *str = echoBuf;
+    len = strlen(echoBuf);
+    if (offset < len) {
+	    if (offset + size > len)
+		    size = len - offset;
+	    memcpy(buf, str + offset, size);
+    } else {
+	    size = 0;
+    }
   } else if (strcmp(path, FIRELOG_PATH) == 0) {
 	  char *str = "Actual log is " FIRELOG_FILE "\n";
     len = strlen(str);
@@ -325,7 +353,16 @@ static int firefuse_write(const char *pathname, const char *buf, size_t bufsize,
     LOGERROR1("firefuse_write %s -> null buffer", pathname);
     return EINVAL;
   }
-  if (strcmp(pathname, FIRELOG_PATH) == 0) {
+  if (strcmp(pathname, ECHO_PATH) == 0) {
+		if (bufsize > MAX_ECHO) {
+			sprintf(echoBuf, "firefuse_write %s -> string too long (%d > %d bytes)", pathname, bufsize, MAX_ECHO);
+			LOGERROR1("%s", echoBuf);
+			return EINVAL;
+		}
+		memcpy(echoBuf, buf, bufsize);
+		echoBuf[bufsize] = 0;
+		LOGINFO2("firefuse_write %s -> %s", pathname, echoBuf);
+	} else if (strcmp(pathname, FIRELOG_PATH) == 0) {
     switch (buf[0]) {
       case 'E': 
       case 'e': 
@@ -365,6 +402,8 @@ static int firefuse_truncate(const char *path, off_t size)
   (void) size;
   if (strcmp(path, "/") == 0) {
     // directory
+  } else if (strcmp(path, ECHO_PATH) == 0) {
+    // NOP
   } else if (strcmp(path, FIRELOG_PATH) == 0) {
     // NOP
   } else if (strcmp(path, FIRESTEP_PATH) == 0) {

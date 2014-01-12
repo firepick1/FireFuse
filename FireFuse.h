@@ -31,6 +31,7 @@ extern "C" {
 #define FIRESTEP_PATH "/firestep"
 #define FIRELOG_PATH "/firelog"
 #define CAM_PATH "/cam.jpg"
+#define ECHO_PATH "/echo"
 
 typedef struct {
   char *pData;
