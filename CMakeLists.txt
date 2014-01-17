@@ -22,6 +22,9 @@ configure_file (
 #include_directories(/usr/local/include)
 find_package( OpenCV REQUIRED )
 
+add_executable(firesight FireSightMain.cpp FireLog.c FireSight.cpp )
+target_link_libraries(firesight /usr/local/lib/libfirepicam.so ${OpenCV_LIBS})
+
 add_executable(firefuse FireFuse.c FireLog.c FireStep.cpp FirePick.cpp FireSight.cpp)
 target_link_libraries(firefuse /usr/local/lib/libfirepicam.so libfuse.so ${OpenCV_LIBS})
 
