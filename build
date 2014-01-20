@@ -30,6 +30,26 @@ then
 	echo "++++++++++++++++++ INSTALLING OPENCV C++ LIBRARIES ++++++++++++"
 	apt-get -y install libopencv-dev
 fi
+if [ ! -e /usr/lib/libfirepicam.so ]
+then
+	echo "++++++++++++++++++ INSTALLING firepicam C++ LIBRARY ++++++++++++"
+	pushd ..
+	git clone git://github.com/firepick1/FirePiCam
+	popd
+	pushd ../FirePiCam
+	./build
+	popd
+fi
+if [ ! -e /usr/lib/libfiresight.so ]
+then
+	echo "++++++++++++++++++ INSTALLING firesight C++ LIBRARY ++++++++++++"
+	pushd ..
+	git clone git://github.com/firepick1/FireSight
+	popd
+	pushd ../FireSight
+	./build
+	popd
+fi
 if [ ! -e /opt/node ] 
 then
 	echo installing Nodejs...

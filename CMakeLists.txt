@@ -23,7 +23,7 @@ configure_file (
 find_package( OpenCV REQUIRED )
 
 add_executable(firefuse FireFuse.c FireStep.cpp FirePick.cpp )
-target_link_libraries(firefuse /usr/local/lib/libfirepicam.so libfiresight.so libfuse.so ${OpenCV_LIBS})
+target_link_libraries(firefuse libfirepicam.so libfiresight.so libfuse.so ${OpenCV_LIBS})
 
 INSTALL(TARGETS firefuse DESTINATION bin)
 INSTALL(PROGRAMS mountfirefuse.sh DESTINATION /etc/init.d/)
