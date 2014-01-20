@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
 project( FireFuse )
+
 SET(COMPILE_DEFINITIONS -Werror)
 SET(FireFuse_VERSION_MAJOR 0)
 SET(FireFuse_VERSION_MINOR 1)
@@ -19,7 +20,7 @@ configure_file (
 	"${PROJECT_BINARY_DIR}/version.h"
 	)
 
-#include_directories(/usr/local/include)
+include_directories(/usr/local/include)
 find_package( OpenCV REQUIRED )
 
 add_executable(firefuse FireFuse.c FireStep.cpp FirePick.cpp )
