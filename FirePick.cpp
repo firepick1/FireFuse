@@ -14,21 +14,21 @@
 #include "opencv2/imgproc/imgproc.hpp"
 
 using namespace cv;
-using namespace FireSight;
+using namespace firesight;
 
 #define STATUS_BUFFER_SIZE 1024
 
 char status_buffer[STATUS_BUFFER_SIZE];
 
 const void* firepick_holes(JPG *pJPG) {
-	Mat jpg(1, pJPG->length, CV_8UC1, pJPG->pData);
-	Mat matRGB = imdecode(jpg, CV_LOAD_IMAGE_COLOR);
-	vector<MatchedRegion> matches;
+  Mat jpg(1, pJPG->length, CV_8UC1, pJPG->pData);
+  Mat matRGB = imdecode(jpg, CV_LOAD_IMAGE_COLOR);
+  vector<MatchedRegion> matches;
 
-	HoleRecognizer recognizer(26/1.15, 26*1.15);
+  HoleRecognizer recognizer(26/1.15, 26*1.15);
   recognizer.scan(matRGB, matches);
 
-	imwrite("/home/pi/camcv.bmp", matRGB);
+  imwrite("/home/pi/camcv.bmp", matRGB);
 
   return pJPG;
 }
@@ -39,10 +39,10 @@ const char* firepick_status() {
   strcpy(timebuf, ctime(&current_time));
   timebuf[strlen(timebuf)-1] = 0;
 
-	const char *errorOrWarn = firelog_lastMessage(FIRELOG_WARN);
-	if (strlen(errorOrWarn)) {
-		return errorOrWarn;
-	}
+  const char *errorOrWarn = firelog_lastMessage(FIRELOG_WARN);
+  if (strlen(errorOrWarn)) {
+    return errorOrWarn;
+  }
 
   sprintf(status_buffer, 
     "{\n"

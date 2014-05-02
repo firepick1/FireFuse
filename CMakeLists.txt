@@ -7,7 +7,14 @@ SET(FireFuse_VERSION_MINOR 1)
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -g")
 SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_FILE_OFFSET_BITS=64")
 
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include (InstallRequiredSystemLibraries)
+include_directories(/usr/local/include)
+get_property(dirs DIRECTORY . PROPERTY INCLUDE_DIRECTORIES)
+message("INCLUDE_DIRECTORIES:${dirs}")
+
+link_directories( ${BUILD_TARGET_DIR} /usr/local/lib /usr/lib )
+
 SET(CPACK_RESOURCE_FILE_LICENSE  
      "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
 SET(CPACK_PACKAGE_GENERATED_WARNING "GENERATED FILE!!! DO NOT CHANGE!!!")
@@ -20,11 +27,10 @@ configure_file (
 	"${PROJECT_BINARY_DIR}/version.h"
 	)
 
-include_directories(/usr/local/include)
 find_package( OpenCV REQUIRED )
 
-add_executable(firefuse FireFuse.c FireStep.cpp FirePick.cpp )
-target_link_libraries(firefuse libfirepicam.so libfiresight.so libfuse.so ${OpenCV_LIBS})
+add_executable(firefuse FireFuse.c FireLog.cpp FireStep.cpp FirePick.cpp )
+target_link_libraries(firefuse libfirepicam.so lib_firesight.so libfuse.so ${OpenCV_LIBS})
 
 INSTALL(TARGETS firefuse DESTINATION bin)
 INSTALL(PROGRAMS mountfirefuse.sh DESTINATION /etc/init.d/)
