@@ -158,8 +158,8 @@ fi
 
 if [ ! -e /var/firefuse/cv/1/cve ]; then
   echo creating CVE folders
-  mkdir -p /var/firefuse/cv/1/cve
-  chown pi:pi /var/firefuse/cv/1/cve
+  mkdir -p /var/firefuse
+  cp -r cv /var/firefuse
 fi
 
 echo creating makefiles
