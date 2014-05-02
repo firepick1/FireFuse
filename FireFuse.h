@@ -7,6 +7,13 @@ extern "C" {
 
 #define MAX_GCODE_LEN 255 /* maximum characters in a gcode instruction */
 
+#define FIREREST_CAM1 "/1"
+#define FIREREST_CV "/cv"
+#define FIREREST_CVE "/cve"
+#define FIREREST_SAVE "/save"
+#define FIREREST_JPG "/jpg"
+#define FIREREST_PNG "/png"
+
 #define STATUS_PATH "/status"
 #define HOLES_PATH "/holes"
 #define FIRESTEP_PATH "/firestep"
