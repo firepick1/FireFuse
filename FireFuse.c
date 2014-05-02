@@ -2,6 +2,7 @@
 #define FUSE_USE_VERSION 26
 
 #include <fuse.h>
+#include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -90,6 +91,16 @@ static int firefuse_getattr(const char *path, struct stat *stbuf)
   } else if (strcmp(path, FIREREST_CV) == 0) {
     stbuf->st_mode = S_IFDIR | 0755;
     stbuf->st_nlink = 1; // Safe default value
+  } else if (strcmp(path, FIREREST_CV_1) == 0) {
+    stbuf->st_mode = S_IFDIR | 0755;
+    stbuf->st_nlink = 1; // Safe default value
+  } else if (strcmp(path, FIREREST_CV_1_CVE) == 0) {
+    stbuf->st_mode = S_IFDIR | 0755;
+    stbuf->st_nlink = 1; // Safe default value
+  } else if (strncmp(path, FIREREST_CV_1_CVE, strlen(FIREREST_CV_1_CVE)) == 0) {
+    stbuf->st_mode = S_IFREG | 0444;
+    stbuf->st_nlink = 1;
+    stbuf->st_size = 0;
   } else if (strcmp(path, STATUS_PATH) == 0) {
     const char *status_str = firepick_status();
     stbuf->st_mode = S_IFREG | 0444;
@@ -147,10 +158,29 @@ static int firefuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     filler(buf, FIRELOG_PATH + 1, NULL, 0);
     filler(buf, ECHO_PATH + 1, NULL, 0);
     filler(buf, FIRESTEP_PATH + 1, NULL, 0);
+    filler(buf, FIREREST_CV + 1, NULL, 0);
   } else if (strcmp(path, FIREREST_CV) == 0) {
     filler(buf, ".", NULL, 0);
     filler(buf, "..", NULL, 0);
-    filler(buf, FIREREST_CAM1 + 1, NULL, 0);
+    filler(buf, FIREREST_1 + 1, NULL, 0);
+  } else if (strcmp(path, FIREREST_CV_1) == 0) {
+    filler(buf, ".", NULL, 0);
+    filler(buf, "..", NULL, 0);
+    filler(buf, FIREREST_CVE + 1, NULL, 0);
+  } else if (strcmp(path, FIREREST_CV_1_CVE) == 0) {
+    filler(buf, ".", NULL, 0);
+    filler(buf, "..", NULL, 0);
+    DIR *dirp = opendir(FIREREST_VAR_1_CVE);
+    if (dirp) {
+      struct dirent * dp;
+      while ((dp = readdir(dirp)) != NULL) {
+	LOGTRACE1("readdir(%s)", dp->d_name);
+	filler(buf, dp->d_name, NULL, 0);
+      }
+      (void)closedir(dirp);
+    } else {
+      LOGERROR1("Cannot read directory %s", FIREREST_VAR_1_CVE);
+    }
   } else {
     return -ENOENT;
   }
@@ -393,6 +423,10 @@ static int firefuse_truncate(const char *path, off_t size)
   if (strcmp(path, "/") == 0) {
     // directory
   } else if (strcmp(path, FIREREST_CV) == 0) {
+    // directory
+  } else if (strcmp(path, FIREREST_CV_1) == 0) {
+    // directory
+  } else if (strcmp(path, FIREREST_CV_1_CVE) == 0) {
     // directory
   } else if (strcmp(path, ECHO_PATH) == 0) {
     // NOP

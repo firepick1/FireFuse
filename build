@@ -150,15 +150,21 @@ if [ ! -e /dev/firefuse ]; then
   echo mkdir /dev/firefuse 
   mkdir /dev/firefuse 
 fi
-
 if [ -e CMakeFiles ] ; then 
   echo removing existing makefiles
   rm -rf CMakeCache.txt CMakeFiles CMakeFiles.txt target cmake_install.cmake CPackConfig.cmake CPackSourceConfig.cmake
   sudo -u $SUDO_USER mkdir target
 fi
 
+if [ ! -e /var/firefuse/cv/1/cve ]; then
+  echo creating CVE folders
+  mkdir -p /var/firefuse/cv/1/cve
+  chown pi:pi /var/firefuse/cv/1/cve
+fi
+
 echo creating makefiles
 sudo -u $SUDO_USER cmake .
+
 echo building and installing FireFuse...
 sudo -u $SUDO_USER make
 make install
@@ -166,6 +172,7 @@ if [ $? -ne 0 ]; then
   echo FAILED: make install
   exit -1
 fi
+
 firefuse -o allow_other /dev/firefuse
 
 if [ -e /dev/firefuse/status ]; then
