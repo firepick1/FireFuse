@@ -229,6 +229,37 @@ static JPG* firefuse_allocImage(const char *path, struct fuse_file_info *fi) {
   return pJPG;
 }
 
+static result firefuse_openFireREST(const char *path, struct fuse_file_info *fi) {
+  int result = 0;
+  char varPath[255];
+  snprintf(varPath, sizeof(varPath), "%s%s", FIREREST_VAR, path);
+  std::ifstream is(varPath, std::ifstream::binary);
+  if (is && is.good()) {
+    // get length of file:
+    is.seekg (0, is.end);
+    int length = is.tellg();
+    is.seekg (0, is.beg);
+    
+    char * buffer = calloc(length);
+    if (buffer) {
+      is.read (buffer,length);
+      if (is.good()) {
+	fi->direct_io = 1;
+	fi->fh = (uint64_t) (size_t) buffer;
+      } else {
+	LOGERROR1("firefuse_openFireREST(%s) failed", path);
+	free(buffer);
+      }
+    } else {
+      result = -ENOMEM;
+    }
+  } else {
+    LOGERROR1("firefuse_openFireREST(%s) file not found", path);
+    result = -ENOENT;
+  }
+  return result;
+}
+
 static int firefuse_open(const char *path, struct fuse_file_info *fi) {
   int result = 0;
   
@@ -253,6 +284,11 @@ static int firefuse_open(const char *path, struct fuse_file_info *fi) {
     if (!pJPG) {
       return -ENOMEM;
     }
+  } else if (strncmp(path, FIREREST_CV_1_CVE, strlen(FIREREST_CV_1_CVE) == 0) {
+    if ((fi->flags & 3) != O_RDONLY) {
+      return -EACCES;
+    }
+    result = firefuse_openFireREST(path, fi);
   } else if (strcmp(path, ECHO_PATH) == 0) {
     if ((fi->flags & O_DIRECTORY)) {
       LOGERROR1("firefuse_open %s -> O_DIRECTORY not allowed ", path);
@@ -295,6 +331,13 @@ static int firefuse_release(const char *path, struct fuse_file_info *fi) {
     // NOP
   } else if (strcmp(path, HOLES_PATH) == 0) {
     firefuse_freeImage(path, fi);
+  } else if (strncmp(path, FIREREST_CV_1_CVE, strlen(FIREREST_CV_1_CVE) == 0) {
+    if (fi->fh) {
+      char * buffer = (char *) (size_t) fi->fh;
+      LOGTRACE1("firefuse_release %s freeing buffer", path);
+      free(buffer);
+      fi->fh = 0;
+    }
   } else if (strcmp(path, ECHO_PATH) == 0) {
     // NOP
   } else if (strcmp(path, FIRELOG_PATH) == 0) {
@@ -321,6 +364,17 @@ static int firefuse_read(const char *path, char *buf, size_t size, off_t offset,
       if (offset + size > len)
         size = len - offset;
       memcpy(buf, status_str + offset, size);
+    } else {
+      size = 0;
+    }
+  } else if (strncmp(path, FIREREST_CV_1_CVE, strlen(FIREREST_CV_1_CVE) == 0) {
+    char *buffer = (char *) (size_t) fi->fh;
+    len = *(size_t *)buffer;
+    buffer += sizeof(size_t);
+    if (offset < len) {
+      if (offset + size > len)
+        size = len - offset;
+      memcpy(buf, holes_str + offset, size);
     } else {
       size = 0;
     }
