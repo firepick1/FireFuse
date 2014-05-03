@@ -97,10 +97,19 @@ static int firefuse_getattr(const char *path, struct stat *stbuf)
   } else if (strcmp(path, FIREREST_CV_1_CVE) == 0) {
     stbuf->st_mode = S_IFDIR | 0755;
     stbuf->st_nlink = 1; // Safe default value
-  } else if (strncmp(path, FIREREST_CV_1_CVE, strlen(FIREREST_CV_1_CVE)) == 0) {
+  } else if (strncmp(path, FIREREST_CV_1_CVE_DIR, strlen(FIREREST_CV_1_CVE_DIR)) == 0) {
     stbuf->st_mode = S_IFREG | 0444;
     stbuf->st_nlink = 1;
     stbuf->st_size = 0;
+  } else if (strncmp(path, FIREREST_CV_1_CVE, strlen(FIREREST_CV_1_CVE)) == 0) {
+    if (strchr(path, '.')) {
+      stbuf->st_mode = S_IFREG | 0444;
+      stbuf->st_nlink = 1;
+      stbuf->st_size = 0;
+    } else {
+      stbuf->st_mode = S_IFDIR | 0755;
+      stbuf->st_nlink = 1; // Safe default value
+    }
   } else if (strcmp(path, STATUS_PATH) == 0) {
     const char *status_str = firepick_status();
     stbuf->st_mode = S_IFREG | 0444;
@@ -166,7 +175,14 @@ static int firefuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
   } else if (strcmp(path, FIREREST_CV_1) == 0) {
     filler(buf, ".", NULL, 0);
     filler(buf, "..", NULL, 0);
-    filler(buf, FIREREST_CVE + 1, NULL, 0);
+  } else if (strncmp(path, FIREREST_CV_1_CVE_DIR, strlen(FIREREST_CV_1_CVE_DIR)) == 0) {
+    filler(buf, ".", NULL, 0);
+    filler(buf, "..", NULL, 0);
+    filler(buf, FIREREST_PIPELINE_JSON + 1, NULL, 0);
+    filler(buf, FIREREST_PIPELINE_JPG + 1, NULL, 0);
+    filler(buf, FIREREST_PIPELINE_PNG + 1, NULL, 0);
+    filler(buf, FIREREST_SAVED_PNG + 1, NULL, 0);
+    filler(buf, FIREREST_MODEL_JSON + 1, NULL, 0);
   } else if (strcmp(path, FIREREST_CV_1_CVE) == 0) {
     filler(buf, ".", NULL, 0);
     filler(buf, "..", NULL, 0);

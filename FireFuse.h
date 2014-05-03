@@ -7,15 +7,20 @@ extern "C" {
 
 #define MAX_GCODE_LEN 255 /* maximum characters in a gcode instruction */
 
-#define FIREREST_VAR_1_CVE "/var/firefuse/cv/1/cve"
 #define FIREREST_1 "/1"
 #define FIREREST_CV_1 "/cv/1"
 #define FIREREST_CV_1_CVE "/cv/1/cve"
+#define FIREREST_CV_1_CVE_DIR "/cv/1/cve/"
 #define FIREREST_CV "/cv"
 #define FIREREST_CVE "/cve"
-#define FIREREST_JPG "/jpg"
-#define FIREREST_PNG "/png"
+#define FIREREST_IMAGE_JPG "/image.jpg"
+#define FIREREST_IMAGE_PNG "/image.png"
+#define FIREREST_MODEL_JSON "/model.json"
+#define FIREREST_PIPELINE_JPG "/pipeline.jpg"
+#define FIREREST_PIPELINE_JSON "/pipeline.json"
+#define FIREREST_PIPELINE_PNG "/pipeline.png"
 #define FIREREST_SAVE "/save"
+#define FIREREST_VAR_1_CVE "/var/firefuse/cv/1/cve"
 
 #define STATUS_PATH "/status"
 #define HOLES_PATH "/holes"
