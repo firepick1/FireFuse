@@ -97,10 +97,6 @@ static int firefuse_getattr(const char *path, struct stat *stbuf)
   } else if (strcmp(path, FIREREST_CV_1_CVE) == 0) {
     stbuf->st_mode = S_IFDIR | 0755;
     stbuf->st_nlink = 1; // Safe default value
-  } else if (strncmp(path, FIREREST_CV_1_CVE_DIR, strlen(FIREREST_CV_1_CVE_DIR)) == 0) {
-    stbuf->st_mode = S_IFREG | 0444;
-    stbuf->st_nlink = 1;
-    stbuf->st_size = 0;
   } else if (strncmp(path, FIREREST_CV_1_CVE, strlen(FIREREST_CV_1_CVE)) == 0) {
     if (strchr(path, '.')) {
       stbuf->st_mode = S_IFREG | 0444;
