@@ -98,10 +98,19 @@ static int firefuse_getattr(const char *path, struct stat *stbuf)
     stbuf->st_mode = S_IFDIR | 0755;
     stbuf->st_nlink = 1; // Safe default value
   } else if (strncmp(path, FIREREST_CV_1_CVE, strlen(FIREREST_CV_1_CVE)) == 0) {
-    if (strchr(path, '.')) {
-      stbuf->st_mode = S_IFREG | 0444;
-      stbuf->st_nlink = 1;
-      stbuf->st_size = 0;
+    char * pDot = strchr(path, '.');
+    if (pDot) {
+      char varPath[255];
+      snprintf(varPath, sizeof(varPath), "%s%s", FIREREST_VAR, path);
+      struct stat filestatus;
+      res = stat( varPath, &filestatus );
+      if (res) {
+        LOGERROR2("firefuse_getattr(%s) stat -> %d", path, res);
+      } else {
+	stbuf->st_mode = S_IFREG | 0444;
+	stbuf->st_nlink = 1;
+	stbuf->st_size = filestatus.st_size;
+      }
     } else {
       stbuf->st_mode = S_IFDIR | 0755;
       stbuf->st_nlink = 1; // Safe default value
@@ -171,7 +180,8 @@ static int firefuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
   } else if (strcmp(path, FIREREST_CV_1) == 0) {
     filler(buf, ".", NULL, 0);
     filler(buf, "..", NULL, 0);
-  } else if (strncmp(path, FIREREST_CV_1_CVE_DIR, strlen(FIREREST_CV_1_CVE_DIR)) == 0) {
+    filler(buf, FIREREST_CV_1_CVE + 1, NULL, 0);
+  } else if (strncmp(path, FIREREST_CV_1_CVE_SUBDIR, strlen(FIREREST_CV_1_CVE_SUBDIR)) == 0) {
     filler(buf, ".", NULL, 0);
     filler(buf, "..", NULL, 0);
     filler(buf, FIREREST_PIPELINE_JSON + 1, NULL, 0);
