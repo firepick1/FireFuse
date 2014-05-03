@@ -22,8 +22,8 @@
 long bytes_read = 0;
 long seconds = 0;
 
-JPG headcam_image;     // perpetually changing image
-JPG headcam_image_fstat;  // image at time of most recent fstat()
+FuseDataBuffer headcam_image;     // perpetually changing image
+FuseDataBuffer headcam_image_fstat;  // image at time of most recent fstat()
 
 #define FIRELOG_FILE "/var/log/firefuse.log"
 
@@ -121,13 +121,13 @@ static int firefuse_getattr(const char *path, struct stat *stbuf)
     stbuf->st_nlink = 1;
     stbuf->st_size = strlen(status_str);
   } else if (strcmp(path, HOLES_PATH) == 0) {
-    memcpy(&headcam_image_fstat, &headcam_image, sizeof(JPG));
+    memcpy(&headcam_image_fstat, &headcam_image, sizeof(FuseDataBuffer));
     stbuf->st_mode = S_IFREG | 0666;
     stbuf->st_nlink = 1;
     stbuf->st_size = 1;
     stbuf->st_size = headcam_image_fstat.length;
   } else if (strcmp(path, CAM_PATH) == 0) {
-    memcpy(&headcam_image_fstat, &headcam_image, sizeof(JPG));
+    memcpy(&headcam_image_fstat, &headcam_image, sizeof(FuseDataBuffer));
     stbuf->st_mode = S_IFREG | 0444;
     stbuf->st_nlink = 1;
     stbuf->st_size = headcam_image_fstat.length;
@@ -210,15 +210,28 @@ static int firefuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
   return 0;
 }
 
-static JPG* firefuse_allocImage(const char *path, struct fuse_file_info *fi) {
+static FuseDataBuffer* firefuse_allocDataBuffer(const char *path, struct fuse_file_info *fi, size_t length) {
+  int result = 0;
+  FuseDataBuffer *pBuffer = calloc(sizeof(FuseDataBuffer) + length, 1);
+  if (pBuffer) {
+    pBuffer->length = length;
+    pBuffer->pData = (void *) &pBuffer->reserved; 
+    LOGTRACE1("firefuse_allocImage allocated data buffer: %ldB", length);
+  } else {
+    LOGERROR2("firefuse_allocImage %s Could not allocate data buffer: %ldB", path, length);
+    result = -ENOMEM;
+  }
+  fi->direct_io = 1;
+  fi->fh = (uint64_t) (size_t) pBuffer;
+  return pBuffer;
+}
+
+static FuseDataBuffer* firefuse_allocImage(const char *path, struct fuse_file_info *fi) {
   int result = 0;
   int length = headcam_image_fstat.length;
-  JPG *pJPG = calloc(sizeof(JPG) + length, 1);
+  FuseDataBuffer *pJPG = firefuse_allocDataBuffer(path, fi, length);
   if (pJPG) {
-    pJPG->length = length;
-    pJPG->pData = (void *) &pJPG->reserved; 
     memcpy(pJPG->pData, headcam_image_fstat.pData, length);
-    LOGTRACE1("firefuse_allocImage allocated image memory: %ldB", length);
   } else {
     LOGERROR2("firefuse_allocImage %s Could not allocate image memory: %ldB", path, length);
     result = -ENOMEM;
@@ -240,9 +253,9 @@ static result firefuse_openFireREST(const char *path, struct fuse_file_info *fi)
     int length = is.tellg();
     is.seekg (0, is.beg);
     
-    char * buffer = calloc(length);
-    if (buffer) {
-      is.read (buffer,length);
+    FuseDataBuffer *pBuffer = firefuse_allocDataBuffer(path, fi, length);
+    if (pBuffer) {
+      is.read (pBuffer->pData,length);
       if (is.good()) {
 	fi->direct_io = 1;
 	fi->fh = (uint64_t) (size_t) buffer;
@@ -271,7 +284,7 @@ static int firefuse_open(const char *path, struct fuse_file_info *fi) {
     if ((fi->flags & 3) != O_RDONLY) {
       return -EACCES;
     }
-    JPG *pJPG = firefuse_allocImage(path, fi);
+    FuseDataBuffer *pJPG = firefuse_allocImage(path, fi);
     if (!pJPG) {
       return -ENOMEM;
     }
@@ -280,7 +293,7 @@ static int firefuse_open(const char *path, struct fuse_file_info *fi) {
     if ((fi->flags & 3) != O_RDONLY) {
       return -EACCES;
     }
-    JPG *pJPG = firefuse_allocImage(path, fi);
+    FuseDataBuffer *pJPG = firefuse_allocImage(path, fi);
     if (!pJPG) {
       return -ENOMEM;
     }
@@ -316,11 +329,11 @@ static int firefuse_open(const char *path, struct fuse_file_info *fi) {
   return result;
 }
 
-static void firefuse_freeImage(const char *path, struct fuse_file_info *fi) {
+static void firefuse_freeDataBuffer(const char *path, struct fuse_file_info *fi) {
   if (fi->fh) {
-    JPG *pJPG = (JPG *)(size_t) fi->fh;
-    LOGTRACE2("firefuse_release %s freeing image: %ldB", path, pJPG->length);
-    free(pJPG);
+    FuseDataBuffer *pBuffer = (FuseDataBuffer *)(size_t) fi->fh;
+    LOGTRACE2("firefuse_release %s freeing data buffer: %ldB", path, pBuffer->length);
+    free(pBuffer);
     fi->fh = 0;
   }
 }
@@ -330,14 +343,9 @@ static int firefuse_release(const char *path, struct fuse_file_info *fi) {
   if (strcmp(path, STATUS_PATH) == 0) {
     // NOP
   } else if (strcmp(path, HOLES_PATH) == 0) {
-    firefuse_freeImage(path, fi);
+    firefuse_freeDataBuffer(path, fi);
   } else if (strncmp(path, FIREREST_CV_1_CVE, strlen(FIREREST_CV_1_CVE) == 0) {
-    if (fi->fh) {
-      char * buffer = (char *) (size_t) fi->fh;
-      LOGTRACE1("firefuse_release %s freeing buffer", path);
-      free(buffer);
-      fi->fh = 0;
-    }
+    firefuse_freeDataBuffer(path, fi);
   } else if (strcmp(path, ECHO_PATH) == 0) {
     // NOP
   } else if (strcmp(path, FIRELOG_PATH) == 0) {
@@ -345,7 +353,7 @@ static int firefuse_release(const char *path, struct fuse_file_info *fi) {
   } else if (strcmp(path, FIRESTEP_PATH) == 0) {
     // NOP
   } else if (strcmp(path, CAM_PATH) == 0) {
-    firefuse_freeImage(path, fi);
+    firefuse_freeDataBuffer(path, fi);
   }
   return 0;
 }
@@ -368,13 +376,13 @@ static int firefuse_read(const char *path, char *buf, size_t size, off_t offset,
       size = 0;
     }
   } else if (strncmp(path, FIREREST_CV_1_CVE, strlen(FIREREST_CV_1_CVE) == 0) {
-    char *buffer = (char *) (size_t) fi->fh;
-    len = *(size_t *)buffer;
-    buffer += sizeof(size_t);
+    FuseDataBuffer *pBuffer = (FuseDataBuffer *) (size_t) fi->fh;
+    len = pBuffer->length;
     if (offset < len) {
-      if (offset + size > len)
+      if (offset + size > len) {
         size = len - offset;
-      memcpy(buf, holes_str + offset, size);
+      }
+      memcpy(buf, pBuffer->pData + offset, size);
     } else {
       size = 0;
     }
@@ -389,7 +397,7 @@ static int firefuse_read(const char *path, char *buf, size_t size, off_t offset,
       size = 0;
     }
   } else if (strcmp(path, CAM_PATH) == 0) {
-    JPG *pJPG = (JPG *) (size_t) fi->fh;
+    FuseDataBuffer *pJPG = (FuseDataBuffer *) (size_t) fi->fh;
     len = pJPG->length;
     if (offset < len) {
       if (offset + size > len) {

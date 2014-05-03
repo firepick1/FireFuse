@@ -1,5 +1,13 @@
 #! /bin/bash
 
+if [ "$(arch)" != "armv6l" ] || [ "$(lsb_release -is)" != "Debian" ] ;then
+  echo "========================== WARNING ==============================="
+  echo "FireFuse is currently only supported on Raspberry Pi with Raspbian"
+  echo "=================================================================="
+else 
+  echo "Raspberry Pi Debian confirmed for installation"
+fi
+
 cv="install"
  
 function help() {
@@ -30,13 +38,6 @@ while getopts "hc:" flag; do
   esac
 done
  
-if [ "$(arch)" != "armv6l" ] || [ "$(lsb_release -is)" != "Debian" ] ;then
-  echo "FireFuse only works on Raspberry Pi with Raspbian"
-  exit -1
-else 
-  echo "Raspberry Pi Debian confirmed"
-fi
-
 if [ "$SUDO_USER" == "" ]; then
   echo "This script must be run with sudo command from a non-root user"
   exit -1
@@ -167,6 +168,15 @@ sudo -u $SUDO_USER cmake .
 
 echo building and installing FireFuse...
 sudo -u $SUDO_USER make
+if [ $? -ne 0 ]; then
+  echo FAILED: make
+fi
+
+if [ "$(arch)" != "armv6l" ] || [ "$(lsb_release -is)" != "Debian" ] ;then
+  echo "FireFuse is currently only supported on Raspberry Pi with Raspbian"
+  exit -1
+fi
+echo installing FireFuse...
 make install
 if [ $? -ne 0 ]; then
   echo FAILED: make install

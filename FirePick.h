@@ -8,8 +8,8 @@ extern "C" {
 #endif
 
 const char* firepick_status();
-const void* firepick_holes(JPG *pJPG);
-int firepick_camera_daemon(JPG *pJPG);
+const void* firepick_holes(FuseDataBuffer *pJPG);
+int firepick_camera_daemon(FuseDataBuffer *pJPG);
 
 #ifdef __cplusplus
 }

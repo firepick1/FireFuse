@@ -35,7 +35,7 @@ typedef struct {
   char *pData;
   int length;
   long reserved;
-} JPG;
+} FuseDataBuffer;
 
 #ifdef __cplusplus
 }

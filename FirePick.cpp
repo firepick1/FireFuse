@@ -20,7 +20,7 @@ using namespace firesight;
 
 char status_buffer[STATUS_BUFFER_SIZE];
 
-const void* firepick_holes(JPG *pJPG) {
+const void* firepick_holes(FuseDataBuffer *pJPG) {
   Mat jpg(1, pJPG->length, CV_8UC1, pJPG->pData);
   Mat matRGB = imdecode(jpg, CV_LOAD_IMAGE_COLOR);
   vector<MatchedRegion> matches;
@@ -55,7 +55,7 @@ const char* firepick_status() {
   return status_buffer;
 }
 
-int firepick_camera_daemon(JPG *pJPG) {
+int firepick_camera_daemon(FuseDataBuffer *pJPG) {
   int status = firepicam_create(0, NULL);
 
   LOGINFO1("firepick_camera_daemon start -> %d", status);
