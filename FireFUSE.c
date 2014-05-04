@@ -98,6 +98,11 @@ static int firefuse_getattr(const char *path, struct stat *stbuf)
   } else if (strcmp(path, FIREREST_CV_1_CVE) == 0) {
     stbuf->st_mode = S_IFDIR | 0755;
     stbuf->st_nlink = 1; // Safe default value
+  } else if (strcmp(path, CAM_PATH) == 0 || strcmp(path, FIREREST_CV_1_IMAGE_JPG) == 0) {
+    stbuf->st_mode = S_IFREG | 0444;
+    stbuf->st_nlink = 1;
+    memcpy(&headcam_image_fstat, &headcam_image, sizeof(FuseDataBuffer));
+    stbuf->st_size = headcam_image_fstat.length;
   } else if (strncmp(path, FIREREST_CV_1_CVE, strlen(FIREREST_CV_1_CVE)) == 0) {
     char * pDot = strchr(path, '.');
     if (pDot) {
@@ -126,11 +131,6 @@ static int firefuse_getattr(const char *path, struct stat *stbuf)
     stbuf->st_mode = S_IFREG | 0666;
     stbuf->st_nlink = 1;
     stbuf->st_size = 1;
-    stbuf->st_size = headcam_image_fstat.length;
-  } else if (strcmp(path, CAM_PATH) == 0) {
-    memcpy(&headcam_image_fstat, &headcam_image, sizeof(FuseDataBuffer));
-    stbuf->st_mode = S_IFREG | 0444;
-    stbuf->st_nlink = 1;
     stbuf->st_size = headcam_image_fstat.length;
   } else if (strcmp(path, ECHO_PATH) == 0) {
     stbuf->st_mode = S_IFREG | 0666;
@@ -295,7 +295,7 @@ static int firefuse_open(const char *path, struct fuse_file_info *fi) {
     } else {
       result = -ENOMEM;
     }
-  } else if (strcmp(path, CAM_PATH) == 0) {
+  } else if (strcmp(path, CAM_PATH) == 0 || strcmp(path, FIREREST_CV_1_IMAGE_JPG) == 0) {
     if ((fi->flags & 3) != O_RDONLY) {
       result = -EACCES;
     } else {
@@ -356,6 +356,8 @@ static int firefuse_release(const char *path, struct fuse_file_info *fi) {
     // NOP
   } else if (strcmp(path, HOLES_PATH) == 0) {
     firefuse_freeDataBuffer(path, fi);
+  } else if (strcmp(path, CAM_PATH) == 0 || strcmp(path, FIREREST_CV_1_IMAGE_JPG) == 0) {
+    firefuse_freeDataBuffer(path, fi);
   } else if (strncmp(path, FIREREST_CV_1_CVE, strlen(FIREREST_CV_1_CVE) == 0)) {
     firefuse_freeDataBuffer(path, fi);
   } else if (strcmp(path, ECHO_PATH) == 0) {
@@ -364,8 +366,6 @@ static int firefuse_release(const char *path, struct fuse_file_info *fi) {
     // NOP
   } else if (strcmp(path, FIRESTEP_PATH) == 0) {
     // NOP
-  } else if (strcmp(path, CAM_PATH) == 0) {
-    firefuse_freeDataBuffer(path, fi);
   }
   return 0;
 }
@@ -387,6 +387,17 @@ static int firefuse_read(const char *path, char *buf, size_t size, off_t offset,
     } else {
       sizeOut = 0;
     }
+  } else if (strcmp(path, CAM_PATH) == 0 || strcmp(path, FIREREST_CV_1_IMAGE_JPG) == 0) {
+    FuseDataBuffer *pJPG = (FuseDataBuffer *) (size_t) fi->fh;
+    len = pJPG->length;
+    if (offset < len) {
+      if (offset + sizeOut > len) {
+        sizeOut = len - offset;
+      }
+      memcpy(buf, pJPG->pData + offset, sizeOut);
+    } else {
+      sizeOut = 0;
+    }
   } else if (strncmp(path, FIREREST_CV_1_CVE, strlen(FIREREST_CV_1_CVE)) == 0) {
     FuseDataBuffer *pBuffer = (FuseDataBuffer *) (size_t) fi->fh;
     len = pBuffer->length;
@@ -405,17 +416,6 @@ static int firefuse_read(const char *path, char *buf, size_t size, off_t offset,
       if (offset + sizeOut > len)
         sizeOut = len - offset;
       memcpy(buf, holes_str + offset, sizeOut);
-    } else {
-      sizeOut = 0;
-    }
-  } else if (strcmp(path, CAM_PATH) == 0) {
-    FuseDataBuffer *pJPG = (FuseDataBuffer *) (size_t) fi->fh;
-    len = pJPG->length;
-    if (offset < len) {
-      if (offset + sizeOut > len) {
-        sizeOut = len - offset;
-      }
-      memcpy(buf, pJPG->pData + offset, sizeOut);
     } else {
       sizeOut = 0;
     }
