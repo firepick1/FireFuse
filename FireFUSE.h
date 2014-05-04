@@ -1,6 +1,6 @@
 
-#ifndef FIREFUSE_H
-#define FIREFUSE_H
+#ifndef FIREFUSE_HPP
+#define FIREFUSE_HPP
 #ifdef __cplusplus
 extern "C" {
 #endif

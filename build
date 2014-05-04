@@ -170,6 +170,7 @@ echo building and installing FireFuse...
 sudo -u $SUDO_USER make
 if [ $? -ne 0 ]; then
   echo FAILED: make
+  exit -1
 fi
 
 if [ "$(arch)" != "armv6l" ] || [ "$(lsb_release -is)" != "Debian" ] ;then

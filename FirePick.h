@@ -1,5 +1,5 @@
 
-#include "FireFuse.h"
+#include "FireFUSE.h"
 
 #ifndef FIREPICK_H
 #define FIREPICK_H
