@@ -101,10 +101,6 @@ else
   apt-get install -y libopencv-dev
 fi
 
-if [ ! -e /usr/include/boost ]; then
-  echo "++++++++++++++++++ INSTALLING BOOST C++ LIBRARIES ++++++++++++"
-  apt-get -y install libboost1.50-all
-fi
 if [ ! -e /usr/include/fuse.h ] ; then
   echo "++++++++++++++++++ INSTALLING FUSE C LIBRARIES ++++++++++++"
   apt-get -y install libfuse-dev
