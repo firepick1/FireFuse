@@ -1,13 +1,12 @@
-
 #include <stdio.h>
 #include <time.h>
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
 #include "version.h"
-#include "FirePick.h"
 #include "FireLog.h"
 #include "FirePiCam.h"
+#include "FireREST.h"
 #include "FireSight.hpp"
 
 #include "opencv2/highgui/highgui.hpp"
@@ -20,7 +19,7 @@ using namespace firesight;
 
 static char status_buffer[STATUS_BUFFER_SIZE];
 
-const void* firepick_holes(FuseDataBuffer *pJPG) {
+const void* firerest_cv_holes(FuseDataBuffer *pJPG) {
   Mat jpg(1, pJPG->length, CV_8UC1, pJPG->pData);
   Mat matRGB = imdecode(jpg, CV_LOAD_IMAGE_COLOR);
   vector<MatchedRegion> matches;
@@ -33,7 +32,7 @@ const void* firepick_holes(FuseDataBuffer *pJPG) {
   return pJPG;
 }
 
-const char* firepick_status() {
+const char* firerest_cv_status() {
   time_t current_time = time(NULL);
   char timebuf[70];
   strcpy(timebuf, ctime(&current_time));
@@ -47,7 +46,7 @@ const char* firepick_status() {
   sprintf(status_buffer, 
     "{\n"
     " 'timestamp':'%s'\n"
-    " 'message':'FirePick OK!',\n"
+    " 'message':'firerest_cv OK!',\n"
     " 'version':'FireFuse version %d.%d'\n"
     "}\n",
     timebuf,
@@ -55,10 +54,10 @@ const char* firepick_status() {
   return status_buffer;
 }
 
-int firepick_camera_daemon(FuseDataBuffer *pJPG) {
+int firerest_cv_camera_daemon(FuseDataBuffer *pJPG) {
   int status = firepicam_create(0, NULL);
 
-  LOGINFO1("firepick_camera_daemon start -> %d", status);
+  LOGINFO1("firerest_cv_camera_daemon start -> %d", status);
 
   for (;;) {
     JPG_Buffer buffer;
@@ -70,7 +69,7 @@ int firepick_camera_daemon(FuseDataBuffer *pJPG) {
     pJPG->length = buffer.length;
   }
 
-  LOGINFO1("firepick_camera_daemon exit -> %d", status);
+  LOGINFO1("firerest_cv_camera_daemon exit -> %d", status);
   firepicam_destroy(status);
 }
 

@@ -23,13 +23,18 @@ SET(CPACK_PACKAGE_VERSION_MINOR "${FireFuse_VERSION_MINOR}")
 include (CPack)
 
 configure_file (
-	"${PROJECT_SOURCE_DIR}/version.h.in"
-	"${PROJECT_BINARY_DIR}/version.h"
-	)
+  "${PROJECT_SOURCE_DIR}/version.h.in"
+  "${PROJECT_BINARY_DIR}/version.h"
+  )
 
 find_package( OpenCV REQUIRED )
 
-add_executable(firefuse FireFUSE.c FireStep.cpp FirePick.cpp )
+add_executable(firefuse 
+  FireFUSE.c 
+  FirePick.cpp 
+  FireREST-CV.cpp 
+  FireStep.cpp 
+  )
 target_link_libraries(firefuse libfirepicam.so lib_firesight.so libfuse.so ${OpenCV_LIBS})
 
 INSTALL(TARGETS firefuse DESTINATION bin)

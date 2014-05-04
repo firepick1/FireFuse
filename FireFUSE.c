@@ -18,6 +18,7 @@
 #include "FirePiCam.h"
 #include "FireStep.h"
 #include "FireLog.h"
+#include "FireREST.h"
 
 long bytes_read = 0;
 long seconds = 0;
