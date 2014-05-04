@@ -29,7 +29,7 @@ configure_file (
 
 find_package( OpenCV REQUIRED )
 
-add_executable(firefuse FireFUSE.c FireLog.cpp FireStep.cpp FirePick.cpp )
+add_executable(firefuse FireFUSE.c FireStep.cpp FirePick.cpp )
 target_link_libraries(firefuse libfirepicam.so lib_firesight.so libfuse.so ${OpenCV_LIBS})
 
 INSTALL(TARGETS firefuse DESTINATION bin)
