@@ -182,12 +182,12 @@ static int firefuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     filler(buf, ".", NULL, 0);
     filler(buf, "..", NULL, 0);
     filler(buf, FIREREST_CVE + 1, NULL, 0);
+    filler(buf, FIREREST_IMAGE_JPG + 1, NULL, 0);
   } else if (strncmp(path, FIREREST_CV_1_CVE_SUBDIR, strlen(FIREREST_CV_1_CVE_SUBDIR)) == 0) {
     filler(buf, ".", NULL, 0);
     filler(buf, "..", NULL, 0);
     filler(buf, FIREREST_PIPELINE_JSON + 1, NULL, 0);
     filler(buf, FIREREST_PIPELINE_JPG + 1, NULL, 0);
-    filler(buf, FIREREST_PIPELINE_PNG + 1, NULL, 0);
     filler(buf, FIREREST_SAVED_PNG + 1, NULL, 0);
     filler(buf, FIREREST_MODEL_JSON + 1, NULL, 0);
   } else if (strcmp(path, FIREREST_CV_1_CVE) == 0) {
