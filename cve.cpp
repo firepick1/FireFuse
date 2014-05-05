@@ -25,58 +25,36 @@ double cve_seconds() {
   double seconds = ticks/ticksPerSecond;
 }
 
-const void* firerest_cv_holes(FuseDataBuffer *pJPG) {
-  Mat jpg(1, pJPG->length, CV_8UC1, pJPG->pData);
-  Mat matRGB = imdecode(jpg, CV_LOAD_IMAGE_COLOR);
-  vector<MatchedRegion> matches;
+int cve_save(FuseDataBuffer *pBuffer, const char *path) {
+  int result = 0;
 
-  HoleRecognizer recognizer(26/1.15, 26*1.15);
-  recognizer.scan(matRGB, matches);
+  char varPath[255];
+  snprintf(varPath, sizeof(varPath) - strlen(FIREREST_SAVED_PNG), "%s%s", FIREREST_VAR, path);
+  char *pSave = varPath + strlen(varPath) - strlen(FIREREST_SAVE_JSON);
+  sprintf(pSave, "%s", FIREREST_SAVED_PNG);
 
-  imwrite("/home/pi/camcv.bmp", matRGB);
-
-  return pJPG;
-}
-
-const char* firerest_cv_status() {
-  time_t current_time = time(NULL);
-  char timebuf[70];
-  strcpy(timebuf, ctime(&current_time));
-  timebuf[strlen(timebuf)-1] = 0;
-
-  const char *errorOrWarn = firelog_lastMessage(FIRELOG_WARN);
-  if (strlen(errorOrWarn)) {
-    return errorOrWarn;
+  FILE *fSaved = fopen(varPath, "w");
+  if (fSaved) {
+    size_t bytes = fwrite(pBuffer->pData, 1, pBuffer->length, fSaved);
+    if (bytes == pBuffer->length) {
+      LOGTRACE2("cve_save(%s) saved camera image to %s", path, varPath);
+    } else {
+      LOGERROR2("cve_save(%s) could not write to file: %s", path, varPath);
+      result = -EIO;
+    }
+    fclose(fSaved);
+  } else {
+    LOGERROR2("cve_save(%s) could not open file for write: %s", path, varPath);
+    result = -ENOENT;
   }
 
-  sprintf(status_buffer, 
-    "{\n"
-    " 'timestamp':'%s'\n"
-    " 'message':'firerest_cv OK!',\n"
-    " 'version':'FireFuse version %d.%d'\n"
-    "}\n",
-    timebuf,
-    FireFuse_VERSION_MAJOR, FireFuse_VERSION_MINOR);
-  return status_buffer;
-}
-
-int firerest_cv_camera_daemon(FuseDataBuffer *pJPG) {
-  int status = firepicam_create(0, NULL);
-
-  LOGINFO1("firerest_cv_camera_daemon start -> %d", status);
-
-  for (;;) {
-    JPG_Buffer buffer;
-    buffer.pData = NULL;
-    buffer.length = 0;
-    
-    status = firepicam_acquireImage(&buffer);
-    pJPG->pData = buffer.pData;
-    pJPG->length = buffer.length;
+  if (result == 0) {
+    snprintf(pBuffer->pData, pBuffer->length, "{\"camera\":{\"time\":\"%.1f\"}}\n", cve_seconds());
+  } else {
+    snprintf(pBuffer->pData, pBuffer->length, 
+      "{\"camera\":{\"time\":\"%.1f\"},\"save\":{\"error\":\"Could not save camera image for %s\"}}\n", 
+      cve_seconds(), path);
   }
 
-  LOGINFO1("firerest_cv_camera_daemon exit -> %d", status);
-  firepicam_destroy(status);
+  return result;
 }
-
-

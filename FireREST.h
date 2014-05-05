@@ -7,10 +7,7 @@ extern "C" {
 #endif
 
 double cve_seconds();
-
-const char* firerest_cv_status();
-const void* firerest_cv_holes(FuseDataBuffer *pJPG);
-int firerest_cv_camera_daemon(FuseDataBuffer *pJPG);
+int cve_save(FuseDataBuffer *pBuffer, const char *path);
 
 #ifdef __cplusplus
 }

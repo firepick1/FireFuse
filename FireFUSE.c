@@ -210,12 +210,12 @@ static int firefuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     filler(buf, ".", NULL, 0);
     filler(buf, "..", NULL, 0);
     filler(buf, FIREREST_CVE + 1, NULL, 0);
-    filler(buf, FIREREST_IMAGE_JPG + 1, NULL, 0);
+    filler(buf, FIREREST_CAMERA_JPG + 1, NULL, 0);
   } else if (strncmp(path, FIREREST_CV_1_CVE_SUBDIR, strlen(FIREREST_CV_1_CVE_SUBDIR)) == 0) {
     filler(buf, ".", NULL, 0);
     filler(buf, "..", NULL, 0);
-    filler(buf, FIREREST_PIPELINE_JSON + 1, NULL, 0);
-    filler(buf, FIREREST_PIPELINE_JPG + 1, NULL, 0);
+    filler(buf, FIREREST_FIRESIGHT_JSON + 1, NULL, 0);
+    filler(buf, FIREREST_OUTPUT_JPG + 1, NULL, 0);
     filler(buf, FIREREST_SAVED_PNG + 1, NULL, 0);
     filler(buf, FIREREST_SAVE_JSON + 1, NULL, 0);
     filler(buf, FIREREST_MODEL_JSON + 1, NULL, 0);
@@ -426,7 +426,7 @@ static int firefuse_read(const char *path, char *buf, size_t size, off_t offset,
   } else if (isCameraPath(path, CAMERA_SAVE)) {
     FuseDataBuffer *pBuffer = (FuseDataBuffer *) (size_t) fi->fh;
     if (offset == 0) {
-      snprintf(pBuffer->pData, pBuffer->length, "{\"camera\":{\"time\":\"%.1f\"}}\n", cve_seconds());
+      cve_save(pBuffer, path);
     }
     sizeOut = load_buffer(buf, pBuffer->pData, size, offset, strlen(pBuffer->pData));
   } else if (isCameraPath(path, CAMERA_LOAD)) {
