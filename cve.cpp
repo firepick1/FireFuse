@@ -19,6 +19,12 @@ using namespace firesight;
 
 static char status_buffer[STATUS_BUFFER_SIZE];
 
+double cve_seconds() {
+  int64 ticks = getTickCount();
+  double ticksPerSecond = getTickFrequency();
+  double seconds = ticks/ticksPerSecond;
+}
+
 const void* firerest_cv_holes(FuseDataBuffer *pJPG) {
   Mat jpg(1, pJPG->length, CV_8UC1, pJPG->pData);
   Mat matRGB = imdecode(jpg, CV_LOAD_IMAGE_COLOR);

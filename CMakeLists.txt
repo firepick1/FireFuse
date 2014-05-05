@@ -32,7 +32,7 @@ find_package( OpenCV REQUIRED )
 add_executable(firefuse 
   FireFUSE.c 
   FirePick.cpp 
-  FireREST-CV.cpp 
+  cve.cpp 
   FireStep.cpp 
   )
 target_link_libraries(firefuse libfirepicam.so lib_firesight.so libfuse.so ${OpenCV_LIBS})

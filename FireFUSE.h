@@ -22,7 +22,7 @@ extern "C" {
 #define FIREREST_PIPELINE_JSON "/pipeline.json"
 #define FIREREST_PIPELINE_PNG "/pipeline.png"
 #define FIREREST_SAVED_PNG "/saved.png"
-#define FIREREST_SAVE "/save"
+#define FIREREST_SAVE_JSON "/save.json"
 #define FIREREST_VAR_1_CVE "/var/firefuse/cv/1/cve"
 #define FIREREST_VAR "/var/firefuse"
 
