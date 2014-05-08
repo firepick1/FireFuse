@@ -1,4 +1,3 @@
-
 #define FUSE_USE_VERSION 26
 
 #include <fuse.h>
@@ -75,22 +74,11 @@ static void firefuse_destroy(void * initData)
   }
 }
 
-static int getattr_varFile(const char *path, struct stat *stbuf) {
-  char varPath[255];
-  snprintf(varPath, sizeof(varPath), "%s%s", FIREREST_VAR, path);
-  struct stat filestatus;
-  int res = stat( varPath, &filestatus );
-  if (res) {
-    LOGERROR2("getattr_varFile(%s) stat -> %d", path, res);
-  } else {
-    stbuf->st_mode = S_IFREG | 0444;
-    stbuf->st_nlink = 1;
-    stbuf->st_size = filestatus.st_size;
-  }
-  return res;
-}
-
 static int firefuse_getattr(const char *path, struct stat *stbuf) {
+  if (cve_isPathPrefix(path, FIREREST_CV)) {
+    return cve_getattr(path, stbuf);
+  }
+
   int res = 0;
 
   memset(stbuf, 0, sizeof(struct stat));
@@ -102,30 +90,7 @@ static int firefuse_getattr(const char *path, struct stat *stbuf) {
   if (strcmp(path, "/") == 0) {
     stbuf->st_mode = S_IFDIR | 0755;
     stbuf->st_nlink = 2;
-  } else if (strcmp(path, FIREREST_CV) == 0) {
-    stbuf->st_mode = S_IFDIR | 0755;
     stbuf->st_nlink = 1; // Safe default value
-  } else if (strcmp(path, FIREREST_CV_1) == 0) {
-    stbuf->st_mode = S_IFDIR | 0755;
-    stbuf->st_nlink = 1; // Safe default value
-  } else if (strcmp(path, FIREREST_CV_1_CVE) == 0) {
-    stbuf->st_mode = S_IFDIR | 0755;
-    stbuf->st_nlink = 1; // Safe default value
-  } else if (strcmp(path, FIREREST_CV_1_MONITOR_JPG) == 0) {
-    getattr_varFile(path, stbuf);
-  } else if (cve_isPath(path, CVEPATH_CAMERA_LOAD)) {
-    stbuf->st_mode = S_IFREG | 0444;
-    stbuf->st_nlink = 1;
-    memcpy(&headcam_image_fstat, &headcam_image, sizeof(FuseDataBuffer));
-    stbuf->st_size = headcam_image_fstat.length;
-  } else if (strncmp(path, FIREREST_CV_1_CVE, strlen(FIREREST_CV_1_CVE)) == 0) {
-    char * pDot = strchr(path, '.');
-    if (pDot) {
-      getattr_varFile(path, stbuf);
-    } else {
-      stbuf->st_mode = S_IFDIR | 0755;
-      stbuf->st_nlink = 1; // Safe default value
-    }
   } else if (strcmp(path, STATUS_PATH) == 0) {
     const char *status_str = firepick_status();
     stbuf->st_mode = S_IFREG | 0444;
@@ -166,6 +131,10 @@ static int firefuse_getattr(const char *path, struct stat *stbuf) {
 static int firefuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
        off_t offset, struct fuse_file_info *fi)
 {
+  if (cve_isPathPrefix(path, FIREREST_CV)) {
+    return cve_readdir(path, buf, filler, offset, fi);
+  }
+
   (void) offset;
   (void) fi;
 
@@ -176,44 +145,10 @@ static int firefuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     filler(buf, "..", NULL, 0);
     filler(buf, STATUS_PATH + 1, NULL, 0);
     filler(buf, HOLES_PATH + 1, NULL, 0);
-    filler(buf, CAM_PATH + 1, NULL, 0);
     filler(buf, FIRELOG_PATH + 1, NULL, 0);
     filler(buf, ECHO_PATH + 1, NULL, 0);
     filler(buf, FIRESTEP_PATH + 1, NULL, 0);
     filler(buf, FIREREST_CV + 1, NULL, 0);
-  } else if (strcmp(path, FIREREST_CV) == 0) {
-    filler(buf, ".", NULL, 0);
-    filler(buf, "..", NULL, 0);
-    filler(buf, FIREREST_1 + 1, NULL, 0);
-  } else if (strcmp(path, FIREREST_CV_1) == 0) {
-    filler(buf, ".", NULL, 0);
-    filler(buf, "..", NULL, 0);
-    filler(buf, FIREREST_CVE + 1, NULL, 0);
-    filler(buf, FIREREST_CAMERA_JPG + 1, NULL, 0);
-    filler(buf, FIREREST_MONITOR_JPG + 1, NULL, 0);
-  } else if (strncmp(path, FIREREST_CV_1_CVE_SUBDIR, strlen(FIREREST_CV_1_CVE_SUBDIR)) == 0) {
-    filler(buf, ".", NULL, 0);
-    filler(buf, "..", NULL, 0);
-    filler(buf, FIREREST_FIRESIGHT_JSON + 1, NULL, 0);
-    filler(buf, FIREREST_OUTPUT_JPG + 1, NULL, 0);
-    filler(buf, FIREREST_SAVED_PNG + 1, NULL, 0);
-    filler(buf, FIREREST_SAVE_JSON + 1, NULL, 0);
-    filler(buf, FIREREST_PROCESS_JSON + 1, NULL, 0);
-  } else if (strcmp(path, FIREREST_CV_1_CVE) == 0) {
-    filler(buf, ".", NULL, 0);
-    filler(buf, "..", NULL, 0);
-    DIR *dirp = opendir(FIREREST_VAR_1_CVE);
-    if (dirp) {
-      struct dirent * dp;
-      while ((dp = readdir(dirp)) != NULL) {
-	LOGTRACE1("readdir(%s)", dp->d_name);
-	filler(buf, dp->d_name, NULL, 0);
-      }
-      (void)closedir(dirp);
-    } else {
-      LOGERROR1("firefuse_readdir(%s) opendir failed", path);
-      return -ENOENT;
-    }
   } else {
     LOGERROR1("firefuse_readdir(%s) Unknown path", path);
     return -ENOENT;
@@ -222,7 +157,7 @@ static int firefuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
   return 0;
 }
 
-static FuseDataBuffer* firefuse_allocDataBuffer(const char *path, struct fuse_file_info *fi, const char *pData, size_t length) {
+FuseDataBuffer* firefuse_allocDataBuffer(const char *path, struct fuse_file_info *fi, const char *pData, size_t length) {
   FuseDataBuffer *pBuffer = calloc(sizeof(FuseDataBuffer) + length, 1);
   if (pBuffer) {
     pBuffer->length = length;
@@ -241,62 +176,17 @@ static FuseDataBuffer* firefuse_allocDataBuffer(const char *path, struct fuse_fi
   return pBuffer;
 }
 
-static FuseDataBuffer* firefuse_allocImage(const char *path, struct fuse_file_info *fi) {
+FuseDataBuffer* firefuse_allocImage(const char *path, struct fuse_file_info *fi) {
   int length = headcam_image_fstat.length;
   FuseDataBuffer *pJPG = firefuse_allocDataBuffer(path, fi, headcam_image_fstat.pData, length);
   return pJPG;
 }
 
-static int firefuse_openFireREST(const char *path, struct fuse_file_info *fi) {
-  int result = 0;
-  char varPath[255];
-  snprintf(varPath, sizeof(varPath), "%s%s", FIREREST_VAR, path);
-  FILE *file = fopen(varPath, "rb");
-  if (!file) {
-    LOGERROR1("firefuse_openFireREST(%s) fopen failed", varPath);
-    return -ENOENT;
-  }
-
-  fseek(file, 0, SEEK_END);
-  size_t length = ftell(file);
-  fseek(file, 0, SEEK_SET);
-    
-  FuseDataBuffer *pBuffer = firefuse_allocDataBuffer(path, fi, NULL, length);
-  if (pBuffer) {
-    size_t bytesRead = fread(pBuffer->pData, 1, length, file);
-    if (bytesRead == length) {
-      fi->direct_io = 1;
-      fi->fh = (uint64_t) (size_t) pBuffer;
-    } else {
-      LOGERROR3("firefuse_openFireREST(%s) read failed  (%d != %d)", path, bytesRead, length);
-      free(pBuffer);
-    }
-  } else {
-    result = -ENOMEM;
-  }
-  if (file) {
-    fclose(file);
-  }
-  return result;
-}
-
-static inline bool verifyOpenR_(const char *path, struct fuse_file_info *fi, int *pResult) {
-  if ((fi->flags & 3) != O_RDONLY) {
-    LOGERROR1("verifyOpenR_(%s) EACCESS", path);
-    (*pResult) = -EACCES;
-  }
-  return (*pResult) == 0;
-}
-
-static inline bool verifyOpenRW(const char *path, struct fuse_file_info *fi, int *pResult) {
-  if ((fi->flags & O_DIRECTORY)) {
-    LOGERROR1("verifyOpenRW(%s) EACCESS", path);
-    (*pResult) = -EACCES;
-  }
-  return (*pResult) == 0;
-}
-
 static int firefuse_open(const char *path, struct fuse_file_info *fi) {
+  if (cve_isPathPrefix(path, FIREREST_CV)) {
+    return cve_open(path, fi);
+  }
+
   int result = 0;
   
   if (strcmp(path, STATUS_PATH) == 0) {
@@ -308,29 +198,6 @@ static int firefuse_open(const char *path, struct fuse_file_info *fi) {
       firepick_holes(pJPG);
     } else {
       result = -ENOMEM;
-    }
-  } else if (cve_isPath(path, CVEPATH_PROCESS_JSON)) {
-    if (verifyOpenR_(path, fi, &result)) {
-      FuseDataBuffer *pJPG = firefuse_allocImage(path, fi);
-      const char * pJson = cve_process(pJPG, path);
-      int jsonLen = strlen(pJson);
-      fi->fh = (uint64_t) (size_t) pJson;
-      free(pJPG);
-    }
-  } else if (cve_isPath(path, CVEPATH_CAMERA_LOAD)) {
-    if (verifyOpenR_(path, fi, &result)) {
-      FuseDataBuffer *pJPG = firefuse_allocImage(path, fi);
-      if (!pJPG) {
-	result = -ENOMEM;
-      }
-    }
-  } else if (strcmp(path, FIREREST_CV_1_MONITOR_JPG) == 0) {
-    if (verifyOpenR_(path, fi, &result)) {
-      result = firefuse_openFireREST(path, fi);
-    }
-  } else if (strncmp(path, FIREREST_CV_1_CVE, strlen(FIREREST_CV_1_CVE)) == 0) {
-    if (verifyOpenR_(path, fi, &result)) {
-      result = firefuse_openFireREST(path, fi);
     }
   } else if (strcmp(path, ECHO_PATH) == 0) {
     verifyOpenRW(path, fi, &result);
@@ -357,7 +224,7 @@ static int firefuse_open(const char *path, struct fuse_file_info *fi) {
   return result;
 }
 
-static void firefuse_freeDataBuffer(const char *path, struct fuse_file_info *fi) {
+void firefuse_freeDataBuffer(const char *path, struct fuse_file_info *fi) {
   if (fi->fh) {
     FuseDataBuffer *pBuffer = (FuseDataBuffer *)(size_t) fi->fh;
     LOGTRACE2("firefuse_release(%s) freeing data buffer: %ldB", path, pBuffer->length);
@@ -367,14 +234,14 @@ static void firefuse_freeDataBuffer(const char *path, struct fuse_file_info *fi)
 }
 
 static int firefuse_release(const char *path, struct fuse_file_info *fi) {
+  if (cve_isPathPrefix(path, FIREREST_CV)) {
+    return cve_release(path, fi);
+  }
+
   LOGTRACE1("firefuse_release %s", path);
   if (strcmp(path, STATUS_PATH) == 0) {
     // NOP
   } else if (strcmp(path, HOLES_PATH) == 0) {
-    firefuse_freeDataBuffer(path, fi);
-  } else if (cve_isPath(path, CVEPATH_CAMERA_LOAD)) {
-    firefuse_freeDataBuffer(path, fi);
-  } else if (strncmp(path, FIREREST_CV_1_CVE, strlen(FIREREST_CV_1_CVE) == 0)) {
     firefuse_freeDataBuffer(path, fi);
   } else if (strcmp(path, ECHO_PATH) == 0) {
     // NOP
@@ -386,56 +253,33 @@ static int firefuse_release(const char *path, struct fuse_file_info *fi) {
   return 0;
 }
 
-static inline int load_buffer(char *pDst, const char *pSrc, size_t size, off_t offset, size_t len) {
-  size_t sizeOut = size;
-  if (offset < len) {
-    if (offset + sizeOut > len) {
-      sizeOut = len - offset;
+static int firefuse_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
+  if (cve_isPathPrefix(path, FIREREST_CV)) {
+    int res = cve_read(path, buf, size, offset, fi);
+    if (res > 0) {
+      bytes_read += res;
     }
-    memcpy(pDst, pSrc + offset, sizeOut);
-  } else {
-    sizeOut = 0;
+    return res;
   }
 
-  return sizeOut;
-}
-
-static int firefuse_read(const char *path, char *buf, size_t size, off_t offset,
-          struct fuse_file_info *fi)
-{
   size_t sizeOut = size;
   size_t len;
   (void) fi;
 
   if (strcmp(path, STATUS_PATH) == 0) {
     const char *status_str = firepick_status();
-    sizeOut = load_buffer(buf, status_str, size, offset, strlen(status_str));
-  } else if (cve_isPath(path, CVEPATH_PROCESS_JSON)) {
-    const char *pJson = (const char *) (size_t)fi->fh;
-    sizeOut = load_buffer(buf, pJson, size, offset, strlen(pJson));
-  } else if (cve_isPath(path, CVEPATH_CAMERA_SAVE)) {
-    FuseDataBuffer *pBuffer = (FuseDataBuffer *) (size_t) fi->fh;
-    if (offset == 0) {
-      cve_save(pBuffer, path);
-    }
-    sizeOut = load_buffer(buf, pBuffer->pData, size, offset, strlen(pBuffer->pData));
-  } else if (cve_isPath(path, CVEPATH_CAMERA_LOAD)) {
-    FuseDataBuffer *pBuffer = (FuseDataBuffer *) (size_t) fi->fh;
-    sizeOut = load_buffer(buf, pBuffer->pData, size, offset, pBuffer->length);
-  } else if (strncmp(path, FIREREST_CV_1_CVE, strlen(FIREREST_CV_1_CVE)) == 0) {
-    FuseDataBuffer *pBuffer = (FuseDataBuffer *) (size_t) fi->fh;
-    sizeOut = load_buffer(buf, pBuffer->pData, size, offset, pBuffer->length);
+    sizeOut = firefuse_readBuffer(buf, status_str, size, offset, strlen(status_str));
   } else if (strcmp(path, HOLES_PATH) == 0) {
     const char *holes_str = "holes";
-    sizeOut = load_buffer(buf, holes_str, size, offset, strlen(holes_str));
+    sizeOut = firefuse_readBuffer(buf, holes_str, size, offset, strlen(holes_str));
   } else if (strcmp(path, ECHO_PATH) == 0) {
-    sizeOut = load_buffer(buf, echoBuf, size, offset, strlen(echoBuf));
+    sizeOut = firefuse_readBuffer(buf, echoBuf, size, offset, strlen(echoBuf));
   } else if (strcmp(path, FIRELOG_PATH) == 0) {
     char *str = "Actual log is " FIRELOG_FILE "\n";
-    sizeOut = load_buffer(buf, str, size, offset, strlen(str));
+    sizeOut = firefuse_readBuffer(buf, str, size, offset, strlen(str));
   } else if (strcmp(path, FIRESTEP_PATH) == 0) {
     const char *json = firestep_json();
-    sizeOut = load_buffer(buf, json, size, offset, strlen(json));
+    sizeOut = firefuse_readBuffer(buf, json, size, offset, strlen(json));
   } else {
     LOGERROR2("firefuse_read(%s, %ldB) ENOENT", path, size);
     return -ENOENT;
@@ -501,14 +345,12 @@ static int firefuse_write(const char *path, const char *buf, size_t bufsize, off
 
 static int firefuse_truncate(const char *path, off_t size)
 {
+  if (cve_isPathPrefix(path, FIREREST_CV)) {
+    return cve_truncate(path, size);
+  }
+
   (void) size;
   if (strcmp(path, "/") == 0) {
-    // directory
-  } else if (strcmp(path, FIREREST_CV) == 0) {
-    // directory
-  } else if (strcmp(path, FIREREST_CV_1) == 0) {
-    // directory
-  } else if (strcmp(path, FIREREST_CV_1_CVE) == 0) {
     // directory
   } else if (strcmp(path, ECHO_PATH) == 0) {
     // NOP

@@ -19,13 +19,9 @@ enum CVE_Path {
 };
 
 #define FIREREST_1 "/1"
+#define FIREREST_GRAY "/gray"
+#define FIREREST_BGR "/bgr"
 #define FIREREST_CAMERA_JPG "/camera.jpg"
-#define FIREREST_CV_1 "/cv/1"
-#define FIREREST_CV_1_CVE "/cv/1/cve"
-#define FIREREST_CV_1_CVE_OUTPUT_JPG "/cv/1/cve/output.jpg"
-#define FIREREST_CV_1_CVE_SUBDIR "/cv/1/cve/"
-#define FIREREST_CV_1_IMAGE_JPG "/cv/1/camera.jpg"
-#define FIREREST_CV_1_MONITOR_JPG "/cv/1/monitor.jpg"
 #define FIREREST_CV "/cv"
 #define FIREREST_CVE "/cve"
 #define FIREREST_FIRESIGHT_JSON "/firesight.json"
@@ -34,14 +30,38 @@ enum CVE_Path {
 #define FIREREST_PROCESS_JSON "/process.json"
 #define FIREREST_SAVED_PNG "/saved.png"
 #define FIREREST_SAVE_JSON "/save.json"
-#define FIREREST_VAR_1_CVE "/var/firefuse/cv/1/cve"
-#define FIREREST_VAR_1_MONITOR_JPG "/var/firefuse/cv/1/monitor.jpg"
+
 #define FIREREST_VAR "/var/firefuse"
 
+bool cve_isPathPrefix(const char *value, const char * prefix) ;
+bool cve_isPathSuffix(const char *path, const char *suffix);
 bool cve_isPath(const char *path, int flags);
+bool cve_isPathCV(const char *path);
 double cve_seconds();
 const char * cve_process(FuseDataBuffer *pJPG, const char *path);
 int cve_save(FuseDataBuffer *pBuffer, const char *path);
+int cve_getattr(const char *path, struct stat *stbuf);
+int cve_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi);
+int cve_open(const char *path, struct fuse_file_info *fi);
+int cve_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi);
+int cve_release(const char *path, struct fuse_file_info *fi);
+int cve_truncate(const char *path, off_t size);
+
+inline bool verifyOpenR_(const char *path, struct fuse_file_info *fi, int *pResult) {
+  if ((fi->flags & 3) != O_RDONLY) {
+    LOGERROR1("verifyOpenR_(%s) EACCESS", path);
+    (*pResult) = -EACCES;
+  }
+  return (*pResult) == 0;
+}
+
+inline bool verifyOpenRW(const char *path, struct fuse_file_info *fi, int *pResult) {
+  if ((fi->flags & O_DIRECTORY)) {
+    LOGERROR1("verifyOpenRW(%s) EACCESS", path);
+    (*pResult) = -EACCES;
+  }
+  return (*pResult) == 0;
+}
 
 #ifdef __cplusplus
 }
