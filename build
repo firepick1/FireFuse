@@ -181,7 +181,7 @@ if [ $? -ne 0 ]; then
   exit -1
 fi
 
-firefuse -o allow_other /dev/firefuse
+firefuse -s -o allow_other /dev/firefuse
 
 if [ -e /dev/firefuse/status ]; then
   if [ ! -e /etc/rc5.d/S01mountfirefuse.sh ]; then

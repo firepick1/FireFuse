@@ -164,9 +164,9 @@ FuseDataBuffer* firefuse_allocDataBuffer(const char *path, struct fuse_file_info
     pBuffer->pData = (void *) &pBuffer->reserved; 
     if (pData) {
       memcpy(pBuffer->pData, pData, length);
-      LOGTRACE2("firefuse_allocDataBuffer(%s) allocated and initialized %ldB", path, length);
+      LOGTRACE2("firefuse_allocDataBuffer(%s) MEMORY-ALLOC initialized %ldB", path, length);
     } else {
-      LOGTRACE2("firefuse_allocDataBuffer(%s) allocated %ldB", path, length);
+      LOGTRACE2("firefuse_allocDataBuffer(%s) MEMORY-ALLOC uninitialized %ldB", path, length);
     }
   } else {
     LOGERROR2("firefuse_allocDataBuffer(%s) Could not allocate memory: %ldB", path, length);
@@ -227,7 +227,7 @@ static int firefuse_open(const char *path, struct fuse_file_info *fi) {
 void firefuse_freeDataBuffer(const char *path, struct fuse_file_info *fi) {
   if (fi->fh) {
     FuseDataBuffer *pBuffer = (FuseDataBuffer *)(size_t) fi->fh;
-    LOGTRACE2("firefuse_release(%s) freeing data buffer: %ldB", path, pBuffer->length);
+    LOGTRACE2("firefuse_freeDataBuffer(%s) MEMORY-FREE: %ldB", path, pBuffer->length);
     free(pBuffer);
     fi->fh = 0;
   }

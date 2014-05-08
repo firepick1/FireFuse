@@ -126,13 +126,13 @@ int cve_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offse
   return 0;
 }
 
-static int cve_openFireREST(const char *path, struct fuse_file_info *fi) {
+static int cve_openVarFile(const char *path, struct fuse_file_info *fi) {
   int result = 0;
   char varPath[255];
   snprintf(varPath, sizeof(varPath), "%s%s", FIREREST_VAR, path);
   FILE *file = fopen(varPath, "rb");
   if (!file) {
-    LOGERROR1("cve_openFireREST(%s) fopen failed", varPath);
+    LOGERROR1("cve_openVarFile(%s) fopen failed", varPath);
     return -ENOENT;
   }
 
@@ -147,7 +147,7 @@ static int cve_openFireREST(const char *path, struct fuse_file_info *fi) {
       fi->direct_io = 1;
       fi->fh = (uint64_t) (size_t) pBuffer;
     } else {
-      LOGERROR3("cve_openFireREST(%s) read failed  (%d != %d)", path, bytesRead, length);
+      LOGERROR3("cve_openVarFile(%s) read failed %d != MEMORY-FREE %d)", path, bytesRead, length);
       free(pBuffer);
     }
   } else {
@@ -167,8 +167,8 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
       FuseDataBuffer *pJPG = firefuse_allocImage(path, fi);
       if (pJPG) {
 	const char * pJson = cve_process(pJPG, path);
-	int jsonLen = strlen(pJson);
 	fi->fh = (uint64_t) (size_t) pJson;
+	LOGTRACE2("cve_open(%s) MEMORY-FREE %ldB", path, pJPG->length);
 	free(pJPG);
       } else {
 	result = -ENOMEM;
@@ -184,13 +184,13 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
 	result = -ENOMEM;
       }
     } else if (cve_isPathSuffix(path, FIREREST_OUTPUT_JPG)) {
-      result = cve_openFireREST(path, fi);
+      result = cve_openVarFile(path, fi);
     } else if (cve_isPathSuffix(path, FIREREST_FIRESIGHT_JSON)) {
-      result = cve_openFireREST(path, fi);
+      result = cve_openVarFile(path, fi);
     } else if (cve_isPathSuffix(path, FIREREST_SAVED_PNG)) {
-      result = cve_openFireREST(path, fi);
+      result = cve_openVarFile(path, fi);
     } else if (cve_isPathSuffix(path, FIREREST_MONITOR_JPG)) {
-      result = cve_openFireREST(path, fi);
+      result = cve_openVarFile(path, fi);
     } else {
       result = -ENOENT;
     }
@@ -243,6 +243,17 @@ int cve_read(const char *path, char *buf, size_t size, off_t offset, struct fuse
 int cve_release(const char *path, struct fuse_file_info *fi) {
   LOGTRACE1("cve_release(%s)", path);
   if (cve_isPathSuffix(path, FIREREST_PROCESS_JSON)) {
+    char *pJson = (char *)(size_t) fi->fh;
+    fi->fh = 0;
+    LOGTRACE2("cve_release(%s) MEMORY-FREE %ldB", path, strlen(pJson));
+    free(pJson);
+  } else if (cve_isPathSuffix(path, FIREREST_MONITOR_JPG)) {
+    firefuse_freeDataBuffer(path, fi);
+  } else if (cve_isPathSuffix(path, FIREREST_SAVED_PNG)) {
+    firefuse_freeDataBuffer(path, fi);
+  } else if (cve_isPathSuffix(path, FIREREST_OUTPUT_JPG)) {
+    firefuse_freeDataBuffer(path, fi);
+  } else if (cve_isPathSuffix(path, FIREREST_FIRESIGHT_JSON)) {
     firefuse_freeDataBuffer(path, fi);
   } else if (cve_isPathSuffix(path, FIREREST_CAMERA_JPG)) {
     firefuse_freeDataBuffer(path, fi);
@@ -278,6 +289,7 @@ bool cve_isPathSuffix(const char *value, const char * suffix) {
 #define CVE_MESSAGE(pResult,fmt,arg1,arg2) {\
   pResult = (char *)malloc(255);\
   if (pResult) {\
+    LOGTRACE2("CVE_MESSAGE(%s) MEMORY-ALLOC %ldB", path, 255);\
     snprintf(pResult, 255, fmt, arg1, arg2);\
   } else {\
     LOGERROR("cve_message() out of memory");\
@@ -286,6 +298,7 @@ bool cve_isPathSuffix(const char *value, const char * suffix) {
 }
 
 const char * cve_process(FuseDataBuffer *pJPG, const char *path) {
+  double sStart = cve_seconds();
   string firesightPath = buildVarPath(path, FIREREST_FIRESIGHT_JSON);
   LOGTRACE2("cve_process(%s) loading JSON: %s", path, firesightPath.c_str());
   char *pModelStr = NULL;
@@ -304,7 +317,7 @@ const char * cve_process(FuseDataBuffer *pJPG, const char *path) {
     LOGTRACE1("cve_process(%s) process end", path);
     int jsonIndent = 2;
     char *pModelStr = json_dumps(pModel, JSON_PRESERVE_ORDER|JSON_COMPACT|JSON_INDENT(jsonIndent));
-    LOGINFO2("cve_process(%s) -> %dB", path, strlen(pModelStr));
+    LOGTRACE2("cve_process(%s) MEMORY-ALLOC %ldB", path, strlen(pModelStr));
     json_decref(pModel);
     string monitorPath = buildVarPath(path, FIREREST_MONITOR_JPG, 4);
     LOGTRACE2("cve_process(%s) MONITOR -> %s", path, monitorPath.c_str());
@@ -312,11 +325,13 @@ const char * cve_process(FuseDataBuffer *pJPG, const char *path) {
     string outputPath = buildVarPath(path, FIREREST_OUTPUT_JPG);
     LOGTRACE2("cve_process(%s) OUTPUT -> %s", path, outputPath.c_str());
     imwrite(outputPath.c_str(), image);
+    LOGINFO3("cve_process(%s) -> %dB %0.3fs", path, strlen(pModelStr), cve_seconds()-sStart);
     return pModelStr;
   } catch (char * ex) {
     const char *fmt = "cve_process(%s) EXCEPTION: %s";
     LOGERROR2(fmt, path, ex);
     if (pModelStr) {
+      LOGTRACE2("cve_process(%s) MEMORY-FREE %ldB", path, strlen(pModelStr));
       free(pModelStr);
     }
     char *pResult;
@@ -326,6 +341,7 @@ const char * cve_process(FuseDataBuffer *pJPG, const char *path) {
     const char *fmt = "cve_process(%s) UNKNOWN EXCEPTION";
     LOGERROR1(fmt, path);
     if (pModelStr) {
+      LOGTRACE2("cve_process(%s) MEMORY-FREE %ldB", path, strlen(pModelStr));
       free(pModelStr);
     }
     char *pResult;
@@ -336,13 +352,14 @@ const char * cve_process(FuseDataBuffer *pJPG, const char *path) {
 }
 
 int cve_save(FuseDataBuffer *pJPG, const char *path) {
+  double sStart = cve_seconds();
   int result = 0;
 
   string savedPath = buildVarPath(path, FIREREST_SAVED_PNG);
   LOGTRACE2("cve_save(%s) saving to %s", path, savedPath.c_str());
+  bool isColor = strcmp("bgr", camera_profile(path).c_str()) == 0;
   FILE *fSaved = fopen(savedPath.c_str(), "w");
   if (fSaved) {
-    bool isColor = strcmp("bgr", camera_profile(path).c_str()) == 0;
     size_t bytes;
     size_t expectedBytes = pJPG->length;
     if (isColor) {
@@ -362,7 +379,9 @@ int cve_save(FuseDataBuffer *pJPG, const char *path) {
       bytes = fwrite(buff.data(), 1, expectedBytes, fSaved);
     }
     fclose(fSaved);
-    if (bytes != expectedBytes) {
+    if (bytes == expectedBytes) {
+      LOGINFO4("cve_save(%s) %s image saved (%ldB) %0.3fs", path, isColor ? "color" : "gray", bytes, cve_seconds() - sStart);
+    } else {
       LOGERROR3("cve_save(%s) could not write to file: %s (%d)B", path, savedPath.c_str(), bytes);
       result = -EIO;
     }

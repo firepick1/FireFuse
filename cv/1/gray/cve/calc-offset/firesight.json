@@ -7,6 +7,5 @@
     "ytol":"{{ytol||32}}",
     "channels":"{{channels||[]}}", 
     "template":"{{saved}}"
-  },
-  {"op":"drawRects", "model":"model", "color":[32,255,32]}
+  }
 ]
