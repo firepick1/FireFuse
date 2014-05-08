@@ -60,6 +60,11 @@ int cve_getattr(const char *path, struct stat *stbuf) {
   }
   if (res == 0) {
     (*stbuf) = filestatus;
+    if (stbuf->st_mode & S_IFDIR) {
+      stbuf->st_mode = S_IFDIR | 0755;
+    } else {
+      stbuf->st_mode = S_IFREG | 0444;
+    }
   }
   if (cve_isPathSuffix(path, FIREREST_PROCESS_JSON) ||
       cve_isPathSuffix(path, FIREREST_CAMERA_JPG)) {
@@ -276,7 +281,7 @@ const char * cve_process(FuseDataBuffer *pJPG, const char *path) {
     char *pModelStr = json_dumps(pModel, JSON_PRESERVE_ORDER|JSON_COMPACT|JSON_INDENT(jsonIndent));
     LOGDEBUG3("cve_process(%s) -> %s %0.2fs", path, pModelStr, cve_seconds());
     json_decref(pModel);
-    string monitorPath = buildVarPath(path, FIREREST_MONITOR_JPG, 3);
+    string monitorPath = buildVarPath(path, FIREREST_MONITOR_JPG, 4);
     LOGTRACE3("cve_process(%s) MONITOR -> %s %0.2fs", path, monitorPath.c_str(), cve_seconds());
     imwrite(monitorPath.c_str(), image);
     string outputPath = buildVarPath(path, FIREREST_OUTPUT_JPG);

@@ -1,0 +1,57 @@
+#! /bin/bash
+
+if [ ! -e target ]; then
+  mkdir target
+fi
+
+echo
+echo "====> TESTING FIREFUSE FILE STRUCTURE"
+ls -RF /dev/firefuse |& tee target/firefuse.ls
+diff test/firefuse.ls target/firefuse.ls
+if [ $? -ne 0 ]; then
+  echo "ERROR: firefuse file structure mismatch"
+  exit -1
+fi
+
+echo
+echo "====> TESTING FIREFUSE VAR FILE CONTENT"
+cat /dev/firefuse/cv/1/gray/cve/calc-offset/firesight.json
+diff /var/firefuse/cv/1/gray/cve/calc-offset/firesight.json /dev/firefuse/cv/1/gray/cve/calc-offset/firesight.json 
+if [ $? -ne 0 ]; then
+  echo "ERROR: firesight.json comparison failed"
+  exit -1
+fi
+
+echo
+echo "====> TESTING FIREFUSE save.json"
+cp -f /dev/firefuse/cv/1/gray/cve/calc-offset/saved.png target
+cat /dev/firefuse/cv/1/gray/cve/calc-offset/save.json
+cmp /var/firefuse/cv/1/gray/cve/calc-offset/saved.png target/saved.png
+if [ $? -eq 0 ]; then
+  echo "ERROR: save.json did create new saved.png"
+  exit -1
+fi
+
+echo
+echo "====> TESTING FIREFUSE process.json"
+cp -f /dev/firefuse/cv/1/monitor.jpg target
+cp -f /dev/firefuse/cv/1/gray/cve/calc-offset/output.jpg target
+cat /dev/firefuse/cv/1/gray/cve/calc-offset/process.json |& tee target/process.json
+if [ $? -ne 0 ]; then
+  echo "ERROR: process.json failed"
+  exit -1
+fi
+cmp /dev/firefuse/cv/1/monitor.jpg target/monitor.jpg
+if [ $? -eq 0 ]; then
+  echo "ERROR: process.json did not generate new monitor.jpg"
+  exit -1
+fi
+cmp /dev/firefuse/cv/1/gray/cve/calc-offset/output.jpg target/output.jpg
+if [ $? -eq 0 ]; then
+  echo "ERROR: process.json did not generate new output.jpg"
+  exit -1
+fi
+
+echo "-------------------------------------------"
+echo "FireFUSE test: PASSED"
+echo "-------------------------------------------"
