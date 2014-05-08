@@ -287,30 +287,30 @@ bool cve_isPathSuffix(const char *value, const char * suffix) {
 
 const char * cve_process(FuseDataBuffer *pJPG, const char *path) {
   string firesightPath = buildVarPath(path, FIREREST_FIRESIGHT_JSON);
-  LOGTRACE3("cve_process(%s) loading JSON: %s %0.2fs", path, firesightPath.c_str(), cve_seconds());
+  LOGTRACE2("cve_process(%s) loading JSON: %s", path, firesightPath.c_str());
   char *pModelStr = NULL;
   try {
     Pipeline pipeline(firesightPath.c_str(), Pipeline::PATH);
     const uchar * pJPGBytes = (const uchar *) pJPG->pData;
     std::vector<uchar> vJPG (pJPGBytes, pJPGBytes + pJPG->length / sizeof(uchar) );
-    LOGTRACE2("cve_process(%s) decode image %0.2fs", path, cve_seconds());
+    LOGTRACE1("cve_process(%s) decode image", path);
     bool isColor = strcmp("bgr", camera_profile(path).c_str()) == 0;
     Mat image = imdecode(vJPG, isColor ? CV_LOAD_IMAGE_COLOR : CV_LOAD_IMAGE_GRAYSCALE); 
     string savedPath = buildVarPath(path, FIREREST_SAVED_PNG);
     ArgMap argMap;
     argMap["saved"] = savedPath.c_str();
-    LOGTRACE2("cve_process(%s) process begin %0.2fs", path, cve_seconds());
+    LOGTRACE1("cve_process(%s) process begin", path);
     json_t *pModel = pipeline.process(image, argMap);
-    LOGTRACE2("cve_process(%s) process end %0.2fs", path, cve_seconds());
+    LOGTRACE1("cve_process(%s) process end", path);
     int jsonIndent = 2;
     char *pModelStr = json_dumps(pModel, JSON_PRESERVE_ORDER|JSON_COMPACT|JSON_INDENT(jsonIndent));
-    LOGDEBUG3("cve_process(%s) -> %s %0.2fs", path, pModelStr, cve_seconds());
+    LOGINFO2("cve_process(%s) -> %dB", path, strlen(pModelStr));
     json_decref(pModel);
     string monitorPath = buildVarPath(path, FIREREST_MONITOR_JPG, 4);
-    LOGTRACE3("cve_process(%s) MONITOR -> %s %0.2fs", path, monitorPath.c_str(), cve_seconds());
+    LOGTRACE2("cve_process(%s) MONITOR -> %s", path, monitorPath.c_str());
     imwrite(monitorPath.c_str(), image);
     string outputPath = buildVarPath(path, FIREREST_OUTPUT_JPG);
-    LOGTRACE3("cve_process(%s) OUTPUT -> %s %0.2fs", path, outputPath.c_str(), cve_seconds());
+    LOGTRACE2("cve_process(%s) OUTPUT -> %s", path, outputPath.c_str());
     imwrite(outputPath.c_str(), image);
     return pModelStr;
   } catch (char * ex) {
