@@ -27,6 +27,30 @@ using namespace firesight;
 
 typedef enum{UI_STILL, UI_VIDEO} UIMode;
 
+static string camera_profile(const char * path) {
+  const char *s = path;
+  const char *pStart = 0;
+  const char *pEnd = 0;
+  for (int i = 0; i < 4; i++ ) {
+    if (*s == 0) {
+      break;
+    }
+    switch (i) {
+      case 2: pStart = s; break;
+      case 3: pEnd = s; break;
+    }
+  }
+  if (*pEnd == 0) {
+    LOGERROR1("camera_profile(%s) -> UNKNOWN", path);
+    return "UNKNOWN";
+  }
+
+  string result(pStart, pEnd-pStart);
+  LOGTRACE2("camera_profile(%s) -> %s", path, result.c_str());
+
+  return result;
+}
+
 static string buildVarPath(const char * path, const char *fName, int parent=1) {
   char buf[255];
   int n = snprintf(buf, sizeof(buf), "%s%s", FIREREST_VAR, path);
@@ -270,7 +294,8 @@ const char * cve_process(FuseDataBuffer *pJPG, const char *path) {
     const uchar * pJPGBytes = (const uchar *) pJPG->pData;
     std::vector<uchar> vJPG (pJPGBytes, pJPGBytes + pJPG->length / sizeof(uchar) );
     LOGTRACE2("cve_process(%s) decode image %0.2fs", path, cve_seconds());
-    Mat image = imdecode(vJPG, CV_LOAD_IMAGE_COLOR); 
+    bool isColor = strcmp("bgr", camera_profile(path).c_str()) == 0;
+    Mat image = imdecode(vJPG, isColor ? CV_LOAD_IMAGE_COLOR : CV_LOAD_IMAGE_GRAYSCALE); 
     string savedPath = buildVarPath(path, FIREREST_SAVED_PNG);
     ArgMap argMap;
     argMap["saved"] = savedPath.c_str();
@@ -310,28 +335,46 @@ const char * cve_process(FuseDataBuffer *pJPG, const char *path) {
 
 }
 
-int cve_save(FuseDataBuffer *pBuffer, const char *path) {
+int cve_save(FuseDataBuffer *pJPG, const char *path) {
   int result = 0;
 
   string savedPath = buildVarPath(path, FIREREST_SAVED_PNG);
   LOGTRACE2("cve_save(%s) saving to %s", path, savedPath.c_str());
   FILE *fSaved = fopen(savedPath.c_str(), "w");
   if (fSaved) {
-    size_t bytes = fwrite(pBuffer->pData, 1, pBuffer->length, fSaved);
-    if (bytes != pBuffer->length) {
-      LOGERROR2("cve_save(%s) could not write to file: %s", path, savedPath.c_str());
-      result = -EIO;
+    bool isColor = strcmp("bgr", camera_profile(path).c_str()) == 0;
+    size_t bytes;
+    size_t expectedBytes = pJPG->length;
+    if (isColor) {
+      expectedBytes = pJPG->length;
+      bytes = fwrite(pJPG->pData, 1, expectedBytes, fSaved);
+    } else {
+      vector<uchar> buff;//buffer for coding
+      const uchar * pJPGBytes = (const uchar *) pJPG->pData;
+      std::vector<uchar> vJPG (pJPGBytes, pJPGBytes + pJPG->length / sizeof(uchar) );
+      LOGTRACE1("cve_save(%s) decode grayscale image", path);
+      Mat image = imdecode(vJPG, CV_LOAD_IMAGE_GRAYSCALE); 
+      vector<int> param = vector<int>(2);
+      param[0]=CV_IMWRITE_PNG_COMPRESSION;
+      param[1]=3;//default(3)  0-9.
+      imencode(".png",image,buff,param);
+      expectedBytes = buff.size();
+      bytes = fwrite(buff.data(), 1, expectedBytes, fSaved);
     }
     fclose(fSaved);
+    if (bytes != expectedBytes) {
+      LOGERROR3("cve_save(%s) could not write to file: %s (%d)B", path, savedPath.c_str(), bytes);
+      result = -EIO;
+    }
   } else {
     LOGERROR2("cve_save(%s) could not open file for write: %s", path, savedPath.c_str());
     result = -ENOENT;
   }
 
   if (result == 0) {
-    snprintf(pBuffer->pData, pBuffer->length, "{\"camera\":{\"time\":\"%.1f\"}}\n", cve_seconds());
+    snprintf(pJPG->pData, pJPG->length, "{\"camera\":{\"time\":\"%.1f\"}}\n", cve_seconds());
   } else {
-    snprintf(pBuffer->pData, pBuffer->length, 
+    snprintf(pJPG->pData, pJPG->length, 
       "{\"camera\":{\"time\":\"%.1f\"},\"save\":{\"error\":\"Could not save camera image for %s\"}}\n", 
       cve_seconds(), path);
   }
