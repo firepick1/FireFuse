@@ -29,7 +29,7 @@ typedef enum{UI_STILL, UI_VIDEO} UIMode;
 
 Mat output_image;
 double output_image_seconds = 0;
-double monitor_seconds = 2; // show camera image after output_image is this old;
+double monitor_seconds = 5; // show camera image after output_image is this old;
 
 static string camera_profile(const char * path) {
   const char *s = path;
@@ -101,11 +101,11 @@ int cve_getattr(const char *path, struct stat *stbuf) {
   } else if (cve_isPathSuffix(path, FIREREST_MONITOR_JPG)) {
     // we don't actually know the JPG size without creating it, so just
     // return the camera image file size, even though it will always be wrong.
-    stbuf->st_size = headcam_image_fstat.length;
+    stbuf->st_size = 1024;
   } else if (cve_isPathSuffix(path, FIREREST_OUTPUT_JPG)) {
     // we don't actually know the JPG size without creating it, so just
     // return the camera image file size, even though it will always be wrong.
-    stbuf->st_size = headcam_image_fstat.length;
+    stbuf->st_size = 1024;
   }
 
   return res;
@@ -152,7 +152,7 @@ static int cve_openVarFile(const char *path, struct fuse_file_info *fi) {
   size_t length = ftell(file);
   fseek(file, 0, SEEK_SET);
     
-  result = firefuse_allocDataBuffer(path, fi, NULL, length);
+  fi->fh = (uint64_t) (size_t) firefuse_allocDataBuffer(path, &result, NULL, length);
   if (result == 0) {
     FuseDataBuffer *pBuffer = (FuseDataBuffer *)(size_t) fi->fh;
     size_t bytesRead = fread(pBuffer->pData, 1, length, file);
@@ -175,9 +175,9 @@ static int allocOutputImage(const char *path, struct fuse_file_info *fi, const c
   if (output_image.rows && output_image.cols) {
     vector<uchar> vJPG;
     imencode(suffix, output_image, vJPG);
-    result = firefuse_allocDataBuffer(path, fi, (const char*) vJPG.data(), vJPG.size());
+    fi->fh = (uint64_t) (size_t) firefuse_allocDataBuffer(path, &result, (const char*) vJPG.data(), vJPG.size());
   } else {
-    result = firefuse_allocImage(path, fi);
+    fi->fh = (uint64_t) (size_t) firefuse_allocImage(path, &result);
   }
   return result;
 }
@@ -187,7 +187,7 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
     
   if (verifyOpenR_(path, fi, &result)) {
     if (cve_isPathSuffix(path, FIREREST_PROCESS_JSON)) {
-      result = firefuse_allocImage(path, fi);
+      fi->fh = (uint64_t) (size_t) firefuse_allocImage(path, &result);
       if (result == 0) {
         FuseDataBuffer *pJPG = (FuseDataBuffer *)(size_t) fi->fh;
 	const char * pJson = cve_process(pJPG, path);
@@ -198,9 +198,9 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
 	result = -ENOMEM;
       }
     } else if (cve_isPathSuffix(path, FIREREST_SAVE_JSON)) {
-      result = firefuse_allocImage(path, fi);
+      fi->fh = (uint64_t) (size_t) firefuse_allocImage(path, &result);
     } else if (cve_isPathSuffix(path, FIREREST_CAMERA_JPG)) {
-      result = firefuse_allocImage(path, fi);
+      fi->fh = (uint64_t) (size_t) firefuse_allocImage(path, &result);
     } else if (cve_isPathSuffix(path, FIREREST_OUTPUT_JPG)) {
       result = allocOutputImage(path, fi, ".jpg");
     } else if (cve_isPathSuffix(path, FIREREST_FIRESIGHT_JSON)) {
@@ -209,7 +209,7 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
       result = cve_openVarFile(path, fi);
     } else if (cve_isPathSuffix(path, FIREREST_MONITOR_JPG)) {
       if (cve_seconds() - output_image_seconds > monitor_seconds) {
-	result = firefuse_allocImage(path, fi);
+	fi->fh = (uint64_t) (size_t) firefuse_allocImage(path, &result);
       } else {
 	result = allocOutputImage(path, fi, ".jpg");
       }
@@ -226,7 +226,9 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
       LOGERROR1("cve_open(%s) error EACCES", path);
       break;
     default:
-      LOGDEBUG2("cve_open(%s) OK flags:%0x", path, fi->flags);
+      if (fi->fh) {
+	fi->direct_io = 1;
+      }
       break;
   }
 

@@ -67,7 +67,7 @@ fi
 echo verifying monitor.jpg ...
 cp -f /dev/firefuse/cv/1/monitor.jpg target/monitor1.jpg; 
 cp -f /dev/firefuse/cv/1/monitor.jpg target/monitor2.jpg;
-sleep 2
+sleep 5
 cp -f /dev/firefuse/cv/1/monitor.jpg target/monitor3.jpg;
 cmp target/monitor1.jpg target/monitor.jpg
 if [ $? -eq 0 ]; then

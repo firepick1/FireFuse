@@ -157,8 +157,8 @@ static int firefuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
   return 0;
 }
 
-int firefuse_allocDataBuffer(const char *path, struct fuse_file_info *fi, const char *pData, size_t length) {
-  int result = 0;
+FuseDataBuffer* firefuse_allocDataBuffer(const char *path, int *pResult, const char *pData, size_t length) {
+  *pResult = 0;
   FuseDataBuffer *pBuffer = calloc(sizeof(FuseDataBuffer) + length, 1);
   if (pBuffer) {
     pBuffer->length = length;
@@ -170,17 +170,16 @@ int firefuse_allocDataBuffer(const char *path, struct fuse_file_info *fi, const 
       LOGTRACE2("firefuse_allocDataBuffer(%s) MEMORY-ALLOC uninitialized %ldB", path, length);
     }
   } else {
-    result = -ENOMEM;
+    *pResult = -ENOMEM;
     LOGERROR2("firefuse_allocDataBuffer(%s) Could not allocate memory: %ldB", path, length);
   }
-  fi->direct_io = 1;
-  fi->fh = (uint64_t) (size_t) pBuffer;
-  return result;
+
+  return pBuffer;
 }
 
-int firefuse_allocImage(const char *path, struct fuse_file_info *fi) {
+FuseDataBuffer* firefuse_allocImage(const char *path, int *pResult) {
   int length = headcam_image_fstat.length;
-  return firefuse_allocDataBuffer(path, fi, headcam_image_fstat.pData, length);
+  return firefuse_allocDataBuffer(path, pResult, headcam_image_fstat.pData, length);
 }
 
 static int firefuse_open(const char *path, struct fuse_file_info *fi) {
@@ -194,7 +193,7 @@ static int firefuse_open(const char *path, struct fuse_file_info *fi) {
     verifyOpenR_(path, fi, &result);
   } else if (strcmp(path, HOLES_PATH) == 0) {
     verifyOpenR_(path, fi, &result);
-    result = firefuse_allocImage(path, fi);
+    fi->fh = (uint64_t) (size_t) firefuse_allocImage(path, &result);
     if (fi->fh) {
       firepick_holes((FuseDataBuffer *) (size_t)fi->fh);
     } else {
@@ -218,6 +217,9 @@ static int firefuse_open(const char *path, struct fuse_file_info *fi) {
       LOGERROR1("firefuse_open(%s) error EACCES", path);
       break;
     default:
+      if (fi->fh) {
+	fi->direct_io = 1;
+      }
       LOGDEBUG2("firefuse_open(%s) OK flags:%0x", path, fi->flags);
       break;
   }
