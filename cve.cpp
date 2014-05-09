@@ -27,6 +27,40 @@ using namespace firesight;
 
 typedef enum{UI_STILL, UI_VIDEO} UIMode;
 
+class CveCam {
+  private:
+    FuseDataBuffer *pCurrentJPG;
+    void freeBuffer(const char *path) {
+      if (pCurrentJPG) {
+	LOGTRACE2("CveCam::size(%s) MEMORY-FREE %ldB", path, pCurrentJPG->length);
+        free(pCurrentJPG);
+	pCurrentJPG = NULL;
+      }
+    }
+
+  public:
+    CveCam() {
+      pCurrentJPG = NULL;
+    }
+    ~CveCam() {
+      freeBuffer("CveCam::destructor");
+    }
+    size_t size(const char *path, int *pResult) {
+      freeBuffer(path);
+      pCurrentJPG = firefuse_allocDataBuffer(path, pResult, headcam_image.pData, headcam_image.length);
+      return pCurrentJPG ? pCurrentJPG->length: 0;
+    }
+    FuseDataBuffer *consume(const char *path, int *pResult) {
+      if (!pCurrentJPG) {
+	pCurrentJPG = firefuse_allocDataBuffer(path, pResult, headcam_image.pData, headcam_image.length);
+      }
+      LOGTRACE2("CveCam::consume(%s) %ldB", path, pCurrentJPG->length);
+      FuseDataBuffer *pBuffer = pCurrentJPG;
+      pCurrentJPG = NULL;
+      return pBuffer;
+    }
+} cveCam[1];
+
 Mat output_image;
 double output_image_seconds = 0;
 double monitor_seconds = 5; // show camera image after output_image is this old;
@@ -96,8 +130,7 @@ int cve_getattr(const char *path, struct stat *stbuf) {
   }
   if (cve_isPathSuffix(path, FIREREST_PROCESS_JSON) ||
       cve_isPathSuffix(path, FIREREST_CAMERA_JPG)) {
-    memcpy(&headcam_image_fstat, &headcam_image, sizeof(FuseDataBuffer));
-    stbuf->st_size = headcam_image_fstat.length;
+    stbuf->st_size = cveCam[0].size(path, &res);
   } else if (cve_isPathSuffix(path, FIREREST_MONITOR_JPG)) {
     // we don't actually know the JPG size without creating it, so just
     // return the camera image file size, even though it will always be wrong.
@@ -177,7 +210,7 @@ static int allocOutputImage(const char *path, struct fuse_file_info *fi, const c
     imencode(suffix, output_image, vJPG);
     fi->fh = (uint64_t) (size_t) firefuse_allocDataBuffer(path, &result, (const char*) vJPG.data(), vJPG.size());
   } else {
-    fi->fh = (uint64_t) (size_t) firefuse_allocImage(path, &result);
+    fi->fh = (uint64_t) (size_t) cveCam[0].consume(path, &result);
   }
   return result;
 }
@@ -187,7 +220,7 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
     
   if (verifyOpenR_(path, fi, &result)) {
     if (cve_isPathSuffix(path, FIREREST_PROCESS_JSON)) {
-      fi->fh = (uint64_t) (size_t) firefuse_allocImage(path, &result);
+      fi->fh = (uint64_t) (size_t) cveCam[0].consume(path, &result);
       if (result == 0) {
         FuseDataBuffer *pJPG = (FuseDataBuffer *)(size_t) fi->fh;
 	const char * pJson = cve_process(pJPG, path);
@@ -198,9 +231,9 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
 	result = -ENOMEM;
       }
     } else if (cve_isPathSuffix(path, FIREREST_SAVE_JSON)) {
-      fi->fh = (uint64_t) (size_t) firefuse_allocImage(path, &result);
+      fi->fh = (uint64_t) (size_t) cveCam[0].consume(path, &result);
     } else if (cve_isPathSuffix(path, FIREREST_CAMERA_JPG)) {
-      fi->fh = (uint64_t) (size_t) firefuse_allocImage(path, &result);
+      fi->fh = (uint64_t) (size_t) cveCam[0].consume(path, &result);
     } else if (cve_isPathSuffix(path, FIREREST_OUTPUT_JPG)) {
       result = allocOutputImage(path, fi, ".jpg");
     } else if (cve_isPathSuffix(path, FIREREST_FIRESIGHT_JSON)) {
@@ -209,7 +242,7 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
       result = cve_openVarFile(path, fi);
     } else if (cve_isPathSuffix(path, FIREREST_MONITOR_JPG)) {
       if (cve_seconds() - output_image_seconds > monitor_seconds) {
-	fi->fh = (uint64_t) (size_t) firefuse_allocImage(path, &result);
+	fi->fh = (uint64_t) (size_t) cveCam[0].consume(path, &result);
       } else {
 	result = allocOutputImage(path, fi, ".jpg");
       }
@@ -339,7 +372,7 @@ const char * cve_process(FuseDataBuffer *pJPG, const char *path) {
     LOGTRACE1("cve_process(%s) process begin", path);
     json_t *pModel = pipeline.process(image, argMap);
     LOGTRACE1("cve_process(%s) process end", path);
-    int jsonIndent = 2;
+    int jsonIndent = 0;
     char *pModelStr = json_dumps(pModel, JSON_PRESERVE_ORDER|JSON_COMPACT|JSON_INDENT(jsonIndent));
     LOGTRACE2("cve_process(%s) MEMORY-ALLOC %ldB", path, strlen(pModelStr));
     json_decref(pModel);
