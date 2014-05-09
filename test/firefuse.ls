@@ -14,6 +14,7 @@ bgr/
 camera.jpg
 gray/
 monitor.jpg
+output.jpg
 
 /dev/firefuse/cv/1/bgr:
 cve/
@@ -24,14 +25,12 @@ locate-part/
 
 /dev/firefuse/cv/1/bgr/cve/calc-offset:
 firesight.json
-output.jpg
 process.json
 saved.png
 save.json
 
 /dev/firefuse/cv/1/bgr/cve/locate-part:
 firesight.json
-output.jpg
 process.json
 saved.png
 save.json
@@ -45,14 +44,12 @@ locate-part/
 
 /dev/firefuse/cv/1/gray/cve/calc-offset:
 firesight.json
-output.jpg
 process.json
 saved.png
 save.json
 
 /dev/firefuse/cv/1/gray/cve/locate-part:
 firesight.json
-output.jpg
 process.json
 saved.png
 save.json

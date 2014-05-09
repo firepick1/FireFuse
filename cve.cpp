@@ -27,6 +27,10 @@ using namespace firesight;
 
 typedef enum{UI_STILL, UI_VIDEO} UIMode;
 
+Mat output_image;
+double output_image_seconds = 0;
+double monitor_seconds = 2; // show camera image after output_image is this old;
+
 static string camera_profile(const char * path) {
   const char *s = path;
   const char *pStart = 0;
@@ -94,6 +98,14 @@ int cve_getattr(const char *path, struct stat *stbuf) {
       cve_isPathSuffix(path, FIREREST_CAMERA_JPG)) {
     memcpy(&headcam_image_fstat, &headcam_image, sizeof(FuseDataBuffer));
     stbuf->st_size = headcam_image_fstat.length;
+  } else if (cve_isPathSuffix(path, FIREREST_MONITOR_JPG)) {
+    // we don't actually know the JPG size without creating it, so just
+    // return the camera image file size, even though it will always be wrong.
+    stbuf->st_size = headcam_image_fstat.length;
+  } else if (cve_isPathSuffix(path, FIREREST_OUTPUT_JPG)) {
+    // we don't actually know the JPG size without creating it, so just
+    // return the camera image file size, even though it will always be wrong.
+    stbuf->st_size = headcam_image_fstat.length;
   }
 
   return res;
@@ -140,14 +152,13 @@ static int cve_openVarFile(const char *path, struct fuse_file_info *fi) {
   size_t length = ftell(file);
   fseek(file, 0, SEEK_SET);
     
-  FuseDataBuffer *pBuffer = firefuse_allocDataBuffer(path, fi, NULL, length);
-  if (pBuffer) {
+  result = firefuse_allocDataBuffer(path, fi, NULL, length);
+  if (result == 0) {
+    FuseDataBuffer *pBuffer = (FuseDataBuffer *)(size_t) fi->fh;
     size_t bytesRead = fread(pBuffer->pData, 1, length, file);
-    if (bytesRead == length) {
-      fi->direct_io = 1;
-      fi->fh = (uint64_t) (size_t) pBuffer;
-    } else {
+    if (bytesRead != length) {
       LOGERROR3("cve_openVarFile(%s) read failed %d != MEMORY-FREE %d)", path, bytesRead, length);
+      fi->fh = 0;
       free(pBuffer);
     }
   } else {
@@ -159,13 +170,26 @@ static int cve_openVarFile(const char *path, struct fuse_file_info *fi) {
   return result;
 }
 
+static int allocOutputImage(const char *path, struct fuse_file_info *fi, const char *suffix) {
+  int result = 0;
+  if (output_image.rows && output_image.cols) {
+    vector<uchar> vJPG;
+    imencode(suffix, output_image, vJPG);
+    result = firefuse_allocDataBuffer(path, fi, (const char*) vJPG.data(), vJPG.size());
+  } else {
+    result = firefuse_allocImage(path, fi);
+  }
+  return result;
+}
+
 int cve_open(const char *path, struct fuse_file_info *fi) {
   int result = 0;
     
   if (verifyOpenR_(path, fi, &result)) {
     if (cve_isPathSuffix(path, FIREREST_PROCESS_JSON)) {
-      FuseDataBuffer *pJPG = firefuse_allocImage(path, fi);
-      if (pJPG) {
+      result = firefuse_allocImage(path, fi);
+      if (result == 0) {
+        FuseDataBuffer *pJPG = (FuseDataBuffer *)(size_t) fi->fh;
 	const char * pJson = cve_process(pJPG, path);
 	fi->fh = (uint64_t) (size_t) pJson;
 	LOGTRACE2("cve_open(%s) MEMORY-FREE %ldB", path, pJPG->length);
@@ -174,23 +198,21 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
 	result = -ENOMEM;
       }
     } else if (cve_isPathSuffix(path, FIREREST_SAVE_JSON)) {
-      FuseDataBuffer *pJPG = firefuse_allocImage(path, fi);
-      if (!pJPG) {
-	result = -ENOMEM;
-      }
+      result = firefuse_allocImage(path, fi);
     } else if (cve_isPathSuffix(path, FIREREST_CAMERA_JPG)) {
-      FuseDataBuffer *pJPG = firefuse_allocImage(path, fi);
-      if (!pJPG) {
-	result = -ENOMEM;
-      }
+      result = firefuse_allocImage(path, fi);
     } else if (cve_isPathSuffix(path, FIREREST_OUTPUT_JPG)) {
-      result = cve_openVarFile(path, fi);
+      result = allocOutputImage(path, fi, ".jpg");
     } else if (cve_isPathSuffix(path, FIREREST_FIRESIGHT_JSON)) {
       result = cve_openVarFile(path, fi);
     } else if (cve_isPathSuffix(path, FIREREST_SAVED_PNG)) {
       result = cve_openVarFile(path, fi);
     } else if (cve_isPathSuffix(path, FIREREST_MONITOR_JPG)) {
-      result = cve_openVarFile(path, fi);
+      if (cve_seconds() - output_image_seconds > monitor_seconds) {
+	result = firefuse_allocImage(path, fi);
+      } else {
+	result = allocOutputImage(path, fi, ".jpg");
+      }
     } else {
       result = -ENOENT;
     }
@@ -319,12 +341,8 @@ const char * cve_process(FuseDataBuffer *pJPG, const char *path) {
     char *pModelStr = json_dumps(pModel, JSON_PRESERVE_ORDER|JSON_COMPACT|JSON_INDENT(jsonIndent));
     LOGTRACE2("cve_process(%s) MEMORY-ALLOC %ldB", path, strlen(pModelStr));
     json_decref(pModel);
-    string monitorPath = buildVarPath(path, FIREREST_MONITOR_JPG, 4);
-    LOGTRACE2("cve_process(%s) MONITOR -> %s", path, monitorPath.c_str());
-    imwrite(monitorPath.c_str(), image);
-    string outputPath = buildVarPath(path, FIREREST_OUTPUT_JPG);
-    LOGTRACE2("cve_process(%s) OUTPUT -> %s", path, outputPath.c_str());
-    imwrite(outputPath.c_str(), image);
+    output_image = image;
+    output_image_seconds = cve_seconds();
     LOGINFO3("cve_process(%s) -> %dB %0.3fs", path, strlen(pModelStr), cve_seconds()-sStart);
     return pModelStr;
   } catch (char * ex) {

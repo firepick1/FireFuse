@@ -25,7 +25,15 @@ fi
 echo
 echo "====> TESTING FIREFUSE save.json"
 cp -f /dev/firefuse/cv/1/gray/cve/calc-offset/saved.png target
+if [ $? -ne 0 ]; then
+  echo "ERROR: /dev/firefuse/cv/1/gray/cve/calc-offset/saved.png not found"
+  exit -1
+fi
 cat /dev/firefuse/cv/1/gray/cve/calc-offset/save.json
+if [ $? -ne 0 ]; then
+  echo "ERROR: save.json failed"
+  exit -1
+fi
 cmp /var/firefuse/cv/1/gray/cve/calc-offset/saved.png target/saved.png
 if [ $? -eq 0 ]; then
   echo "ERROR: save.json did create new saved.png"
@@ -35,24 +43,60 @@ fi
 echo
 echo "====> TESTING FIREFUSE process.json"
 cp -f /dev/firefuse/cv/1/monitor.jpg target
-cp -f /dev/firefuse/cv/1/gray/cve/calc-offset/output.jpg target
+if [ $? -ne 0 ]; then
+  echo "ERROR: /dev/firefuse/cv/1/monitor.jpg not found"
+  exit -1
+fi
+cp -f /dev/firefuse/cv/1/output.jpg target
+if [ $? -ne 0 ]; then
+  echo "ERROR: /dev/firefuse/cv/1/output.jpg not found"
+  exit -1
+fi
 cat /dev/firefuse/cv/1/gray/cve/calc-offset/process.json |& tee target/process.json
-echo
 if [ $? -ne 0 ]; then
   echo "ERROR: process.json failed"
   exit -1
 fi
-cmp /dev/firefuse/cv/1/monitor.jpg target/monitor.jpg
-if [ $? -eq 0 ]; then
-  echo "ERROR: process.json did not generate new monitor.jpg"
-  exit -1
-fi
-cmp /dev/firefuse/cv/1/gray/cve/calc-offset/output.jpg target/output.jpg
+echo
+echo verifying output.jpg 
+cmp /dev/firefuse/cv/1/output.jpg target/output.jpg
 if [ $? -eq 0 ]; then
   echo "ERROR: process.json did not generate new output.jpg"
   exit -1
 fi
+echo verifying monitor.jpg ...
+cp -f /dev/firefuse/cv/1/monitor.jpg target/monitor1.jpg; 
+cp -f /dev/firefuse/cv/1/monitor.jpg target/monitor2.jpg;
+sleep 2
+cp -f /dev/firefuse/cv/1/monitor.jpg target/monitor3.jpg;
+cmp target/monitor1.jpg target/monitor.jpg
+if [ $? -eq 0 ]; then
+  echo "ERROR: process.json did not generate new monitor.jpg"
+  exit -1
+fi
+cmp target/monitor1.jpg target/monitor2.jpg
+if [ $? -ne 0 ]; then
+  echo "ERROR: expected unchanging monitor.jpg before monitor_seconds"
+  exit -1
+fi
+cmp target/monitor2.jpg target/monitor3.jpg
+if [ $? -eq 0 ]; then
+  echo "ERROR: expected changing monitor.jpg after monitor_seconds"
+  exit -1
+fi
+cmp target/monitor1.jpg /dev/firefuse/cv/1/output.jpg
+if [ $? -ne 0 ]; then
+  echo "ERROR: expected initial monitor.jpg to match output.jpg"
+  exit -1
+fi
+echo verifying process.json 
+grep error target/process.json
+if [ $? -eq 0 ]; then
+  echo "ERROR: process.json reported error"
+  exit -1
+fi
 
+echo
 echo "-------------------------------------------"
 echo "FireFUSE test: PASSED"
 echo "-------------------------------------------"

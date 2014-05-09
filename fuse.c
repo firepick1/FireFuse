@@ -157,7 +157,8 @@ static int firefuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
   return 0;
 }
 
-FuseDataBuffer* firefuse_allocDataBuffer(const char *path, struct fuse_file_info *fi, const char *pData, size_t length) {
+int firefuse_allocDataBuffer(const char *path, struct fuse_file_info *fi, const char *pData, size_t length) {
+  int result = 0;
   FuseDataBuffer *pBuffer = calloc(sizeof(FuseDataBuffer) + length, 1);
   if (pBuffer) {
     pBuffer->length = length;
@@ -169,17 +170,17 @@ FuseDataBuffer* firefuse_allocDataBuffer(const char *path, struct fuse_file_info
       LOGTRACE2("firefuse_allocDataBuffer(%s) MEMORY-ALLOC uninitialized %ldB", path, length);
     }
   } else {
+    result = -ENOMEM;
     LOGERROR2("firefuse_allocDataBuffer(%s) Could not allocate memory: %ldB", path, length);
   }
   fi->direct_io = 1;
   fi->fh = (uint64_t) (size_t) pBuffer;
-  return pBuffer;
+  return result;
 }
 
-FuseDataBuffer* firefuse_allocImage(const char *path, struct fuse_file_info *fi) {
+int firefuse_allocImage(const char *path, struct fuse_file_info *fi) {
   int length = headcam_image_fstat.length;
-  FuseDataBuffer *pJPG = firefuse_allocDataBuffer(path, fi, headcam_image_fstat.pData, length);
-  return pJPG;
+  return firefuse_allocDataBuffer(path, fi, headcam_image_fstat.pData, length);
 }
 
 static int firefuse_open(const char *path, struct fuse_file_info *fi) {
@@ -193,9 +194,9 @@ static int firefuse_open(const char *path, struct fuse_file_info *fi) {
     verifyOpenR_(path, fi, &result);
   } else if (strcmp(path, HOLES_PATH) == 0) {
     verifyOpenR_(path, fi, &result);
-    FuseDataBuffer *pJPG = firefuse_allocImage(path, fi);
-    if (pJPG) {
-      firepick_holes(pJPG);
+    result = firefuse_allocImage(path, fi);
+    if (fi->fh) {
+      firepick_holes((FuseDataBuffer *) (size_t)fi->fh);
     } else {
       result = -ENOMEM;
     }
