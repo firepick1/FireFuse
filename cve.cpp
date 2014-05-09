@@ -27,43 +27,134 @@ using namespace firesight;
 
 typedef enum{UI_STILL, UI_VIDEO} UIMode;
 
-class CveCam {
+typedef class CachedJPG {
   private:
-    FuseDataBuffer *pCurrentJPG;
+    FuseDataBuffer *pCachedJPG;
     void freeBuffer(const char *path) {
-      if (pCurrentJPG) {
-	LOGTRACE2("CveCam::size(%s) MEMORY-FREE %ldB", path, pCurrentJPG->length);
-        free(pCurrentJPG);
-	pCurrentJPG = NULL;
+      if (pCachedJPG) {
+	LOGTRACE2("CachedJPG::freeBuffer(%s) MEMORY-FREE %ldB", path, pCachedJPG->length);
+        free(pCachedJPG);
+	pCachedJPG = NULL;
       }
     }
 
   public:
-    CveCam() {
-      pCurrentJPG = NULL;
+    CachedJPG() {
+      pCachedJPG = NULL;
     }
-    ~CveCam() {
-      freeBuffer("CveCam::destructor");
+    ~CachedJPG() {
+      freeBuffer("CachedJPG::destructor");
     }
-    size_t size(const char *path, int *pResult) {
+
+    int push(const char* path, FuseDataBuffer *pValue) {
       freeBuffer(path);
-      pCurrentJPG = firefuse_allocDataBuffer(path, pResult, headcam_image.pData, headcam_image.length);
-      return pCurrentJPG ? pCurrentJPG->length: 0;
+      pCachedJPG = pValue;
+      return pCachedJPG ? pCachedJPG->length: 0;
     }
-    FuseDataBuffer *consume(const char *path, int *pResult) {
-      if (!pCurrentJPG) {
-	pCurrentJPG = firefuse_allocDataBuffer(path, pResult, headcam_image.pData, headcam_image.length);
-      }
-      LOGTRACE2("CveCam::consume(%s) %ldB", path, pCurrentJPG->length);
-      FuseDataBuffer *pBuffer = pCurrentJPG;
-      pCurrentJPG = NULL;
+    FuseDataBuffer *peek(const char *path) {
+      return pCachedJPG;
+    }
+    FuseDataBuffer *pop(const char *path) {
+      FuseDataBuffer *pBuffer = pCachedJPG;
+      pCachedJPG = NULL;
       return pBuffer;
     }
-} cveCam[1];
+} CachedJPGType;
 
-Mat output_image;
-double output_image_seconds = 0;
-double monitor_seconds = 5; // show camera image after output_image is this old;
+class CveCam {
+  private:
+    CachedJPGType cameraJPG;
+    CachedJPGType outputJPG;
+    CachedJPGType monitorJPG;
+    Mat output_image;
+    double output_seconds;
+    double monitor_seconds;
+
+    FuseDataBuffer *createOutputJPG(const char *path, int *pResult) {
+      FuseDataBuffer *pJPG = NULL;
+      if (output_image.rows && output_image.cols) {
+	vector<uchar> vJPG;
+	imencode(".jpg", output_image, vJPG);
+	pJPG = firefuse_allocDataBuffer(path, pResult, (const char*) vJPG.data(), vJPG.size());
+	LOGTRACE2("CveCam::createOutputJPG(%s) %ldB", path, pJPG->length);
+      } else {
+	pJPG = produceCameraJPG(path, pResult);
+	LOGTRACE2("CveCam::createOutputJPG(%s) unavailable (using camera image) %ldB", path, pJPG->length);
+      }
+      return pJPG;
+    }
+
+    FuseDataBuffer *createMonitorJPG(const char *path, int *pResult) {
+      FuseDataBuffer *pJPG = 
+      	cve_seconds() - output_seconds < monitor_seconds ?
+	produceOutputJPG(path, pResult) : 
+	produceCameraJPG(path, pResult);
+      LOGTRACE2("CveCam::createMonitorJPG(%s) %ldB", path, pJPG->length);
+      return pJPG;
+    }
+
+  public:
+    CveCam() {
+      output_seconds = 0;
+      monitor_seconds = 5;
+    }
+
+    void setOutput(Mat value) {
+       output_image = value;
+       output_seconds = cve_seconds();
+    }
+
+    void setMonitorSeconds(double value) {
+      monitor_seconds = value;
+    }
+
+    double getMonitorSeconds() {
+      return monitor_seconds;
+    }
+
+    size_t sizeCameraJPG(const char *path, int *pResult) {
+      FuseDataBuffer *pJPG = firefuse_allocDataBuffer(path, pResult, headcam_image.pData, headcam_image.length);
+      cameraJPG.push(path, pJPG);
+      return pJPG ? pJPG->length: 0;
+    }
+
+    size_t sizeOutputJPG(const char *path, int *pResult) {
+      FuseDataBuffer *pJPG = createOutputJPG(path, pResult);
+      return outputJPG.push(path, pJPG);
+    }
+
+    size_t sizeMonitorJPG(const char *path, int *pResult) {
+      FuseDataBuffer *pJPG = createMonitorJPG(path, pResult);
+      return monitorJPG.push(path, pJPG);
+    }
+
+    FuseDataBuffer *produceCameraJPG(const char *path, int *pResult) {
+      FuseDataBuffer *pJPG = cameraJPG.pop(path);
+      if (!pJPG) {
+	pJPG = firefuse_allocDataBuffer(path, pResult, headcam_image.pData, headcam_image.length);
+      }
+      LOGTRACE2("CveCam::produceCameraJPG(%s) %ldB", path, pJPG->length);
+      return pJPG;
+    }
+
+    FuseDataBuffer *produceOutputJPG(const char *path, int *pResult) {
+      FuseDataBuffer *pJPG = outputJPG.pop(path);
+      if (!pJPG) {
+	pJPG = createOutputJPG(path, pResult);
+      }
+      LOGTRACE2("CveCam::produceOutputJPG(%s) %ldB", path, pJPG->length);
+      return pJPG;
+    }
+
+    FuseDataBuffer *produceMonitorJPG(const char *path, int *pResult) {
+      FuseDataBuffer *pJPG = monitorJPG.pop(path);
+      if (!pJPG) {
+        pJPG = createMonitorJPG(path, pResult);
+      }
+      LOGTRACE2("CveCam::produceMonitorJPG(%s) %ldB", path, pJPG->length);
+      return pJPG;
+    }
+} cveCam[1];
 
 static string camera_profile(const char * path) {
   const char *s = path;
@@ -130,15 +221,11 @@ int cve_getattr(const char *path, struct stat *stbuf) {
   }
   if (cve_isPathSuffix(path, FIREREST_PROCESS_JSON) ||
       cve_isPathSuffix(path, FIREREST_CAMERA_JPG)) {
-    stbuf->st_size = cveCam[0].size(path, &res);
+    stbuf->st_size = cveCam[0].sizeCameraJPG(path, &res);
   } else if (cve_isPathSuffix(path, FIREREST_MONITOR_JPG)) {
-    // we don't actually know the JPG size without creating it, so just
-    // return the camera image file size, even though it will always be wrong.
-    stbuf->st_size = 1024;
+    stbuf->st_size = cveCam[0].sizeMonitorJPG(path, &res);
   } else if (cve_isPathSuffix(path, FIREREST_OUTPUT_JPG)) {
-    // we don't actually know the JPG size without creating it, so just
-    // return the camera image file size, even though it will always be wrong.
-    stbuf->st_size = 1024;
+    stbuf->st_size = cveCam[0].sizeOutputJPG(path, &res);
   }
 
   return res;
@@ -203,16 +290,62 @@ static int cve_openVarFile(const char *path, struct fuse_file_info *fi) {
   return result;
 }
 
-static int allocOutputImage(const char *path, struct fuse_file_info *fi, const char *suffix) {
-  int result = 0;
-  if (output_image.rows && output_image.cols) {
-    vector<uchar> vJPG;
-    imencode(suffix, output_image, vJPG);
-    fi->fh = (uint64_t) (size_t) firefuse_allocDataBuffer(path, &result, (const char*) vJPG.data(), vJPG.size());
-  } else {
-    fi->fh = (uint64_t) (size_t) cveCam[0].consume(path, &result);
+FuseDataBuffer * cve_save(FuseDataBuffer *pJPG, const char *path, int *pResult) {
+  if (!pJPG) {
+    *pResult = -ENOMEM;
+    return NULL;
   }
-  return result;
+  double sStart = cve_seconds();
+  *pResult = 0;
+
+  string savedPath = buildVarPath(path, FIREREST_SAVED_PNG);
+  LOGTRACE2("cve_save(%s) saving to %s", path, savedPath.c_str());
+  bool isColor = strcmp("bgr", camera_profile(path).c_str()) == 0;
+  FILE *fSaved = fopen(savedPath.c_str(), "w");
+  if (fSaved) {
+    size_t bytes;
+    size_t expectedBytes = pJPG->length;
+    if (isColor) {
+      expectedBytes = pJPG->length;
+      bytes = fwrite(pJPG->pData, 1, expectedBytes, fSaved);
+    } else {
+      vector<uchar> buff;//buffer for coding
+      const uchar * pJPGBytes = (const uchar *) pJPG->pData;
+      std::vector<uchar> vJPG (pJPGBytes, pJPGBytes + pJPG->length / sizeof(uchar) );
+      LOGTRACE1("cve_save(%s) decode grayscale image", path);
+      Mat image = imdecode(vJPG, CV_LOAD_IMAGE_GRAYSCALE); 
+      vector<int> param = vector<int>(2);
+      param[0]=CV_IMWRITE_PNG_COMPRESSION;
+      param[1]=3;//default(3)  0-9.
+      imencode(".png",image,buff,param);
+      expectedBytes = buff.size();
+      bytes = fwrite(buff.data(), 1, expectedBytes, fSaved);
+    }
+    fclose(fSaved);
+    if (bytes == expectedBytes) {
+      LOGINFO4("cve_save(%s) %s image saved (%ldB) %0.3fs", path, isColor ? "color" : "gray", bytes, cve_seconds() - sStart);
+    } else {
+      LOGERROR3("cve_save(%s) could not write to file: %s (%d)B", path, savedPath.c_str(), bytes);
+      *pResult = -EIO;
+    }
+  } else {
+    LOGERROR2("cve_save(%s) could not open file for write: %s", path, savedPath.c_str());
+    *pResult = -ENOENT;
+  }
+
+  LOGTRACE2("cve_save(%s) MEMORY-FREE %ldB", path, pJPG->length);
+  FuseDataBuffer *pJSON = pJPG; // json is always smaller than JPG, so just re-use
+  if (*pResult == 0) {
+    snprintf(pJSON->pData, pJSON->length, "{\"camera\":{\"time\":\"%.1f\"}}\n", cve_seconds());
+  } else {
+    snprintf(pJSON->pData, pJSON->length, 
+      "{\"camera\":{\"time\":\"%.1f\"},\"save\":{\"error\":\"Could not save camera image for %s\"}}\n", 
+      cve_seconds(), path);
+  }
+  pJSON->length = strlen(pJSON->pData);
+  LOGTRACE2("cve_save(%s) MEMORY-ALLOC %ldB", path, pJSON->length);
+
+  return pJSON;
 }
 
 int cve_open(const char *path, struct fuse_file_info *fi) {
@@ -220,32 +353,26 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
     
   if (verifyOpenR_(path, fi, &result)) {
     if (cve_isPathSuffix(path, FIREREST_PROCESS_JSON)) {
-      fi->fh = (uint64_t) (size_t) cveCam[0].consume(path, &result);
-      if (result == 0) {
-        FuseDataBuffer *pJPG = (FuseDataBuffer *)(size_t) fi->fh;
+      FuseDataBuffer *pJPG = cveCam[0].produceCameraJPG(path, &result);
+      if (pJPG) {
 	const char * pJson = cve_process(pJPG, path);
 	fi->fh = (uint64_t) (size_t) pJson;
 	LOGTRACE2("cve_open(%s) MEMORY-FREE %ldB", path, pJPG->length);
 	free(pJPG);
-      } else {
-	result = -ENOMEM;
       }
     } else if (cve_isPathSuffix(path, FIREREST_SAVE_JSON)) {
-      fi->fh = (uint64_t) (size_t) cveCam[0].consume(path, &result);
+      FuseDataBuffer *pJPG = cveCam[0].produceCameraJPG(path, &result);
+      fi->fh = (uint64_t) (size_t) cve_save(pJPG, path, &result);
     } else if (cve_isPathSuffix(path, FIREREST_CAMERA_JPG)) {
-      fi->fh = (uint64_t) (size_t) cveCam[0].consume(path, &result);
+      fi->fh = (uint64_t) (size_t) cveCam[0].produceCameraJPG(path, &result);
     } else if (cve_isPathSuffix(path, FIREREST_OUTPUT_JPG)) {
-      result = allocOutputImage(path, fi, ".jpg");
+      fi->fh = (uint64_t) (size_t) cveCam[0].produceOutputJPG(path, &result);
+    } else if (cve_isPathSuffix(path, FIREREST_MONITOR_JPG)) {
+      fi->fh = (uint64_t) (size_t) cveCam[0].produceMonitorJPG(path, &result);
     } else if (cve_isPathSuffix(path, FIREREST_FIRESIGHT_JSON)) {
       result = cve_openVarFile(path, fi);
     } else if (cve_isPathSuffix(path, FIREREST_SAVED_PNG)) {
       result = cve_openVarFile(path, fi);
-    } else if (cve_isPathSuffix(path, FIREREST_MONITOR_JPG)) {
-      if (cve_seconds() - output_image_seconds > monitor_seconds) {
-	fi->fh = (uint64_t) (size_t) cveCam[0].consume(path, &result);
-      } else {
-	result = allocOutputImage(path, fi, ".jpg");
-      }
     } else {
       result = -ENOENT;
     }
@@ -274,17 +401,8 @@ int cve_read(const char *path, char *buf, size_t size, off_t offset, struct fuse
   (void) fi;
 
   if (cve_isPathSuffix(path, FIREREST_PROCESS_JSON)) {
-    const char *pJson = (const char *) (size_t)fi->fh;
-    sizeOut = firefuse_readBuffer(buf, pJson, size, offset, strlen(pJson));
-  } else if (cve_isPathSuffix(path, FIREREST_SAVE_JSON)) {
-    FuseDataBuffer *pBuffer = (FuseDataBuffer *) (size_t) fi->fh;
-    if (offset == 0) {
-      cve_save(pBuffer, path);
-    }
-    sizeOut = firefuse_readBuffer(buf, pBuffer->pData, size, offset, strlen(pBuffer->pData));
-  } else if (cve_isPathSuffix(path, FIREREST_CAMERA_JPG)) {
-    FuseDataBuffer *pBuffer = (FuseDataBuffer *) (size_t) fi->fh;
-    sizeOut = firefuse_readBuffer(buf, pBuffer->pData, size, offset, pBuffer->length);
+    const char *pJSON = (const char *) (size_t)fi->fh;
+    sizeOut = firefuse_readBuffer(buf, pJSON, size, offset, strlen(pJSON));
   } else if (fi->fh) { // data file
     FuseDataBuffer *pBuffer = (FuseDataBuffer *) (size_t) fi->fh;
     sizeOut = firefuse_readBuffer(buf, pBuffer->pData, size, offset, pBuffer->length);
@@ -376,8 +494,7 @@ const char * cve_process(FuseDataBuffer *pJPG, const char *path) {
     char *pModelStr = json_dumps(pModel, JSON_PRESERVE_ORDER|JSON_COMPACT|JSON_INDENT(jsonIndent));
     LOGTRACE2("cve_process(%s) MEMORY-ALLOC %ldB", path, strlen(pModelStr));
     json_decref(pModel);
-    output_image = image;
-    output_image_seconds = cve_seconds();
+    cveCam[0].setOutput(image);
     LOGINFO3("cve_process(%s) -> %dB %0.3fs", path, strlen(pModelStr), cve_seconds()-sStart);
     return pModelStr;
   } catch (char * ex) {
@@ -401,150 +518,5 @@ const char * cve_process(FuseDataBuffer *pJPG, const char *path) {
     CVE_MESSAGE(pResult, fmt, path, NULL);
     return pResult;
   }
-
 }
 
-int cve_save(FuseDataBuffer *pJPG, const char *path) {
-  double sStart = cve_seconds();
-  int result = 0;
-
-  string savedPath = buildVarPath(path, FIREREST_SAVED_PNG);
-  LOGTRACE2("cve_save(%s) saving to %s", path, savedPath.c_str());
-  bool isColor = strcmp("bgr", camera_profile(path).c_str()) == 0;
-  FILE *fSaved = fopen(savedPath.c_str(), "w");
-  if (fSaved) {
-    size_t bytes;
-    size_t expectedBytes = pJPG->length;
-    if (isColor) {
-      expectedBytes = pJPG->length;
-      bytes = fwrite(pJPG->pData, 1, expectedBytes, fSaved);
-    } else {
-      vector<uchar> buff;//buffer for coding
-      const uchar * pJPGBytes = (const uchar *) pJPG->pData;
-      std::vector<uchar> vJPG (pJPGBytes, pJPGBytes + pJPG->length / sizeof(uchar) );
-      LOGTRACE1("cve_save(%s) decode grayscale image", path);
-      Mat image = imdecode(vJPG, CV_LOAD_IMAGE_GRAYSCALE); 
-      vector<int> param = vector<int>(2);
-      param[0]=CV_IMWRITE_PNG_COMPRESSION;
-      param[1]=3;//default(3)  0-9.
-      imencode(".png",image,buff,param);
-      expectedBytes = buff.size();
-      bytes = fwrite(buff.data(), 1, expectedBytes, fSaved);
-    }
-    fclose(fSaved);
-    if (bytes == expectedBytes) {
-      LOGINFO4("cve_save(%s) %s image saved (%ldB) %0.3fs", path, isColor ? "color" : "gray", bytes, cve_seconds() - sStart);
-    } else {
-      LOGERROR3("cve_save(%s) could not write to file: %s (%d)B", path, savedPath.c_str(), bytes);
-      result = -EIO;
-    }
-  } else {
-    LOGERROR2("cve_save(%s) could not open file for write: %s", path, savedPath.c_str());
-    result = -ENOENT;
-  }
-
-  if (result == 0) {
-    snprintf(pJPG->pData, pJPG->length, "{\"camera\":{\"time\":\"%.1f\"}}\n", cve_seconds());
-  } else {
-    snprintf(pJPG->pData, pJPG->length, 
-      "{\"camera\":{\"time\":\"%.1f\"},\"save\":{\"error\":\"Could not save camera image for %s\"}}\n", 
-      cve_seconds(), path);
-  }
-
-  return result;
-}
-
-bool parseArgs(int argc, char *argv[], 
-  string &pipelineString, char *&imagePath, char * &outputPath, UIMode &uimode, ArgMap &argMap, bool &isTime, int &jsonIndent) 
-{
-  char *pipelinePath = NULL;
-  uimode = UI_STILL;
-  isTime = false;
-  firelog_level(FIRELOG_INFO);
- 
-  if (argc <= 1) {
-    return false;
-  }
-
-  for (int i = 1; i < argc; i++) {
-    if (argv[i][0] == 0) {
-      // empty argument
-    } else if (strcmp("-opencv",argv[i]) == 0) {
-      cout << CV_MAJOR_VERSION << "." << CV_MINOR_VERSION << endl;
-      exit(0);
-    } else if (strcmp("-p",argv[i]) == 0) {
-      if (i+1>=argc) {
-        LOGERROR("expected pipeline path after -p");
-        exit(-1);
-      }
-      pipelinePath = argv[++i];
-      LOGTRACE1("parseArgs(-p) \"%s\" is JSON pipeline path", pipelinePath);
-    } else if (strcmp("-ji",argv[i]) == 0) {
-      if (i+1>=argc) {
-        LOGERROR("expected JSON indent after -ji");
-        exit(-1);
-      }
-      jsonIndent = atoi(argv[++i]);
-      LOGTRACE1("parseArgs(-ji) JSON indent:%d", jsonIndent);
-    } else if (strcmp("-o",argv[i]) == 0) {
-      if (i+1>=argc) {
-        LOGERROR("expected output path after -o");
-        exit(-1);
-      }
-      outputPath = argv[++i];
-      LOGTRACE1("parseArgs(-o) \"%s\" is output image path", outputPath);
-    } else if (strcmp("-time",argv[i]) == 0) {
-      isTime = true;
-    } else if (strncmp("-D",argv[i],2) == 0) {
-      char * pEq = strchr(argv[i],'=');
-      if (!pEq || (pEq-argv[i])<=2) {
-        LOGERROR("expected argName=argValue pair after -D");
-        exit(-1);
-      }
-      *pEq = 0;
-      char *pName = argv[i] + 2;
-      char *pVal = pEq + 1;
-      argMap[pName] = pVal;
-      LOGTRACE2("parseArgs(-D) argMap[%s]=\"%s\"", pName, pVal );
-      *pEq = '=';
-    } else if (strcmp("-i",argv[i]) == 0) {
-      if (i+1>=argc) {
-        LOGERROR("expected image path after -i");
-        exit(-1);
-      }
-      imagePath = argv[++i];
-      LOGTRACE1("parseArgs(-i) \"%s\" is input image path", imagePath);
-    } else if (strcmp("-video", argv[i]) == 0) {
-      uimode = UI_VIDEO;
-      LOGTRACE("parseArgs(-video) UI_VIDEO user interface selected");
-    } else if (strcmp("-warn", argv[i]) == 0) {
-      firelog_level(FIRELOG_WARN);
-    } else if (strcmp("-error", argv[i]) == 0) {
-      firelog_level(FIRELOG_ERROR);
-    } else if (strcmp("-info", argv[i]) == 0) {
-      firelog_level(FIRELOG_INFO);
-    } else if (strcmp("-debug", argv[i]) == 0) {
-      firelog_level(FIRELOG_DEBUG);
-    } else if (strcmp("-trace", argv[i]) == 0) {
-      firelog_level(FIRELOG_TRACE);
-    } else {
-      LOGERROR1("unknown firesight argument: '%s'", argv[i]);
-      return false;
-    }
-  }
-  if (pipelinePath) {
-    LOGTRACE1("Reading pipeline: %s", pipelinePath);
-    ifstream ifs(pipelinePath);
-    stringstream pipelineStream;
-    pipelineStream << ifs.rdbuf();
-    pipelineString = pipelineStream.str();
-  } else {
-    pipelineString = "[{\"op\":\"nop\"}]";
-  }
-  const char *pJsonPipeline = pipelineString.c_str();
-  if (strlen(pJsonPipeline) < 10) {
-    LOGERROR1("Invalid pipeline path: %s", pipelinePath);
-    exit(-1);
-  }
-  return true;
-}
