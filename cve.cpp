@@ -157,24 +157,21 @@ class CveCam {
 } cveCam[1];
 
 static string camera_profile(const char * path) {
-  const char *s = path;
-  const char *pStart = 0;
-  const char *pEnd = 0;
-  for (int i = 0; i < 4; i++ ) {
-    if (*s == 0) {
-      break;
-    }
-    switch (i) {
-      case 2: pStart = s; break;
-      case 3: pEnd = s; break;
+  string pathstr(path);
+  string result;
+  size_t cvePos = pathstr.find("/cve/");
+
+  if (cvePos != string::npos) {
+    size_t slashPos = pathstr.rfind("/", cvePos-1);
+    if (slashPos != string::npos) {
+      result = pathstr.substr(slashPos+1, cvePos-slashPos-1);
     }
   }
-  if (*pEnd == 0) {
+  if (result.size() == 0) {
     LOGERROR1("camera_profile(%s) -> UNKNOWN", path);
     return "UNKNOWN";
   }
 
-  string result(pStart, pEnd-pStart);
   LOGTRACE2("camera_profile(%s) -> %s", path, result.c_str());
 
   return result;
