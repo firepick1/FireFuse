@@ -55,6 +55,11 @@ else
   echo CMAKE OK
 fi
 
+if [ "$(type -p lsb-release)" == "" ]; then
+  echo "++++++++++++++++++ INSTALLING lsb-release ++++++++++++"
+  apt-get install -y lsb-release
+fi
+
 if [ ! -e /usr/local/include/jansson.h ] ; then
   echo "++++++++++++++++++ INSTALLING JANNSON C LIBRARY ++++++++++++"
   apt-get -y install dh-autoreconf
