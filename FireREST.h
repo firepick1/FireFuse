@@ -35,10 +35,6 @@ enum CVE_Path {
 
 bool cve_isPathPrefix(const char *value, const char * prefix) ;
 bool cve_isPathSuffix(const char *path, const char *suffix);
-bool cve_isPath(const char *path, int flags);
-bool cve_isPathCV(const char *path);
-double cve_seconds();
-const char * cve_process(FuseDataBuffer *pJPG, const char *path);
 int cve_save(FuseDataBuffer *pBuffer, const char *path);
 int cve_getattr(const char *path, struct stat *stbuf);
 int cve_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi);

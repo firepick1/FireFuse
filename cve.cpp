@@ -25,6 +25,10 @@ using namespace cv;
 using namespace std;
 using namespace firesight;
 
+int max_json_len = 1024;
+
+double cve_seconds();
+
 typedef enum{UI_STILL, UI_VIDEO} UIMode;
 
 typedef class CachedJPG {
@@ -156,6 +160,27 @@ class CveCam {
     }
 } cveCam[1];
 
+static FuseDataBuffer * allocJSONBuffer(const char * path, FuseDataBuffer *pBuffer, int *pResult, size_t len) {
+  FuseDataBuffer *pJSON = pBuffer;
+  *pResult = 0;
+  if (len > max_json_len) {
+    LOGERROR2("allocJSONBuffer(%s) max_json_len exceeded: %ldB", path, len);
+    pResult = -EOVERFLOW;
+  }
+  if (pBuffer->pLength < max_json_len) {
+    LOGTRACE2("allocJSONBuffer(%s) MEMORY-FREE new %ldB", path, pBuffer->length);
+    free(pBuffer);
+    pJSON = firefuse_allocDataBuffer(path, pResult, NULL, max_json_len);
+  } else {
+    LOGTRACE2("allocJSONBuffer(%s) MEMORY-FREE existing %ldB", path, pBuffer->length);
+    pBuffer->length = max_json_len);
+  }
+  memset(pJSON->pData, ' ', max_json_len);
+  pJSON->pData[max_json_len] = '\n';
+  LOGTRACE2("allocJSONBuffer(%s) MEMORY-ALLOC %ldB", path, pJSON->length);
+  return pJSON;
+}
+
 static string camera_profile(const char * path) {
   string pathstr(path);
   string result;
@@ -218,10 +243,10 @@ int cve_getattr(const char *path, struct stat *stbuf) {
   }
   if (cve_isPathSuffix(path, FIREREST_PROCESS_JSON)) {
     cveCam[0].sizeCameraJPG(path, &res); // get current picture but ignore size
-    stbuf->st_size = 1; // we don't know the JSON size just yet
+    stbuf->st_size = max_json_len;
   } else if (cve_isPathSuffix(path, FIREREST_SAVE_JSON)) {
     cveCam[0].sizeCameraJPG(path, &res); // get current picture but ignore size
-    stbuf->st_size = 1; // we don't know the JSON size just yet
+    stbuf->st_size = max_json_len;
   } else if (cve_isPathSuffix(path, FIREREST_CAMERA_JPG)) {
     stbuf->st_size = cveCam[0].sizeCameraJPG(path, &res);
   } else if (cve_isPathSuffix(path, FIREREST_MONITOR_JPG)) {
@@ -336,19 +361,79 @@ FuseDataBuffer * cve_save(FuseDataBuffer *pJPG, const char *path, int *pResult) 
   }
 
   LOGTRACE2("cve_save(%s) MEMORY-FREE %ldB", path, pJPG->length);
-  FuseDataBuffer *pJSON = pJPG; // json is always smaller than JPG, so just re-use
+  int allocResult;
+  FuseDataBuffer *pJSON = allocJSONBuffer(path, pJPG, &allocResult, max_json_len) {
   if (*pResult == 0) {
-    snprintf(pJSON->pData, pJSON->length, "{\"camera\":{\"time\":\"%.1f\"}}\n", cve_seconds());
+    *pResult = *pAllocResult;
+  }
+  char jsonBuf[255];
+  if (*pResult == 0) {
+    snprintf(jsonBuf, sizeof(jsonBuf), "{\"camera\":{\"time\":\"%.1f\"}}\n", cve_seconds());
   } else {
-    snprintf(pJSON->pData, pJSON->length, 
+    snprintf(jsonBuf, sizeof(jsonBuf), 
       "{\"camera\":{\"time\":\"%.1f\"},\"save\":{\"error\":\"Could not save camera image for %s\"}}\n", 
       cve_seconds(), path);
   }
-  pJSON->length = strlen(pJSON->pData);
-  LOGTRACE2("cve_save(%s) MEMORY-ALLOC %ldB", path, pJSON->length);
+  memcpy(pJSON->pData, strlen(jsonBuf));
 
   return pJSON;
 }
+
+static FuseDataBuffer * cve_process(FuseDataBuffer *pJPG, const char *path, int *pResult) {
+  assert(pJPG);
+  assert(path);
+  assert(pResult);
+  double sStart = cve_seconds();
+  string firesightPath = buildVarPath(path, FIREREST_FIRESIGHT_JSON);
+  LOGTRACE2("cve_process(%s) loading JSON: %s", path, firesightPath.c_str());
+  char *pModelStr = NULL;
+  FuseDataBuffer *pJSON = NULL;
+  *pResult = 0;
+  char *pModelStr = NULL;
+  try {
+    Pipeline pipeline(firesightPath.c_str(), Pipeline::PATH);
+    const uchar * pJPGBytes = (const uchar *) pJPG->pData;
+    std::vector<uchar> vJPG (pJPGBytes, pJPGBytes + pJPG->length / sizeof(uchar) );
+    LOGTRACE1("cve_process(%s) decode image", path);
+    bool isColor = strcmp("bgr", camera_profile(path).c_str()) == 0;
+    Mat image = imdecode(vJPG, isColor ? CV_LOAD_IMAGE_COLOR : CV_LOAD_IMAGE_GRAYSCALE); 
+    string savedPath = buildVarPath(path, FIREREST_SAVED_PNG);
+    ArgMap argMap;
+    argMap["saved"] = savedPath.c_str();
+    LOGTRACE1("cve_process(%s) process begin", path);
+    json_t *pModel = pipeline.process(image, argMap);
+    LOGTRACE1("cve_process(%s) process end", path);
+    int jsonIndent = 0;
+    pModelStr = json_dumps(pModel, JSON_PRESERVE_ORDER|JSON_COMPACT|JSON_INDENT(jsonIndent));
+    int modelLen = pModelStr ? strlen(pModelStr) : 0;
+    if (pModelStr) {
+      LOGTRACE2("cve_process(%s) MEMORY-ALLOC %ldB", path, modelLen);
+      pJSON = allocJSONBuffer(path, pJPG, pResult, modelLen);
+      memcpy(pJSON->pData, pModelStr, modelLen);
+    }
+    json_decref(pModel);
+    cveCam[0].setOutput(image);
+    LOGINFO2("cve_process(%s) -> %dB", path, modelLen);
+  } catch (char * ex) {
+    const char *fmt = "cve_process(%s) EXCEPTION: %s";
+    LOGERROR2(fmt, path, ex);
+    pJSON = allocJSONBuffer(path, pJPG, pResult, max_json_len);
+    snprintf(pJSON->pData, pJSON->length, "{\"error\":\"%s\"}", ex);
+  } catch (...) {
+    const char *fmt = "cve_process(%s) UNKNOWN EXCEPTION";
+    LOGERROR1(fmt, path);
+    pJSON = allocJSONBuffer(path, pJPG, pResult, max_json_len);
+    snprintf(pJSON->pData, pJSON->length, "{\"error\":\"UNKOWN EXCEPTION\"}", ex);
+  }
+  
+  if (pModelStr) {
+    LOGTRACE2("cve_process(%s) MEMORY-FREE %ldB", path, strlen(pModelStr));
+    free(pModelStr);
+  }
+  
+  return pJSON;
+}
+
 
 int cve_open(const char *path, struct fuse_file_info *fi) {
   int result = 0;
@@ -356,12 +441,7 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
   if (verifyOpenR_(path, fi, &result)) {
     if (cve_isPathSuffix(path, FIREREST_PROCESS_JSON)) {
       FuseDataBuffer *pJPG = cveCam[0].produceCameraJPG(path, &result);
-      if (pJPG) {
-	const char * pJson = cve_process(pJPG, path);
-	fi->fh = (uint64_t) (size_t) pJson;
-	LOGTRACE2("cve_open(%s) MEMORY-FREE %ldB", path, pJPG->length);
-	free(pJPG);
-      }
+      fi->fh = (uint64_t) (size_t) = cve_process(pJPG, path, &result);
     } else if (cve_isPathSuffix(path, FIREREST_SAVE_JSON)) {
       FuseDataBuffer *pJPG = cveCam[0].produceCameraJPG(path, &result);
       fi->fh = (uint64_t) (size_t) cve_save(pJPG, path, &result);
@@ -462,63 +542,3 @@ bool cve_isPathSuffix(const char *value, const char * suffix) {
   }
   return false;
 }
-
-#define CVE_MESSAGE(pResult,fmt,arg1,arg2) {\
-  pResult = (char *)malloc(255);\
-  if (pResult) {\
-    LOGTRACE2("CVE_MESSAGE(%s) MEMORY-ALLOC %ldB", path, 255);\
-    snprintf(pResult, 255, fmt, arg1, arg2);\
-  } else {\
-    LOGERROR("cve_message() out of memory");\
-    pResult = NULL;\
-  }\
-}
-
-const char * cve_process(FuseDataBuffer *pJPG, const char *path) {
-  double sStart = cve_seconds();
-  string firesightPath = buildVarPath(path, FIREREST_FIRESIGHT_JSON);
-  LOGTRACE2("cve_process(%s) loading JSON: %s", path, firesightPath.c_str());
-  char *pModelStr = NULL;
-  try {
-    Pipeline pipeline(firesightPath.c_str(), Pipeline::PATH);
-    const uchar * pJPGBytes = (const uchar *) pJPG->pData;
-    std::vector<uchar> vJPG (pJPGBytes, pJPGBytes + pJPG->length / sizeof(uchar) );
-    LOGTRACE1("cve_process(%s) decode image", path);
-    bool isColor = strcmp("bgr", camera_profile(path).c_str()) == 0;
-    Mat image = imdecode(vJPG, isColor ? CV_LOAD_IMAGE_COLOR : CV_LOAD_IMAGE_GRAYSCALE); 
-    string savedPath = buildVarPath(path, FIREREST_SAVED_PNG);
-    ArgMap argMap;
-    argMap["saved"] = savedPath.c_str();
-    LOGTRACE1("cve_process(%s) process begin", path);
-    json_t *pModel = pipeline.process(image, argMap);
-    LOGTRACE1("cve_process(%s) process end", path);
-    int jsonIndent = 0;
-    char *pModelStr = json_dumps(pModel, JSON_PRESERVE_ORDER|JSON_COMPACT|JSON_INDENT(jsonIndent));
-    LOGTRACE2("cve_process(%s) MEMORY-ALLOC %ldB", path, strlen(pModelStr));
-    json_decref(pModel);
-    cveCam[0].setOutput(image);
-    LOGINFO3("cve_process(%s) -> %dB %0.3fs", path, strlen(pModelStr), cve_seconds()-sStart);
-    return pModelStr;
-  } catch (char * ex) {
-    const char *fmt = "cve_process(%s) EXCEPTION: %s";
-    LOGERROR2(fmt, path, ex);
-    if (pModelStr) {
-      LOGTRACE2("cve_process(%s) MEMORY-FREE %ldB", path, strlen(pModelStr));
-      free(pModelStr);
-    }
-    char *pResult;
-    CVE_MESSAGE(pResult, fmt, path, ex);
-    return pResult;
-  } catch (...) {
-    const char *fmt = "cve_process(%s) UNKNOWN EXCEPTION";
-    LOGERROR1(fmt, path);
-    if (pModelStr) {
-      LOGTRACE2("cve_process(%s) MEMORY-FREE %ldB", path, strlen(pModelStr));
-      free(pModelStr);
-    }
-    char *pResult;
-    CVE_MESSAGE(pResult, fmt, path, NULL);
-    return pResult;
-  }
-}
-
