@@ -165,18 +165,18 @@ static FuseDataBuffer * allocJSONBuffer(const char * path, FuseDataBuffer *pBuff
   *pResult = 0;
   if (len > max_json_len) {
     LOGERROR2("allocJSONBuffer(%s) max_json_len exceeded: %ldB", path, len);
-    pResult = -EOVERFLOW;
+    *pResult = -EOVERFLOW;
   }
-  if (pBuffer->pLength < max_json_len) {
+  if (pBuffer->length < max_json_len) {
     LOGTRACE2("allocJSONBuffer(%s) MEMORY-FREE new %ldB", path, pBuffer->length);
     free(pBuffer);
     pJSON = firefuse_allocDataBuffer(path, pResult, NULL, max_json_len);
   } else {
     LOGTRACE2("allocJSONBuffer(%s) MEMORY-FREE existing %ldB", path, pBuffer->length);
-    pBuffer->length = max_json_len);
+    pBuffer->length = max_json_len;
   }
   memset(pJSON->pData, ' ', max_json_len);
-  pJSON->pData[max_json_len] = '\n';
+  pJSON->pData[max_json_len-1] = '\n';
   LOGTRACE2("allocJSONBuffer(%s) MEMORY-ALLOC %ldB", path, pJSON->length);
   return pJSON;
 }
@@ -362,9 +362,9 @@ FuseDataBuffer * cve_save(FuseDataBuffer *pJPG, const char *path, int *pResult) 
 
   LOGTRACE2("cve_save(%s) MEMORY-FREE %ldB", path, pJPG->length);
   int allocResult;
-  FuseDataBuffer *pJSON = allocJSONBuffer(path, pJPG, &allocResult, max_json_len) {
+  FuseDataBuffer *pJSON = allocJSONBuffer(path, pJPG, &allocResult, max_json_len);
   if (*pResult == 0) {
-    *pResult = *pAllocResult;
+    *pResult = allocResult;
   }
   char jsonBuf[255];
   if (*pResult == 0) {
@@ -374,7 +374,7 @@ FuseDataBuffer * cve_save(FuseDataBuffer *pJPG, const char *path, int *pResult) 
       "{\"camera\":{\"time\":\"%.1f\"},\"save\":{\"error\":\"Could not save camera image for %s\"}}\n", 
       cve_seconds(), path);
   }
-  memcpy(pJSON->pData, strlen(jsonBuf));
+  memcpy(pJSON->pData, jsonBuf, strlen(jsonBuf));
 
   return pJSON;
 }
@@ -389,7 +389,6 @@ static FuseDataBuffer * cve_process(FuseDataBuffer *pJPG, const char *path, int 
   char *pModelStr = NULL;
   FuseDataBuffer *pJSON = NULL;
   *pResult = 0;
-  char *pModelStr = NULL;
   try {
     Pipeline pipeline(firesightPath.c_str(), Pipeline::PATH);
     const uchar * pJPGBytes = (const uchar *) pJPG->pData;
@@ -423,7 +422,7 @@ static FuseDataBuffer * cve_process(FuseDataBuffer *pJPG, const char *path, int 
     const char *fmt = "cve_process(%s) UNKNOWN EXCEPTION";
     LOGERROR1(fmt, path);
     pJSON = allocJSONBuffer(path, pJPG, pResult, max_json_len);
-    snprintf(pJSON->pData, pJSON->length, "{\"error\":\"UNKOWN EXCEPTION\"}", ex);
+    snprintf(pJSON->pData, pJSON->length, "{\"error\":\"UNKOWN EXCEPTION\"}");
   }
   
   if (pModelStr) {
@@ -441,7 +440,7 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
   if (verifyOpenR_(path, fi, &result)) {
     if (cve_isPathSuffix(path, FIREREST_PROCESS_JSON)) {
       FuseDataBuffer *pJPG = cveCam[0].produceCameraJPG(path, &result);
-      fi->fh = (uint64_t) (size_t) = cve_process(pJPG, path, &result);
+      fi->fh = (uint64_t) (size_t) cve_process(pJPG, path, &result);
     } else if (cve_isPathSuffix(path, FIREREST_SAVE_JSON)) {
       FuseDataBuffer *pJPG = cveCam[0].produceCameraJPG(path, &result);
       fi->fh = (uint64_t) (size_t) cve_save(pJPG, path, &result);
