@@ -216,8 +216,13 @@ int cve_getattr(const char *path, struct stat *stbuf) {
       stbuf->st_mode = S_IFREG | 0444;
     }
   }
-  if (cve_isPathSuffix(path, FIREREST_PROCESS_JSON) ||
-      cve_isPathSuffix(path, FIREREST_CAMERA_JPG)) {
+  if (cve_isPathSuffix(path, FIREREST_PROCESS_JSON)) {
+    cveCam[0].sizeCameraJPG(path, &res); // get current picture but ignore size
+    stbuf->st_size = 1; // we don't know the JSON size just yet
+  } else if (cve_isPathSuffix(path, FIREREST_SAVE_JSON)) {
+    cveCam[0].sizeCameraJPG(path, &res); // get current picture but ignore size
+    stbuf->st_size = 1; // we don't know the JSON size just yet
+  } else if (cve_isPathSuffix(path, FIREREST_CAMERA_JPG)) {
     stbuf->st_size = cveCam[0].sizeCameraJPG(path, &res);
   } else if (cve_isPathSuffix(path, FIREREST_MONITOR_JPG)) {
     stbuf->st_size = cveCam[0].sizeMonitorJPG(path, &res);
