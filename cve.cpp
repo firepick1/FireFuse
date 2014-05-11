@@ -541,3 +541,4 @@ bool cve_isPathSuffix(const char *value, const char * suffix) {
   }
   return false;
 }
+
