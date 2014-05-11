@@ -22,3 +22,4 @@ CMakeFiles/*
 *.cmake
 Makefile
 target
+version.h
