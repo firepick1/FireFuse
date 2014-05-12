@@ -406,13 +406,13 @@ static FuseDataBuffer * cve_process(FuseDataBuffer *pJPG, const char *path, int 
     pModelStr = json_dumps(pModel, JSON_PRESERVE_ORDER|JSON_COMPACT|JSON_INDENT(jsonIndent));
     int modelLen = pModelStr ? strlen(pModelStr) : 0;
     if (pModelStr) {
-      LOGTRACE2("cve_process(%s) MEMORY-ALLOC %ldB", path, modelLen);
+      LOGTRACE2("cve_process(%s) MEMORY-ALLOC json_dumps() %ldB", path, modelLen);
       pJSON = allocJSONBuffer(path, pJPG, pResult, modelLen);
       memcpy(pJSON->pData, pModelStr, modelLen);
     }
     json_decref(pModel);
     cveCam[0].setOutput(image);
-    LOGINFO2("cve_process(%s) -> %dB", path, modelLen);
+    LOGINFO2("cve_process(%s) -> JSON %dB", path, modelLen);
   } catch (char * ex) {
     const char *fmt = "cve_process(%s) EXCEPTION: %s";
     LOGERROR2(fmt, path, ex);
@@ -426,7 +426,7 @@ static FuseDataBuffer * cve_process(FuseDataBuffer *pJPG, const char *path, int 
   }
   
   if (pModelStr) {
-    LOGTRACE2("cve_process(%s) MEMORY-FREE %ldB", path, strlen(pModelStr));
+    LOGTRACE2("cve_process(%s) MEMORY-FREE json_dumps() %ldB", path, strlen(pModelStr));
     free(pModelStr);
   }
   
@@ -481,10 +481,7 @@ int cve_read(const char *path, char *buf, size_t size, off_t offset, struct fuse
   size_t len;
   (void) fi;
 
-  if (cve_isPathSuffix(path, FIREREST_PROCESS_JSON)) {
-    const char *pJSON = (const char *) (size_t)fi->fh;
-    sizeOut = firefuse_readBuffer(buf, pJSON, size, offset, strlen(pJSON));
-  } else if (fi->fh) { // data file
+  if (fi->fh) { // data file
     FuseDataBuffer *pBuffer = (FuseDataBuffer *) (size_t) fi->fh;
     sizeOut = firefuse_readBuffer(buf, pBuffer->pData, size, offset, pBuffer->length);
   } else {
