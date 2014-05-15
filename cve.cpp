@@ -409,6 +409,9 @@ static FuseDataBuffer * cve_process(FuseDataBuffer *pJPG, const char *path, int 
       LOGTRACE2("cve_process(%s) MEMORY-ALLOC json_dumps() %ldB", path, modelLen);
       pJSON = allocJSONBuffer(path, pJPG, pResult, modelLen);
       memcpy(pJSON->pData, pModelStr, modelLen);
+    } else {
+      LOGERROR1("cve_process(%s) json_dumps -> NULL", path);
+      pJSON = NULL;
     }
     json_decref(pModel);
     cveCam[0].setOutput(image);
@@ -496,10 +499,7 @@ int cve_read(const char *path, char *buf, size_t size, off_t offset, struct fuse
 int cve_release(const char *path, struct fuse_file_info *fi) {
   LOGTRACE1("cve_release(%s)", path);
   if (cve_isPathSuffix(path, FIREREST_PROCESS_JSON)) {
-    char *pJson = (char *)(size_t) fi->fh;
-    fi->fh = 0;
-    LOGTRACE2("cve_release(%s) MEMORY-FREE %ldB", path, strlen(pJson));
-    free(pJson);
+    firefuse_freeDataBuffer(path, fi);
   } else if (cve_isPathSuffix(path, FIREREST_MONITOR_JPG)) {
     firefuse_freeDataBuffer(path, fi);
   } else if (cve_isPathSuffix(path, FIREREST_SAVED_PNG)) {
