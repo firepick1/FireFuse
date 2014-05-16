@@ -1,15 +1,7 @@
 [
-  {"op":"threshold", 
-    "type":"{{type}}", 
-    "thresh":"{{thresh}}", 
-    "maxval":"{{maxval}}"}, 
-  {"op":"minAreaRect",
-    "name":"singleBlob",
-    "min":"{{min}}",
-    "max":"{{max}}",
-    "channel":"{{channel}}"},
-  {"op":"drawRects", 
-    "model":"singleBlob", 
-    "thickness":"{{thickness}}",
-    "color":"{{color||[255,0,255]}}"}
+  {"op":"absdiff", "path":"{{saved}}"},
+  {"op":"threshold", "type":"{{type}}", "thresh":"{{thresh}}", "maxval":"{{maxval}}"},
+  {"op":"morph", "ksize":"{{ksize}}", "mop":"{{mop}}", "iterations":"{{iterations}}", "shape":"{{shape}}"},
+  {"op":"minAreaRect", "name":"singleBlob", "min":"{{min}}", "max":"{{max}}", "channel":"{{channel}}"},
+  {"op":"drawRects", "model":"singleBlob", "thickness":"{{thickness}}", "color":"{{color||[255,0,255]}}"}
 ]
