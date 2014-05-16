@@ -43,6 +43,19 @@ if [ "$SUDO_USER" == "" ]; then
   exit -1
 fi
 
+if [ -e /var/firefuse/cv/1/cve ]; then
+  echo "------------------------ WARNING -------------------------------"
+  echo The existing /var/firefuse has been moved to /var/firefuse.bak.
+  echo The /var/firefuse.bak directory will be overwritten with future
+  echo installs.
+  echo "----------------------------------------------------------------"
+  rm -rf /var/firefuse.bak
+  mv /var/firefuse var/firefuse.bak
+fi
+echo initializing /var/firefuse
+mkdir -p /var/firefuse
+cp -r cv /var/firefuse
+
 if [ "$(type -p cmake)" == "" ]; then
   echo "++++++++++++++++++ INSTALLING CMAKE ++++++++++++"
   if [ `uname -o` == "Solaris" ]; then
@@ -158,17 +171,6 @@ if [ -e CMakeFiles ] ; then
   sudo -u $SUDO_USER mkdir target
 fi
 
-if [ -e /var/firefuse/cv/1/cve ]; then
-  echo "------------------ WARNING ------------------------"
-  echo /var/firefuse already exists and was not updated.
-  echo Newer files may be available in FireFUSE/cv
-  echo "---------------------------------------------------"
-else
-  echo creating CVE folders
-  mkdir -p /var/firefuse
-  cp -r cv /var/firefuse
-fi
-
 echo creating makefiles
 sudo -u $SUDO_USER cmake .
 
@@ -190,7 +192,18 @@ if [ $? -ne 0 ]; then
   exit -1
 fi
 
+echo Mounting the firefuse file system on /dev/firefuse
+echo   firefuse -s -o allow_other /dev/firefuse
 firefuse -s -o allow_other /dev/firefuse
+if [ @? -ne 0 ]; then
+  echo "!!!!!!!!!!!!!!!!! ERROR !!!!!!!!!!!!!!!!!!!!"
+  echo "COULD NOT MOUNT /dev/firefuse"
+  echo  Dumping /var/log/firefuse.log
+  echo  FireFUSE has not been installed
+  cat /var/log/firefuse.log
+  echo "!!!!!!!!!!!!!!!!! ERROR !!!!!!!!!!!!!!!!!!!!"
+  exit -1
+fi
 
 if [ -e /dev/firefuse/status ]; then
   if [ ! -e /etc/rc5.d/S01mountfirefuse.sh ]; then
@@ -198,5 +211,11 @@ if [ -e /dev/firefuse/status ]; then
   fi
   echo "FireFuse installed at startup in /dev/firefuse"
 else
-  echo "COULD NOT BUILD FIREFUSE"
+  echo "!!!!!!!!!!!!!!!!! ERROR !!!!!!!!!!!!!!!!!!!!"
+  echo "FireFUSE mount failed: /dev/firefuse/status is missing"
+  echo  Dumping /var/log/firefuse.log
+  echo  FireFUSE has not been installed
+  cat /var/log/firefuse.log
+  echo "!!!!!!!!!!!!!!!!! ERROR !!!!!!!!!!!!!!!!!!!!"
+  exit -1
 fi
