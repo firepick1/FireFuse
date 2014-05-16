@@ -195,7 +195,7 @@ fi
 echo Mounting the firefuse file system on /dev/firefuse
 echo   firefuse -s -o allow_other /dev/firefuse
 firefuse -s -o allow_other /dev/firefuse
-if [ @? -ne 0 ]; then
+if [ $? -ne 0 ]; then
   echo "!!!!!!!!!!!!!!!!! ERROR !!!!!!!!!!!!!!!!!!!!"
   echo "COULD NOT MOUNT /dev/firefuse"
   echo  Dumping /var/log/firefuse.log
