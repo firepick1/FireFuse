@@ -418,7 +418,7 @@ static FuseDataBuffer * cve_process(FuseDataBuffer *pJPG, const char *path, int 
     json_decref(pModel);
     cveCam[0].setOutput(image);
     double sElapsed = cve_seconds() - sStart;
-    LOGINFO2("cve_process(%s) -> JSON %dB %0.3fs", path, pJSON->length, sElapsed);
+    LOGINFO3("cve_process(%s) -> JSON %dB %0.3fs", path, pJSON->length, sElapsed);
   } catch (char * ex) {
     const char *fmt = "cve_process(%s) EXCEPTION: %s";
     LOGERROR2(fmt, path, ex);
