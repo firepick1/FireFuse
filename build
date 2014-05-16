@@ -158,7 +158,7 @@ if [ -e CMakeFiles ] ; then
   sudo -u $SUDO_USER mkdir target
 fi
 
-#if [ -e /var/firefuse/cv/1/cve ]; then
+if [ -e /var/firefuse/cv/1/cve ]; then
   echo "------------------ WARNING ------------------------"
   echo /var/firefuse already exists and was not updated.
   echo Newer files may be available in FireFUSE/cv
@@ -167,7 +167,7 @@ else
   echo creating CVE folders
   mkdir -p /var/firefuse
   cp -r cv /var/firefuse
-#fi
+fi
 
 echo creating makefiles
 sudo -u $SUDO_USER cmake .
