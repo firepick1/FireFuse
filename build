@@ -2,7 +2,7 @@
 
 if [ "$(arch)" != "armv6l" ] || [ "$(lsb_release -is)" != "Debian" ] ;then
   echo "========================== WARNING ==============================="
-  echo "FireFuse is currently only supported on Raspberry Pi with Raspbian"
+  echo "FireFUSE is currently only supported on Raspberry Pi with Raspbian"
   echo "=================================================================="
 else 
   echo "Raspberry Pi Debian confirmed for installation"
@@ -11,7 +11,7 @@ fi
 cv="install"
  
 function help() {
-  echo "Build FireFuse for Raspbian"
+  echo "Build FireFUSE for Raspbian"
   echo 
   echo "EXAMPLES:"
   echo "  sudo ./build"
@@ -174,7 +174,7 @@ fi
 echo creating makefiles
 sudo -u $SUDO_USER cmake .
 
-echo building and installing FireFuse...
+echo building and installing FireFUSE...
 sudo -u $SUDO_USER make
 if [ $? -ne 0 ]; then
   echo FAILED: make
@@ -182,10 +182,10 @@ if [ $? -ne 0 ]; then
 fi
 
 if [ "$(arch)" != "armv6l" ] || [ "$(lsb_release -is)" != "Debian" ] ;then
-  echo "FireFuse is currently only supported on Raspberry Pi with Raspbian"
+  echo "FireFUSE is currently only supported on Raspberry Pi with Raspbian"
   exit -1
 fi
-echo installing FireFuse...
+echo installing FireFUSE...
 make install
 if [ $? -ne 0 ]; then
   echo FAILED: make install
@@ -209,7 +209,7 @@ if [ -e /dev/firefuse/status ]; then
   if [ ! -e /etc/rc5.d/S01mountfirefuse.sh ]; then
     ./postinst
   fi
-  echo "FireFuse installed at startup in /dev/firefuse"
+  echo "FireFUSE installed at startup in /dev/firefuse"
 else
   echo "!!!!!!!!!!!!!!!!! ERROR !!!!!!!!!!!!!!!!!!!!"
   echo "FireFUSE mount failed: /dev/firefuse/status is missing"

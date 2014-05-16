@@ -49,7 +49,7 @@ static void * firefuse_init(struct fuse_conn_info *conn)
   int rc = 0;
 
   firelog_init(FIRELOG_FILE, FIRELOG_INFO);
-  LOGINFO3("Initialized FireFuse %d.%d.%d", FireFuse_VERSION_MAJOR, FireFuse_VERSION_MINOR, FireFuse_VERSION_PATCH);
+  LOGINFO3("Initialized FireFUSE %d.%d.%d", FireFUSE_VERSION_MAJOR, FireFUSE_VERSION_MINOR, FireFUSE_VERSION_PATCH);
   LOGINFO2("PID%d UID%d", (int) getpid(), (int)getuid());
 
   memset(echoBuf, 0, sizeof(echoBuf));

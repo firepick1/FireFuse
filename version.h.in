@@ -9,9 +9,9 @@ extern "C" {
 //////////// GENERATED FILE (from version.h.in) /////////////////
 //////////// GENERATED FILE (from version.h.in) /////////////////
 
-#define FireFuse_VERSION_MAJOR @FireFuse_VERSION_MAJOR@
-#define FireFuse_VERSION_MINOR @FireFuse_VERSION_MINOR@
-#define FireFuse_VERSION_PATCH @FireFuse_VERSION_PATCH@
+#define FireFUSE_VERSION_MAJOR @FireFUSE_VERSION_MAJOR@
+#define FireFUSE_VERSION_MINOR @FireFUSE_VERSION_MINOR@
+#define FireFUSE_VERSION_PATCH @FireFUSE_VERSION_PATCH@
 
 //////////// GENERATED FILE (from version.h.in) /////////////////
 //////////// GENERATED FILE (from version.h.in) /////////////////

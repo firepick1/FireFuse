@@ -48,10 +48,10 @@ const char* firepick_status() {
     "{\n"
     " 'timestamp':'%s'\n"
     " 'message':'FirePick OK!',\n"
-    " 'version':'FireFuse version %d.%d'\n"
+    " 'version':'FireFUSE version %d.%d'\n"
     "}\n",
     timebuf,
-    FireFuse_VERSION_MAJOR, FireFuse_VERSION_MINOR);
+    FireFUSE_VERSION_MAJOR, FireFUSE_VERSION_MINOR);
   return status_buffer;
 }
 
