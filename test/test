@@ -95,7 +95,7 @@ if [ $? -eq 0 ]; then
   echo "ERROR: process.json reported error"
   exit -1
 fi
-grep '"model":{"channels":{"0":{"dx":0' target/process.json
+grep '"model":{"channels":{"0":{' target/process.json
 if [ $? -ne 0 ]; then
   echo "ERROR: process.json is not JSON"
   exit -1
