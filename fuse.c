@@ -43,14 +43,37 @@ static void * firefuse_cameraThread(void *arg) {
 }
 
 /////////////////////// FIREFUSE CALLBACKS //////////////////////
+static char *pConfigJson = NULL;
+
+#define CONFIG_JSON "/var/firefuse/config.json"
 
 static void * firefuse_init(struct fuse_conn_info *conn)
 {
   int rc = 0;
 
   firelog_init(FIRELOG_FILE, FIRELOG_INFO);
-  LOGINFO3("Initialized FireFUSE %d.%d.%d", FireFUSE_VERSION_MAJOR, FireFUSE_VERSION_MINOR, FireFUSE_VERSION_PATCH);
+  LOGINFO3("FireFUSE %d.%d.%d", FireFUSE_VERSION_MAJOR, FireFUSE_VERSION_MINOR, FireFUSE_VERSION_PATCH);
   LOGINFO2("PID%d UID%d", (int) getpid(), (int)getuid());
+
+
+  LOGINFO1("Loading FireREST configuration: %s", CONFIG_JSON);
+  FILE *fConfig = fopen(CONFIG_JSON, "r");
+  if (fConfig == 0) {
+    LOGERROR1("FATAL: Could not open configuration file: %s", CONFIG_JSON);
+    exit(-ENOENT);
+  }
+  fseek(fConfig, 0, SEEK_END);
+  size_t length = ftell(fConfig);
+  fseek(fConfig, 0, SEEK_SET);
+  pConfigJson = malloc(length + 1);
+  size_t bytesRead = fread(pConfigJson, 1, length, fConfig);
+  if (bytesRead != length) {
+    LOGERROR1("FATAL: Could not read configuration file: expected:%ldB actual:%ldB", length, bytesRead);
+    exit(-EIO);
+  }
+  pConfigJson[length] = 0;
+  fclose(fConfig);
+  firerest_config(pConfigJson);
 
   memset(echoBuf, 0, sizeof(echoBuf));
 
@@ -71,6 +94,9 @@ static void firefuse_destroy(void * initData)
   if (logFile) {
     LOGINFO("firefuse_destroy()");
     firelog_destroy();
+  }
+  if (pConfigJson) {
+    memfree(pConfigJson);
   }
 }
 
@@ -95,10 +121,7 @@ static int firefuse_getattr(const char *path, struct stat *stbuf) {
   } else if (strcmp(path, CONFIG_PATH) == 0) {
     stbuf->st_mode = S_IFREG | 0444;
     stbuf->st_nlink = 1;
-    res = stat(filename, &st);
-    if (res == 0) {
-      stbuf->st_size = st.st_size;
-    }
+    stbuf->st_size = strlen(pConfigJson);
   } else if (strcmp(path, STATUS_PATH) == 0) {
     const char *status_str = firepick_status();
     stbuf->st_mode = S_IFREG | 0444;
@@ -252,8 +275,9 @@ static int firefuse_release(const char *path, struct fuse_file_info *fi) {
 
   LOGTRACE1("firefuse_release %s", path);
   if (strcmp(path, STATUS_PATH) == 0) {
+    // NOP
   } else if (strcmp(path, CONFIG_PATH) == 0) {
-    fclose(fi->fh);
+    // NOP
   } else if (strcmp(path, HOLES_PATH) == 0) {
     firefuse_freeDataBuffer(path, fi);
   } else if (strcmp(path, ECHO_PATH) == 0) {
@@ -283,7 +307,7 @@ static int firefuse_read(const char *path, char *buf, size_t size, off_t offset,
     const char *status_str = firepick_status();
     sizeOut = firefuse_readBuffer(buf, status_str, size, offset, strlen(status_str));
   } else if (strcmp(path, CONFIG_PATH) == 0) {
-    sizeOut = fread(buf+offset, 1, size, fi->fh);
+    sizeOut = firefuse_readBuffer(buf, pConfigJson, size, offset, strlen(pConfigJson));
   } else if (strcmp(path, HOLES_PATH) == 0) {
     const char *holes_str = "holes";
     sizeOut = firefuse_readBuffer(buf, holes_str, size, offset, strlen(holes_str));

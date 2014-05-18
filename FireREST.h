@@ -43,6 +43,8 @@ int cve_read(const char *path, char *buf, size_t size, off_t offset, struct fuse
 int cve_release(const char *path, struct fuse_file_info *fi);
 int cve_truncate(const char *path, off_t size);
 
+void firerest_config(const char *pJson);
+
 inline bool verifyOpenR_(const char *path, struct fuse_file_info *fi, int *pResult) {
   if ((fi->flags & 3) != O_RDONLY) {
     LOGERROR1("verifyOpenR_(%s) EACCESS", path);

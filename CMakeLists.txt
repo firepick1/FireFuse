@@ -32,6 +32,7 @@ configure_file (
 find_package( OpenCV REQUIRED )
 
 add_executable(firefuse 
+  firerest.cpp
   fuse.c 
   FirePick.cpp 
   cve.cpp 
