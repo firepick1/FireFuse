@@ -80,6 +80,7 @@ static int firefuse_getattr(const char *path, struct stat *stbuf) {
   }
 
   int res = 0;
+  struct stat st; 
 
   memset(stbuf, 0, sizeof(struct stat));
 
@@ -91,6 +92,13 @@ static int firefuse_getattr(const char *path, struct stat *stbuf) {
     stbuf->st_mode = S_IFDIR | 0755;
     stbuf->st_nlink = 2;
     stbuf->st_nlink = 1; // Safe default value
+  } else if (strcmp(path, CONFIG_PATH) == 0) {
+    stbuf->st_mode = S_IFREG | 0444;
+    stbuf->st_nlink = 1;
+    res = stat(filename, &st);
+    if (res == 0) {
+      stbuf->st_size = st.st_size;
+    }
   } else if (strcmp(path, STATUS_PATH) == 0) {
     const char *status_str = firepick_status();
     stbuf->st_mode = S_IFREG | 0444;
@@ -144,6 +152,7 @@ static int firefuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     filler(buf, ".", NULL, 0);
     filler(buf, "..", NULL, 0);
     filler(buf, STATUS_PATH + 1, NULL, 0);
+    filler(buf, CONFIG_PATH + 1, NULL, 0);
     filler(buf, HOLES_PATH + 1, NULL, 0);
     filler(buf, FIRELOG_PATH + 1, NULL, 0);
     filler(buf, ECHO_PATH + 1, NULL, 0);
@@ -191,13 +200,13 @@ static int firefuse_open(const char *path, struct fuse_file_info *fi) {
   
   if (strcmp(path, STATUS_PATH) == 0) {
     verifyOpenR_(path, fi, &result);
+  } else if (strcmp(path, CONFIG_PATH) == 0) {
+    verifyOpenR_(path, fi, &result);
   } else if (strcmp(path, HOLES_PATH) == 0) {
     verifyOpenR_(path, fi, &result);
-    fi->fh = (uint64_t) (size_t) firefuse_allocImage(path, &result);
-    if (fi->fh) {
-      firepick_holes((FuseDataBuffer *) (size_t)fi->fh);
-    } else {
-      result = -ENOMEM;
+    fi->fh = fopen("/var/firefuse/config.json", "r");
+    if (!fi->fh) {
+      result = -ENOENT;
     }
   } else if (strcmp(path, ECHO_PATH) == 0) {
     verifyOpenRW(path, fi, &result);
@@ -243,7 +252,8 @@ static int firefuse_release(const char *path, struct fuse_file_info *fi) {
 
   LOGTRACE1("firefuse_release %s", path);
   if (strcmp(path, STATUS_PATH) == 0) {
-    // NOP
+  } else if (strcmp(path, CONFIG_PATH) == 0) {
+    fclose(fi->fh);
   } else if (strcmp(path, HOLES_PATH) == 0) {
     firefuse_freeDataBuffer(path, fi);
   } else if (strcmp(path, ECHO_PATH) == 0) {
@@ -272,6 +282,8 @@ static int firefuse_read(const char *path, char *buf, size_t size, off_t offset,
   if (strcmp(path, STATUS_PATH) == 0) {
     const char *status_str = firepick_status();
     sizeOut = firefuse_readBuffer(buf, status_str, size, offset, strlen(status_str));
+  } else if (strcmp(path, CONFIG_PATH) == 0) {
+    sizeOut = fread(buf+offset, 1, size, fi->fh);
   } else if (strcmp(path, HOLES_PATH) == 0) {
     const char *holes_str = "holes";
     sizeOut = firefuse_readBuffer(buf, holes_str, size, offset, strlen(holes_str));

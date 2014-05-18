@@ -11,6 +11,7 @@ extern "C" {
 #define HOLES_PATH "/holes"
 #define FIRESTEP_PATH "/firestep"
 #define FIRELOG_PATH "/firelog"
+#define CONFIG_PATH "/config.json"
 #define ECHO_PATH "/echo"
 
 typedef struct {

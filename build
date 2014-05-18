@@ -218,7 +218,7 @@ if [ -e /var/firefuse/cv/1/cve ]; then
 fi
 echo initializing /var/firefuse
 mkdir -p /var/firefuse
-cp -r cv /var/firefuse
+cp -r var/firefuse/* /var/firefuse
 
 grep FireFUSE version.h
 echo "FireFUSE installation is complete!"
