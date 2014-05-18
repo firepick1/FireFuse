@@ -1,13 +1,24 @@
+extern "C" {
+#define FUSE_USE_VERSION 26
+#include <fuse.h>
+}
+
 #include <string.h>
-#include <fstream>
+#include <errno.h>
+#include <fcntl.h>
+#include <dirent.h>
+#include <stdio.h>
+#include <time.h>
 #include <iostream>
-#include <stdexcept>
+#include <fstream>
+#include <sstream>
+#include <math.h>
+#include "FireSight.hpp"
 #include "FireLog.h"
-#include "jansson.h"
 #include "FireREST.h"
+#include "version.h"
 
 using namespace std;
-
 
 static string firerest_config_cv(json_t *pConfig) {
   string errMsg;
@@ -53,7 +64,7 @@ static string firerest_config_cv(json_t *pConfig) {
 
 void firerest_config(const char *pJson) {
   json_error_t jerr;
-  json_t *pConfig = json_loads(pJson 0, &jerr);
+  json_t *pConfig = json_loads(pJson, 0, &jerr);
   string errMsg;
   if (pConfig == 0) {
     LOGERROR3("firerest_config() cannot parse json: %s src:%s line:%d", jerr.text, jerr.source, jerr.line);

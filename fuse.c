@@ -68,7 +68,7 @@ static void * firefuse_init(struct fuse_conn_info *conn)
   pConfigJson = malloc(length + 1);
   size_t bytesRead = fread(pConfigJson, 1, length, fConfig);
   if (bytesRead != length) {
-    LOGERROR1("FATAL: Could not read configuration file: expected:%ldB actual:%ldB", length, bytesRead);
+    LOGERROR2("FATAL: Could not read configuration file: expected:%ldB actual:%ldB", length, bytesRead);
     exit(-EIO);
   }
   pConfigJson[length] = 0;
@@ -96,7 +96,7 @@ static void firefuse_destroy(void * initData)
     firelog_destroy();
   }
   if (pConfigJson) {
-    memfree(pConfigJson);
+    free(pConfigJson);
   }
 }
 
@@ -227,7 +227,7 @@ static int firefuse_open(const char *path, struct fuse_file_info *fi) {
     verifyOpenR_(path, fi, &result);
   } else if (strcmp(path, HOLES_PATH) == 0) {
     verifyOpenR_(path, fi, &result);
-    fi->fh = fopen("/var/firefuse/config.json", "r");
+    fi->fh = (uint64_t) (size_t) fopen("/var/firefuse/config.json", "r");
     if (!fi->fh) {
       result = -ENOENT;
     }
