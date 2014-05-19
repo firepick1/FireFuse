@@ -143,10 +143,10 @@ if [ ! -e /opt/node ] ;then
   source /etc/profile
   popd
 fi
-if [ -e /dev/firefuse/firestep ] ;then 
-  echo Uninstalling /dev/firefuse...
-  fusermount -u /dev/firefuse 
-fi
+
+# Agressively dismount /dev/firefuse
+echo Uninstalling /dev/firefuse...
+fusermount -uq /dev/firefuse 
 
 if [ ! -e /dev/firefuse ]; then 
   echo mkdir /dev/firefuse 
@@ -179,6 +179,19 @@ if [ $? -ne 0 ]; then
   exit -1
 fi
 
+if [ -e /var/firefuse ]; then
+  echo "------------------------ WARNING -------------------------------"
+  echo The existing /var/firefuse has been moved to /var/firefuse.bak.
+  echo The /var/firefuse.bak directory will be overwritten with future
+  echo installs.
+  echo "----------------------------------------------------------------"
+  rm -rf /var/firefuse.bak
+  mv /var/firefuse /var/firefuse.bak
+fi
+echo initializing /var/firefuse
+mkdir -p /var/firefuse/cv
+cp var/firefuse/config.json /var/firefuse
+
 echo Mounting the firefuse file system on /dev/firefuse
 echo   firefuse -s -o allow_other /dev/firefuse
 firefuse -s -o allow_other /dev/firefuse
@@ -206,19 +219,6 @@ else
   echo "!!!!!!!!!!!!!!!!! ERROR !!!!!!!!!!!!!!!!!!!!"
   exit -1
 fi
-
-if [ -e /var/firefuse/cv/1/cve ]; then
-  echo "------------------------ WARNING -------------------------------"
-  echo The existing /var/firefuse has been moved to /var/firefuse.bak.
-  echo The /var/firefuse.bak directory will be overwritten with future
-  echo installs.
-  echo "----------------------------------------------------------------"
-  rm -rf /var/firefuse.bak
-  mv /var/firefuse var/firefuse.bak
-fi
-echo initializing /var/firefuse
-mkdir -p /var/firefuse
-cp -r var/firefuse/* /var/firefuse
 
 grep FireFUSE version.h
 echo "FireFUSE installation is complete!"

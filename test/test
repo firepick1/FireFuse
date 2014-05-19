@@ -6,7 +6,7 @@ fi
 
 echo
 echo "====> TESTING FIREFUSE FILE STRUCTURE"
-ls -RF /dev/firefuse |& tee target/firefuse.ls
+find /dev/firefuse -exec ls --block-size=1 -sFd {} \; |& tee target/firefuse.ls
 diff test/firefuse.ls target/firefuse.ls
 if [ $? -ne 0 ]; then
   echo "ERROR: firefuse file structure mismatch"

@@ -1,55 +1,36 @@
-/dev/firefuse:
-cv/
-echo
-firelog
-firestep
-holes
-status
-
-/dev/firefuse/cv:
-1/
-
-/dev/firefuse/cv/1:
-bgr/
-camera.jpg
-gray/
-monitor.jpg
-output.jpg
-
-/dev/firefuse/cv/1/bgr:
-cve/
-
-/dev/firefuse/cv/1/bgr/cve:
-calc-offset/
-locate-part/
-
-/dev/firefuse/cv/1/bgr/cve/calc-offset:
-firesight.json
-process.json
-saved.png
-save.json
-
-/dev/firefuse/cv/1/bgr/cve/locate-part:
-firesight.json
-process.json
-saved.png
-save.json
-
-/dev/firefuse/cv/1/gray:
-cve/
-
-/dev/firefuse/cv/1/gray/cve:
-calc-offset/
-locate-part/
-
-/dev/firefuse/cv/1/gray/cve/calc-offset:
-firesight.json
-process.json
-saved.png
-save.json
-
-/dev/firefuse/cv/1/gray/cve/locate-part:
-firesight.json
-process.json
-saved.png
-save.json
+0 /dev/firefuse/
+0 /dev/firefuse/status
+0 /dev/firefuse/config.json
+0 /dev/firefuse/holes
+0 /dev/firefuse/firelog
+0 /dev/firefuse/echo
+0 /dev/firefuse/firestep
+4096 /dev/firefuse/cv/
+4096 /dev/firefuse/cv/1/
+0 /dev/firefuse/cv/1/camera.jpg
+4096 /dev/firefuse/cv/1/gray/
+4096 /dev/firefuse/cv/1/gray/cve/
+4096 /dev/firefuse/cv/1/gray/cve/locate-part/
+0 /dev/firefuse/cv/1/gray/cve/locate-part/save.json
+0 /dev/firefuse/cv/1/gray/cve/locate-part/process.json
+0 /dev/firefuse/cv/1/gray/cve/locate-part/saved.png
+4096 /dev/firefuse/cv/1/gray/cve/locate-part/firesight.json
+4096 /dev/firefuse/cv/1/gray/cve/calc-offset/
+0 /dev/firefuse/cv/1/gray/cve/calc-offset/save.json
+0 /dev/firefuse/cv/1/gray/cve/calc-offset/process.json
+0 /dev/firefuse/cv/1/gray/cve/calc-offset/saved.png
+4096 /dev/firefuse/cv/1/gray/cve/calc-offset/firesight.json
+0 /dev/firefuse/cv/1/output.jpg
+0 /dev/firefuse/cv/1/monitor.jpg
+4096 /dev/firefuse/cv/1/bgr/
+4096 /dev/firefuse/cv/1/bgr/cve/
+4096 /dev/firefuse/cv/1/bgr/cve/locate-part/
+0 /dev/firefuse/cv/1/bgr/cve/locate-part/save.json
+0 /dev/firefuse/cv/1/bgr/cve/locate-part/process.json
+0 /dev/firefuse/cv/1/bgr/cve/locate-part/saved.png
+4096 /dev/firefuse/cv/1/bgr/cve/locate-part/firesight.json
+4096 /dev/firefuse/cv/1/bgr/cve/calc-offset/
+0 /dev/firefuse/cv/1/bgr/cve/calc-offset/save.json
+0 /dev/firefuse/cv/1/bgr/cve/calc-offset/process.json
+0 /dev/firefuse/cv/1/bgr/cve/calc-offset/saved.png
+4096 /dev/firefuse/cv/1/bgr/cve/calc-offset/firesight.json

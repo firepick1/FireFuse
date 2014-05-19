@@ -22,8 +22,8 @@
     "camera_map":{
       "1":{
 	"profile_map":{
-	  "gray":{ "cve-names":[ "calc-offset", "locate-part" ] },
-	  "bgr":{ "cve-names":[ "calc-offset", "locate-part" ] }
+	  "gray":{ "cve_names":[ "calc-offset", "locate-part" ] },
+	  "bgr":{ "cve_names":[ "calc-offset", "locate-part" ] }
 	}
       }
     }
