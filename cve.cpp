@@ -350,7 +350,7 @@ FuseDataBuffer * cve_save(FuseDataBuffer *pJPG, const char *path, int *pResult) 
     }
     fclose(fSaved);
     if (bytes == expectedBytes) {
-      LOGINFO4("cve_save(%s) %s image saved (%ldB) %0.3fs", path, isColor ? "color" : "gray", bytes, cve_seconds() - sStart);
+      LOGTRACE4("cve_save(%s) %s image saved (%ldB) %0.3fs", path, isColor ? "color" : "gray", bytes, cve_seconds() - sStart);
     } else {
       LOGERROR3("cve_save(%s) could not write to file: %s (%d)B", path, savedPath.c_str(), bytes);
       *pResult = -EIO;
@@ -376,7 +376,7 @@ FuseDataBuffer * cve_save(FuseDataBuffer *pJPG, const char *path, int *pResult) 
   }
   memcpy(pJSON->pData, jsonBuf, strlen(jsonBuf));
   double sElapsed = cve_seconds() - sStart;
-  LOGINFO3("cve_save(%s) -> %ldB %0.3fs", path, pJSON->length, sElapsed);
+  LOGDEBUG3("cve_save(%s) -> %ldB %0.3fs", path, pJSON->length, sElapsed);
 
   return pJSON;
 }
@@ -418,7 +418,7 @@ static FuseDataBuffer * cve_process(FuseDataBuffer *pJPG, const char *path, int 
     json_decref(pModel);
     cveCam[0].setOutput(image);
     double sElapsed = cve_seconds() - sStart;
-    LOGINFO3("cve_process(%s) -> JSON %dB %0.3fs", path, pJSON->length, sElapsed);
+    LOGDEBUG3("cve_process(%s) -> JSON %dB %0.3fs", path, pJSON->length, sElapsed);
   } catch (char * ex) {
     const char *fmt = "cve_process(%s) EXCEPTION: %s";
     LOGERROR2(fmt, path, ex);

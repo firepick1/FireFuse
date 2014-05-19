@@ -43,6 +43,12 @@ static string firerest_config_camera(json_t *pCamera, const char *pCameraName, j
   LOGINFO1("firerest_config_camera() processing camera: %s", pCameraName);
   string cameraPath = "/var/firefuse/cv/";
   cameraPath += pCameraName;
+  DIR * cameraDir = opendir(cameraPath.c_str());
+  if (cameraDir) {
+    LOGINFO1("firererest_config_camera() using existing configuration:", cameraPath.c_str() );
+    closedir(cameraDir);
+    return errMsg;
+  }
   int rc = mkdir(cameraPath.c_str(), 0755);
   if (rc) {
     errMsg = "firerest_config_camera() could not create directory: ";
@@ -172,7 +178,7 @@ static string firerest_config_cv(json_t *pConfig) {
     const char *pKey;
     json_t *pCve;
     json_object_foreach(pCveMap, pKey, pCve) {
-      LOGINFO1("firerest_config_cv() processing cve: %s", pKey);
+      LOGINFO1("firerest_config_cv() loaded cve: %s", pKey);
     }
   }
 

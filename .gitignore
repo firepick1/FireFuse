@@ -13,7 +13,8 @@
 *.a
 
 # Other stuff
-./firefuse
+firefuse
+!var/firefuse
 firesight
 jannson
 CMakeCache.txt
