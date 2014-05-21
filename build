@@ -4,9 +4,9 @@ if [ "$(arch)" != "armv6l" ] || [ "$(lsb_release -is)" != "Debian" ] ;then
   echo "========================== WARNING ==============================="
   echo "FireFUSE is currently only supported on Raspberry Pi with Raspbian"
   echo "=================================================================="
-else 
-  echo "Raspberry Pi Debian confirmed for installation"
+  exit -1
 fi
+echo "Raspberry Pi Debian confirmed for installation"
 
 cv="install"
  
@@ -168,10 +168,6 @@ if [ $? -ne 0 ]; then
   exit -1
 fi
 
-if [ "$(arch)" != "armv6l" ] || [ "$(lsb_release -is)" != "Debian" ] ;then
-  echo "FireFUSE is currently only supported on Raspberry Pi with Raspbian"
-  exit -1
-fi
 echo installing FireFUSE...
 make install
 if [ $? -ne 0 ]; then
@@ -179,17 +175,14 @@ if [ $? -ne 0 ]; then
   exit -1
 fi
 
-if [ -e /var/firefuse ]; then
-  echo "------------------------ WARNING -------------------------------"
-  echo The existing /var/firefuse has been moved to /var/firefuse.bak.
-  echo The /var/firefuse.bak directory will be overwritten with future
-  echo installs.
-  echo "----------------------------------------------------------------"
-  rm -rf /var/firefuse.bak
-  mv /var/firefuse /var/firefuse.bak
+if [ -e /var/firefuse/cv ]; then
+  rm -rf /var/firefuse/cv
 fi
 echo initializing /var/firefuse
-mkdir -p /var/firefuse/cv
+if [ -e /var/firefuse/config.json ]; then
+  mv -f /var/firefuse/config.json /var/firefuse/config.json.bak
+  echo Saved old /var/firefuse/config.json as /var/firefuse/config.json.bak
+fi
 cp var/firefuse/config.json /var/firefuse
 
 echo Mounting the firefuse file system on /dev/firefuse
@@ -198,8 +191,9 @@ firefuse -s -o allow_other /dev/firefuse
 if [ $? -ne 0 ]; then
   echo "!!!!!!!!!!!!!!!!! ERROR !!!!!!!!!!!!!!!!!!!!"
   echo "COULD NOT MOUNT /dev/firefuse"
-  echo  Dumping /var/log/firefuse.log
   echo  FireFUSE has not been installed
+  echo  Dumping /var/log/firefuse.log:
+  echo
   cat /var/log/firefuse.log
   echo "!!!!!!!!!!!!!!!!! ERROR !!!!!!!!!!!!!!!!!!!!"
   exit -1
