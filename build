@@ -147,6 +147,9 @@ fi
 # Agressively dismount /dev/firefuse
 echo Uninstalling /dev/firefuse...
 fusermount -uq /dev/firefuse 
+if [ $? -ne 0 ]; then 
+  echo "non-zero result: fusermount -ug /dev/firefuse"
+fi
 
 if [ ! -e /dev/firefuse ]; then 
   echo mkdir /dev/firefuse 
@@ -178,6 +181,7 @@ fi
 if [ -e /var/firefuse/cv ]; then
   rm -rf /var/firefuse/cv
 fi
+mkdir /var/firefuse/cv
 echo initializing /var/firefuse
 if [ -e /var/firefuse/config.json ]; then
   mv -f /var/firefuse/config.json /var/firefuse/config.json.bak
