@@ -150,11 +150,6 @@ fusermount -uq /dev/firefuse
 if [ $? -ne 0 ]; then 
   echo "non-zero result: fusermount -uq /dev/firefuse"
 fi
-fusermount -uq /dev/firefuse 
-ls -l /dev/firefuse
-if [ $? -ne 0 ]; then 
-  echo "non-zero result: ls -l /dev/firefuse"
-fi
 
 if [ ! -e /dev/firefuse ]; then 
   echo mkdir /dev/firefuse 
@@ -186,13 +181,13 @@ fi
 if [ -e /var/firefuse/cv ]; then
   rm -rf /var/firefuse/cv
 fi
-mkdir /var/firefuse/cv
+mkdir -P /var/firefuse/cv
 echo initializing /var/firefuse
 if [ -e /var/firefuse/config.json ]; then
   mv -f /var/firefuse/config.json /var/firefuse/config.json.bak
   echo Saved old /var/firefuse/config.json as /var/firefuse/config.json.bak
 fi
-cp var/firefuse/config.json /var/firefuse
+cp var/firefuse/config.json /var/firefuse/
 
 echo Mounting the firefuse file system on /dev/firefuse
 echo   firefuse -s -o allow_other /dev/firefuse
