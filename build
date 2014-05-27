@@ -148,8 +148,11 @@ fi
 echo Uninstalling /dev/firefuse...
 fusermount -uq /dev/firefuse 
 if [ $? -ne 0 ]; then 
-  echo "non-zero result: fusermount -ug /dev/firefuse"
+  echo "non-zero result: fusermount -uq /dev/firefuse"
 fi
+fusermount -u /dev/firefuse 
+ls -l /dev/firefuse
+exit 0
 
 if [ ! -e /dev/firefuse ]; then 
   echo mkdir /dev/firefuse 
