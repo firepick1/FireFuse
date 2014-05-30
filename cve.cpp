@@ -416,7 +416,7 @@ static FuseDataBuffer * cve_process(FuseDataBuffer *pJPG, const char *path, int 
 	const char * key;
 	json_t *pValue;
         json_object_foreach(pProperties, key, pValue) {
-	  const char *valueStr = json_dumps(pValue, JSON_PRESERVE_ORDER|JSON_COMPACT|JSON_INDENT(jsonIndent));
+	  char *valueStr = json_dumps(pValue, JSON_PRESERVE_ORDER|JSON_COMPACT|JSON_INDENT(0));
 	  argMap[key] = valueStr;
 	}
       } else {
@@ -431,14 +431,14 @@ static FuseDataBuffer * cve_process(FuseDataBuffer *pJPG, const char *path, int 
       const char * key;
       json_t *pValue;
       json_object_foreach(pProperties, key, pValue) {
-	free(argMap[key]);
+	free((char *) argMap[key]);
       }
     }
     if (pProperties) {
       json_decref(pProperties);
     }
     int jsonIndent = 0;
-    pModelStr = json_dumps(pModel, JSON_PRESERVE_ORDER|JSON_COMPACT|JSON_INDENT(jsonIndent));
+    pModelStr = json_dumps(pModel, JSON_PRESERVE_ORDER|JSON_COMPACT|JSON_INDENT(0));
     int modelLen = pModelStr ? strlen(pModelStr) : 0;
     if (pModelStr) {
       LOGTRACE2("cve_process(%s) MEMORY-ALLOC json_dumps() %ldB", path, modelLen);
