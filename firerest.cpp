@@ -139,12 +139,12 @@ static string firerest_config_camera(json_t *pCamera, const char *pCameraName, j
       if (!errMsg.empty()) { return errMsg; }
 
       string savePath(cvePath);
-      savePath += "save.cmd";
+      savePath += "save.fire";
       errMsg = firerest_write_file(savePath.c_str(), "");
       if (!errMsg.empty()) { return errMsg; }
 
       string processPath(cvePath);
-      processPath += "process.cmd";
+      processPath += "process.fire";
       errMsg = firerest_write_file(processPath.c_str(), "");
       if (!errMsg.empty()) { return errMsg; }
 

@@ -23,25 +23,25 @@ if [ $? -ne 0 ]; then
 fi
 
 echo
-echo "====> TESTING FIREFUSE save.cmd"
+echo "====> TESTING FIREFUSE save.fire"
 cp -f /dev/firefuse/cv/1/gray/cve/calc-offset/saved.png target
 if [ $? -ne 0 ]; then
   echo "ERROR: /dev/firefuse/cv/1/gray/cve/calc-offset/saved.png not found"
   exit -1
 fi
-cat /dev/firefuse/cv/1/gray/cve/calc-offset/save.cmd
+cat /dev/firefuse/cv/1/gray/cve/calc-offset/save.fire
 if [ $? -ne 0 ]; then
-  echo "ERROR: save.cmd failed"
+  echo "ERROR: save.fire failed"
   exit -1
 fi
 cmp /var/firefuse/cv/1/gray/cve/calc-offset/saved.png target/saved.png
 if [ $? -eq 0 ]; then
-  echo "ERROR: save.cmd did not create new saved.png"
+  echo "ERROR: save.fire did not create new saved.png"
   exit -1
 fi
 
 echo
-echo "====> TESTING FIREFUSE process.cmd"
+echo "====> TESTING FIREFUSE process.fire"
 cp -f /dev/firefuse/cv/1/monitor.jpg target
 if [ $? -ne 0 ]; then
   echo "ERROR: /dev/firefuse/cv/1/monitor.jpg not found"
@@ -52,16 +52,16 @@ if [ $? -ne 0 ]; then
   echo "ERROR: /dev/firefuse/cv/1/output.jpg not found"
   exit -1
 fi
-cat /dev/firefuse/cv/1/gray/cve/calc-offset/process.cmd |& tee target/process.json
+cat /dev/firefuse/cv/1/gray/cve/calc-offset/process.fire |& tee target/process.json
 if [ $? -ne 0 ]; then
-  echo "ERROR: process.cmd failed"
+  echo "ERROR: process.fire failed"
   exit -1
 fi
 echo
 echo verifying output.jpg 
 cmp /dev/firefuse/cv/1/output.jpg target/output.jpg
 if [ $? -eq 0 ]; then
-  echo "ERROR: process.cmd did not generate new output.jpg"
+  echo "ERROR: process.fire did not generate new output.jpg"
   exit -1
 fi
 echo verifying monitor.jpg ...
@@ -71,7 +71,7 @@ sleep 5
 cp -f /dev/firefuse/cv/1/monitor.jpg target/monitor3.jpg;
 cmp target/monitor1.jpg target/monitor.jpg
 if [ $? -eq 0 ]; then
-  echo "ERROR: process.cmd did not generate new monitor.jpg"
+  echo "ERROR: process.fire did not generate new monitor.jpg"
   exit -1
 fi
 cmp target/monitor1.jpg target/monitor2.jpg
@@ -89,15 +89,15 @@ if [ $? -ne 0 ]; then
   echo "ERROR: expected initial monitor.jpg to match output.jpg"
   exit -1
 fi
-echo verifying process.cmd 
-grep error target/process.cmd
+echo verifying process.fire 
+grep error target/process.fire
 if [ $? -eq 0 ]; then
-  echo "ERROR: process.cmd reported error"
+  echo "ERROR: process.fire reported error"
   exit -1
 fi
-grep '"model":{"channels":{"0":{' target/process.cmd
+grep '"model":{"channels":{"0":{' target/process.fire
 if [ $? -ne 0 ]; then
-  echo "ERROR: process.cmd is not JSON"
+  echo "ERROR: process.fire is not JSON"
   exit -1
 fi
 
