@@ -491,6 +491,8 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
       fi->fh = (uint64_t) (size_t) cveCam[0].produceMonitorJPG(path, &result);
     } else if (cve_isPathSuffix(path, FIREREST_FIRESIGHT_JSON)) {
       result = cve_openVarFile(path, fi);
+    } else if (cve_isPathSuffix(path, FIREREST_PROPERTIES_JSON)) {
+      result = cve_openVarFile(path, fi);
     } else if (cve_isPathSuffix(path, FIREREST_SAVED_PNG)) {
       result = cve_openVarFile(path, fi);
     } else {
@@ -543,6 +545,8 @@ int cve_release(const char *path, struct fuse_file_info *fi) {
   } else if (cve_isPathSuffix(path, FIREREST_OUTPUT_JPG)) {
     firefuse_freeDataBuffer(path, fi);
   } else if (cve_isPathSuffix(path, FIREREST_FIRESIGHT_JSON)) {
+    firefuse_freeDataBuffer(path, fi);
+  } else if (cve_isPathSuffix(path, FIREREST_PROPERTIES_JSON)) {
     firefuse_freeDataBuffer(path, fi);
   } else if (cve_isPathSuffix(path, FIREREST_CAMERA_JPG)) {
     firefuse_freeDataBuffer(path, fi);
