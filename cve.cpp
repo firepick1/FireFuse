@@ -410,7 +410,7 @@ static FuseDataBuffer * cve_process(FuseDataBuffer *pJPG, const char *path, int 
       stringstream propertiesStream;
       propertiesStream << ifs.rdbuf();
       propertiesString = propertiesStream.str();
-      json_errot_t jerr;
+      json_error_t jerr;
       properties = json_loads(properties.c_str(), 0, &jerr);
       if (json_is_object(properties)) {
 	const char * key;
