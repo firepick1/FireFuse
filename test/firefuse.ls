@@ -15,11 +15,13 @@
 0 /dev/firefuse/cv/1/gray/cve/locate-part/process.fire
 0 /dev/firefuse/cv/1/gray/cve/locate-part/saved.png
 4096 /dev/firefuse/cv/1/gray/cve/locate-part/firesight.json
+4096 /dev/firefuse/cv/1/gray/cve/locate-part/properties.json
 4096 /dev/firefuse/cv/1/gray/cve/calc-offset/
 0 /dev/firefuse/cv/1/gray/cve/calc-offset/save.fire
 0 /dev/firefuse/cv/1/gray/cve/calc-offset/process.fire
 0 /dev/firefuse/cv/1/gray/cve/calc-offset/saved.png
 4096 /dev/firefuse/cv/1/gray/cve/calc-offset/firesight.json
+4096 /dev/firefuse/cv/1/gray/cve/calc-offset/properties.json
 0 /dev/firefuse/cv/1/output.jpg
 0 /dev/firefuse/cv/1/monitor.jpg
 4096 /dev/firefuse/cv/1/bgr/
@@ -29,8 +31,10 @@
 0 /dev/firefuse/cv/1/bgr/cve/locate-part/process.fire
 0 /dev/firefuse/cv/1/bgr/cve/locate-part/saved.png
 4096 /dev/firefuse/cv/1/bgr/cve/locate-part/firesight.json
+4096 /dev/firefuse/cv/1/bgr/cve/locate-part/properties.json
 4096 /dev/firefuse/cv/1/bgr/cve/calc-offset/
 0 /dev/firefuse/cv/1/bgr/cve/calc-offset/save.fire
 0 /dev/firefuse/cv/1/bgr/cve/calc-offset/process.fire
 0 /dev/firefuse/cv/1/bgr/cve/calc-offset/saved.png
 4096 /dev/firefuse/cv/1/bgr/cve/calc-offset/firesight.json
+4096 /dev/firefuse/cv/1/bgr/cve/calc-offset/properties.json

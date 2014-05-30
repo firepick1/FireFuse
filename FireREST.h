@@ -25,6 +25,7 @@ enum CVE_Path {
 #define FIREREST_CV "/cv"
 #define FIREREST_CVE "/cve"
 #define FIREREST_FIRESIGHT_JSON "/firesight.json"
+#define FIREREST_PROPERTIES_JSON "/properties.json"
 #define FIREREST_MONITOR_JPG "/monitor.jpg"
 #define FIREREST_OUTPUT_JPG "/output.jpg"
 #define FIREREST_PROCESS_JSON "/process.fire"

@@ -146,12 +146,27 @@ static string firerest_config_camera(json_t *pCamera, const char *pCameraName, j
       string processPath(cvePath);
       processPath += "process.fire";
       errMsg = firerest_write_file(processPath.c_str(), "");
-      if (!errMsg.empty()) { return errMsg; }
 
       string firesightPath(cvePath);
       firesightPath += "firesight.json";
       errMsg = firerest_write_file(firesightPath.c_str(), pFireSightJson);
       free(pFireSightJson);
+
+      json_t *pProperties = json_object_get(pCve, "properties");
+      if (pProperties != 0) {
+	char *pPropertiesJson = json_dumps(pProperties, JSON_COMPACT|JSON_PRESERVE_ORDER);
+	if (pPropertiesJson == 0) {
+	  errMsg = "firerest_config_camera() could not create properties json string";
+	  errMsg += pCveNameStr;
+	  return errMsg;
+	}
+
+	string propertiesPath(cvePath);
+	propertiesPath += "properties.json";
+	errMsg = firerest_write_file(propertiesPath.c_str(), pPropertiesJson);
+	free(pPropertiesJson);
+      }
+
       if (!errMsg.empty()) { return errMsg; }
     }
   }

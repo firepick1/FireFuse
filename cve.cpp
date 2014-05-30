@@ -388,6 +388,8 @@ static FuseDataBuffer * cve_process(FuseDataBuffer *pJPG, const char *path, int 
   double sStart = cve_seconds();
   string firesightPath = buildVarPath(path, FIREREST_FIRESIGHT_JSON);
   LOGTRACE2("cve_process(%s) loading JSON: %s", path, firesightPath.c_str());
+  string propertiesPath = buildVarPath(path, FIREREST_PROPERTIES_JSON);
+  LOGTRACE2("cve_process(%s) loading JSON: %s", path, propertiesPath.c_str());
   char *pModelStr = NULL;
   FuseDataBuffer *pJSON = NULL;
   *pResult = 0;
@@ -400,10 +402,41 @@ static FuseDataBuffer * cve_process(FuseDataBuffer *pJPG, const char *path, int 
     Mat image = imdecode(vJPG, isColor ? CV_LOAD_IMAGE_COLOR : CV_LOAD_IMAGE_GRAYSCALE); 
     string savedPath = buildVarPath(path, FIREREST_SAVED_PNG);
     ArgMap argMap;
+    json_t *properties = NULL;
+    struct stat properiesStat;   
+    if (stat (propertiesPath.c_str(), &properiesStat) == 0) {
+      string propertiesString;
+      ifstream ifs(propertiesPath.c_str());
+      stringstream propertiesStream;
+      propertiesStream << ifs.rdbuf();
+      propertiesString = propertiesStream.str();
+      json_errot_t jerr;
+      properties = json_loads(properties.c_str(), 0, &jerr);
+      if (json_is_object(properties)) {
+	const char * key;
+	json_t *pValue;
+        json_object_foreach(properties, key, pValue) {
+	  const char *valueStr = json_dumps(pValue, JSON_PRESERVE_ORDER|JSON_COMPACT|JSON_INDENT(jsonIndent));
+	  argMap[key] = valueStr;
+	}
+      } else {
+        LOGERROR2("cve_process(%s) Could not load properties: %s", path, properties.c_str());
+      }
+      if (properties) {
+        json_decref(properties);
+      }
+    }
     argMap["saved"] = savedPath.c_str();
     LOGTRACE1("cve_process(%s) process begin", path);
     json_t *pModel = pipeline.process(image, argMap);
     LOGTRACE1("cve_process(%s) process end", path);
+    if (json_is_object(properties)) {
+      const char * key;
+      json_t *pValue;
+      json_object_foreach(properties, key, pValue) {
+	free(argMap[key]);
+      }
+    }
     int jsonIndent = 0;
     pModelStr = json_dumps(pModel, JSON_PRESERVE_ORDER|JSON_COMPACT|JSON_INDENT(jsonIndent));
     int modelLen = pModelStr ? strlen(pModelStr) : 0;

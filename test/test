@@ -21,6 +21,12 @@ if [ $? -ne 0 ]; then
   echo "ERROR: firesight.json comparison failed"
   exit -1
 fi
+cat /dev/firefuse/cv/1/gray/cve/calc-offset/properties.json
+diff /var/firefuse/cv/1/gray/cve/calc-offset/properties.json /dev/firefuse/cv/1/gray/cve/calc-offset/properties.json 
+if [ $? -ne 0 ]; then
+  echo "ERROR: properties.json comparison failed"
+  exit -1
+fi
 
 echo
 echo "====> TESTING FIREFUSE save.fire"
