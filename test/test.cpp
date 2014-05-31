@@ -86,7 +86,6 @@ public:
 
 };
 
-
 template <class T> class SmartPointer {
   public: class ReferencedPointer {
     private: int references;
@@ -109,6 +108,7 @@ template <class T> class SmartPointer {
       }
       if (ptr && references == 0) {
 	cout << "ReferencedPointer() free " << (long) ptr << endl;
+	* (char *) ptr = 0; // mark as deleted
 	free(ptr);
       }
     }
@@ -122,27 +122,24 @@ template <class T> class SmartPointer {
 
   private: ReferencedPointer *pPointer;
 
-  public: SmartPointer(T ptr) {
+  public: SmartPointer(T* ptr) {
     cout << "SmartPointer(" << (long) ptr << ")" << endl;
     this->pPointer = new ReferencedPointer(ptr);
   }
 
   public: SmartPointer() {
     cout << "SmartPointer(NULL)" << endl;
-    pPointer = NULL;
+    this->pPointer = NULL;
   }
 
   public: SmartPointer(const SmartPointer &that) {
-    if (pPointer) {
-      pPointer->decref();
-    }
     this->pPointer = that.pPointer;
-    this->pPointer.incref();
+    this->pPointer->incref();
   }
 
   public: ~SmartPointer() {
     if (pPointer) {
-      pPointer.decref();
+      pPointer->decref();
     }
   }
 
@@ -151,11 +148,19 @@ template <class T> class SmartPointer {
       pPointer->decref();
     }
     this->pPointer = that.pPointer;
-    this->pPointer.incref();
+    this->pPointer->incref();
     return *this;
   }
 
+  public: int getReferences() {
+    return pPointer ? pPointer->getReferences() : 0;
+  }
+
   public: T* operator->() const {
+    return pPointer ? pPointer->get() : NULL;
+  }
+
+  public: operator T*() const {
     return pPointer ? pPointer->get() : NULL;
   }
 };
@@ -195,6 +200,48 @@ public:
     return value;
   }
 };
+
+int testSmartPointer( ){
+  cout << "testSmartPointer() ------------------------" << endl;
+  char *pOne = (char*)malloc(100);
+  strcpy(pOne, "one");
+  cout << "pOne == " << (long) pOne << endl;
+  char *pTwo = (char*)malloc(100);
+  strcpy(pTwo, "two");
+  cout << "pTwo == " << (long) pTwo << endl;
+  MockValue *pMock = new MockValue(123);
+  cout << "pMock == " << (long) pMock << endl;
+  {
+    SmartPointer<char> zero;
+    assert(NULL == (char*) zero);
+    SmartPointer<char> one(pOne);
+    assert(pOne == (char*)one);
+    assert(*pOne == 'o');
+    assert(1 == one.getReferences());
+    assert(0 == strcmp("one", (char*)one));
+    assert(0 == strcmp("one", pOne));
+    SmartPointer<char> oneCopy(one);
+    assert(0 == strcmp("one", (char*)oneCopy));
+    assert(2 == one.getReferences());
+    assert(2 == oneCopy.getReferences());
+    SmartPointer<char> two(pTwo);
+    assert(0 == strcmp("two", (char*)two));
+    assert(0 != strcmp((char *) one, (char *) two));
+    one = two;
+    assert(0 == strcmp((char *) one, (char *) two));
+    assert(2 == one.getReferences());
+    assert(1 == oneCopy.getReferences());
+
+    SmartPointer<MockValue> mock(pMock);
+    assert(123 == mock->getValue());
+  }
+  assert(0 != strcmp("one", pOne));
+  assert(0 != strcmp("two", pTwo));
+  cout << "testSmartPointer() PASSED" << endl;
+  cout << endl;
+
+  return 0;
+}
 
 int testDoubleBuffer() {
   cout << "testDoubleBuffer() ------------------------" << endl;
@@ -243,10 +290,11 @@ int testDoubleBuffer() {
 
   cout << endl;
   cout << "testDoubleBuffer() PASS" << endl;
+  cout << endl;
 
   return 0;
 }
 
 int main(int argc, char *argv[]) {
-  return testDoubleBuffer();
+  return testSmartPointer()==0 && testDoubleBuffer()==0 ? 0 : -1;
 }
