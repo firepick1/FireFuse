@@ -86,6 +86,80 @@ public:
 
 };
 
+
+template <class T> class SmartPointer {
+  public: class ReferencedPointer {
+    private: int references;
+    private: T* ptr;
+
+    public: ReferencedPointer() { 
+      ptr = NULL;
+      references = 0;
+    }
+
+    public: ReferencedPointer(T* ptr) {
+      references = 1;
+      this->ptr = ptr;
+    }
+
+    public: void decref() {
+      references--;
+      if (references < 0) {
+	throw "ReferencedPointer extra dereference";
+      }
+      if (ptr && references == 0) {
+	cout << "ReferencedPointer() free " << (long) ptr << endl;
+	free(ptr);
+      }
+    }
+
+    public: void incref() { references++; }
+
+    public: T* get() { return ptr; }
+
+    public: int getReferences() { return references; }
+  };
+
+  private: ReferencedPointer *pPointer;
+
+  public: SmartPointer(T ptr) {
+    cout << "SmartPointer(" << (long) ptr << ")" << endl;
+    this->pPointer = new ReferencedPointer(ptr);
+  }
+
+  public: SmartPointer() {
+    cout << "SmartPointer(NULL)" << endl;
+    pPointer = NULL;
+  }
+
+  public: SmartPointer(const SmartPointer &that) {
+    if (pPointer) {
+      pPointer->decref();
+    }
+    this->pPointer = that.pPointer;
+    this->pPointer.incref();
+  }
+
+  public: ~SmartPointer() {
+    if (pPointer) {
+      pPointer.decref();
+    }
+  }
+
+  public: SmartPointer& operator=( const SmartPointer& that ) {
+    if (pPointer) {
+      pPointer->decref();
+    }
+    this->pPointer = that.pPointer;
+    this->pPointer.incref();
+    return *this;
+  }
+
+  public: T* operator->() const {
+    return pPointer ? pPointer->get() : NULL;
+  }
+};
+
 class MockValue {
 private:
   int value;
