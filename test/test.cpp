@@ -2,6 +2,7 @@
 #include <iostream>
 #include <cassert>
 #include <stdlib.h>
+
 using namespace std;
 
 template <class T> class DoubleBuffer {
@@ -32,11 +33,11 @@ public:
   }
 };
 
-template <class T> class DoubleBufferPtr {
+template <class T> class DoubleBufferPtr : DoubleBuffer<T*> {
 private:
-  int valueCount;
   int isDelete;
-  T* values[2];
+  using DoubleBuffer<T*>::valueCount;
+  using DoubleBuffer<T*>::values;
 
   void freeValue(int index) {
     if (isDelete) {
@@ -54,7 +55,7 @@ private:
   }
 
 public:
-  DoubleBufferPtr(T* initialValue, int isDelete=0) {
+  DoubleBufferPtr(T* initialValue, int isDelete=0) : DoubleBuffer<T*>(initialValue){
     this->valueCount = 0;
     this->isDelete = isDelete;
     put(initialValue);
@@ -77,11 +78,12 @@ public:
 
   void put(T* value) {
     if (valueCount > 1) {
-      throw "DoubleBufferPtr overflow";
+      throw "DoubleBuffer overflow";
     }
     values[valueCount] = value;
     valueCount++;
   }
+
 };
 
 class MockValue {
