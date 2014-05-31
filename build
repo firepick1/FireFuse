@@ -1,5 +1,16 @@
 #! /bin/bash
 
+if [ "$SUDO_USER" == "" ]; then
+  echo "This script must be run with sudo command from a non-root user"
+  exit -1
+fi
+
+if [ -e CMakeFiles ] ; then 
+  echo removing existing makefiles
+  rm -rf CMakeCache.txt CMakeFiles CMakeFiles.txt target cmake_install.cmake CPackConfig.cmake CPackSourceConfig.cmake
+  sudo -u $SUDO_USER mkdir target
+fi
+
 if [ "$(arch)" != "armv6l" ] || [ "$(lsb_release -is)" != "Debian" ] ;then
   echo "========================== WARNING ==============================="
   echo "FireFUSE is currently only supported on Raspberry Pi with Raspbian"
@@ -38,10 +49,6 @@ while getopts "hc:" flag; do
   esac
 done
  
-if [ "$SUDO_USER" == "" ]; then
-  echo "This script must be run with sudo command from a non-root user"
-  exit -1
-fi
 
 if [ "$(type -p cmake)" == "" ]; then
   echo "++++++++++++++++++ INSTALLING CMAKE ++++++++++++"
@@ -154,11 +161,6 @@ fi
 if [ ! -e /dev/firefuse ]; then 
   echo mkdir /dev/firefuse 
   mkdir /dev/firefuse 
-fi
-if [ -e CMakeFiles ] ; then 
-  echo removing existing makefiles
-  rm -rf CMakeCache.txt CMakeFiles CMakeFiles.txt target cmake_install.cmake CPackConfig.cmake CPackSourceConfig.cmake
-  sudo -u $SUDO_USER mkdir target
 fi
 
 echo creating makefiles
