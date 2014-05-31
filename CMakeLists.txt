@@ -7,7 +7,11 @@ SET(FireFUSE_VERSION_MINOR 6)
 SET(FireFUSE_VERSION_PATCH 1)
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -g -D_FILE_OFFSET_BITS=64")
 SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_FILE_OFFSET_BITS=64")
+SET(BUILD_TARGET_DIR "${CMAKE_CURRENT_SOURCE_DIR}/target" CACHE STRING "Put all binary output in target")
+SET(LIBRARY_OUTPUT_PATH "${BUILD_TARGET_DIR}")
+SET(EXECUTABLE_OUTPUT_PATH "${BUILD_TARGET_DIR}")
 
+include_directories( ${PROJECT_SOURCE_DIR} ${BUILD_TARGET_DIR} )
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include (InstallRequiredSystemLibraries)
 include_directories(/usr/local/include)
@@ -39,6 +43,16 @@ add_executable(firefuse
   FireStep.cpp 
   )
 target_link_libraries(firefuse libfirepicam.so lib_firesight.so libfuse.so ${OpenCV_LIBS})
+
+add_executable(testfirefuse
+  test/test.cpp
+  firerest.cpp
+  fuse.c 
+  FirePick.cpp 
+  cve.cpp 
+  FireStep.cpp 
+  )
+target_link_libraries(testfirefuse libfirepicam.so lib_firesight.so libfuse.so ${OpenCV_LIBS})
 
 INSTALL(TARGETS firefuse DESTINATION bin)
 INSTALL(PROGRAMS mountfirefuse.sh DESTINATION /etc/init.d/)
