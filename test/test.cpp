@@ -5,18 +5,18 @@
 
 using namespace std;
 
-template <class T> class DoubleBuffer {
+template <class T> class CachedValue {
 protected:
   int valueCount;
   T values[2];
 
 public:
-  DoubleBuffer(T initialValue) {
+  CachedValue(T initialValue) {
     this->valueCount = 0;
     put(initialValue);
   }
 
-  T get() {
+  T& get() {
     if (valueCount > 1) {
       values[0] = values[1];
       valueCount--;
@@ -26,64 +26,11 @@ public:
 
   void put(T value) {
     if (valueCount > 1) {
-      throw "DoubleBuffer overflow";
+      throw "CachedValue overflow";
     }
     values[valueCount] = value;
     valueCount++;
   }
-};
-
-template <class T> class DoubleBufferPtr : DoubleBuffer<T*> {
-private:
-  int isDelete;
-  using DoubleBuffer<T*>::valueCount;
-  using DoubleBuffer<T*>::values;
-
-  void freeValue(int index) {
-    if (isDelete) {
-      cout << "DoubleBufferPtr delete " << (long) values[index] << endl;
-      if (values[index]) {
-	delete values[index];
-      }
-    } else {
-      cout << "DoubleBufferPtr freeing " << (long) values[index] << endl;
-      if (values[index]) {
-	* (char *) values[index] = 0;
-	free(values[index]);
-      }
-    }
-  }
-
-public:
-  DoubleBufferPtr(T* initialValue, int isDelete=0) : DoubleBuffer<T*>(initialValue){
-    this->valueCount = 0;
-    this->isDelete = isDelete;
-    put(initialValue);
-  }
-
-  ~DoubleBufferPtr() {
-    for (int i = 0; i < valueCount; i++) {
-      freeValue(i);
-    }
-  }
-  
-  T* get() {
-    if (valueCount > 1) {
-      freeValue(0);
-      values[0] = values[1];
-      valueCount--;
-    }
-    return values[0];
-  }
-
-  void put(T* value) {
-    if (valueCount > 1) {
-      throw "DoubleBuffer overflow";
-    }
-    values[valueCount] = value;
-    valueCount++;
-  }
-
 };
 
 template <class T> class SmartPointer {
@@ -243,16 +190,18 @@ int testSmartPointer( ){
   return 0;
 }
 
-int testDoubleBuffer() {
-  cout << "testDoubleBuffer() ------------------------" << endl;
-  {
-    DoubleBuffer<MockValue> bufInt(MockValue(1));
+typedef SmartPointer<char> CharPtr;
 
-    cout << "testDoubleBuffer() get" << endl;
+int testCachedValue() {
+  cout << "testCachedValue() ------------------------" << endl;
+  {
+    CachedValue<MockValue> bufInt(MockValue(1));
+
+    cout << "testCachedValue() get" << endl;
     assert(1 == bufInt.get().getValue());
     assert(1 == bufInt.get().getValue());
    
-    cout << "testDoubleBuffer() put" << endl;
+    cout << "testCachedValue() put" << endl;
     bufInt.put(MockValue(2));
     assert(2 == bufInt.get().getValue());
     bufInt.put(MockValue(3));
@@ -264,7 +213,7 @@ int testDoubleBuffer() {
     }
     assert(caughtMsg);
 
-    DoubleBuffer<string> bufString("one");
+    CachedValue<string> bufString("one");
     assert(0 == strcmp("one", bufString.get().c_str()));
     assert(0 == strcmp("one", bufString.get().c_str()));
 
@@ -273,28 +222,38 @@ int testDoubleBuffer() {
 
     char *one = (char *) malloc(100);
     strcpy(one, "one");
+    cout << "one " << (long) one << endl;
     char *two = (char *) malloc(200);
+    cout << "two " << (long) two << endl;
     strcpy(two, "two");
     {
-      DoubleBufferPtr<char> bufAlloc(NULL, 0);
-      assert(!bufAlloc.get());
-      bufAlloc.put(one);
-      assert(0 == strcmp("one", bufAlloc.get()));
-      assert(0 == strcmp("one", bufAlloc.get()));
-      bufAlloc.put(two);
-      assert(0 == strcmp("two", bufAlloc.get()));
+      CharPtr spOne(one);
+      CharPtr spTwo(two);
+      CachedValue<CharPtr> bufAlloc(CharPtr());
+      SmartPointer<char> spX;
+      assert(NULL == (char *)spX);
+      spX = spOne;
+      assert(one == (char *)spX);
+      //spX = bufAlloc.get();
+      //assert(NULL == (char *)spX);
+//
+      //bufAlloc.put(spOne);
+      //assert(0 == strcmp("one", (char *) bufAlloc.get()));
+      //assert(0 == strcmp("one", (char *) bufAlloc.get()));
+      //bufAlloc.put(spTwo);
+      //assert(0 == strcmp("two", (char *) bufAlloc.get()));
     }
-    assert(0 == strlen(one));
-    assert(0 == strlen(two));
+    assert(0 != strcmp("one", one));
+    assert(0 != strcmp("two", two));
   }
 
   cout << endl;
-  cout << "testDoubleBuffer() PASS" << endl;
+  cout << "testCachedValue() PASS" << endl;
   cout << endl;
 
   return 0;
 }
 
 int main(int argc, char *argv[]) {
-  return testSmartPointer()==0 && testDoubleBuffer()==0 ? 0 : -1;
+  return testSmartPointer()==0 && testCachedValue()==0 ? 0 : -1;
 }
