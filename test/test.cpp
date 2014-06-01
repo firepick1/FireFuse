@@ -2,23 +2,25 @@
 #include <iostream>
 #include <cassert>
 #include <stdlib.h>
+#include <memory>
 
 using namespace std;
 
 template <class T> class CachedValue {
 protected:
   int valueCount;
+  T emptyValue;
   T values[2];
 
 public:
-  CachedValue(T initialValue) {
+  CachedValue() {
     this->valueCount = 0;
-    put(initialValue);
   }
 
   T& get() {
     if (valueCount > 1) {
       values[0] = values[1];
+      values[1] = emptyValue;
       valueCount--;
     }
     return values[0];
@@ -30,6 +32,10 @@ public:
     }
     values[valueCount] = value;
     valueCount++;
+  }
+
+  int getValueCount() {
+    return valueCount;
   }
 };
 
@@ -64,10 +70,14 @@ template <class T> class SmartPointer {
 
     public: T* get() { return ptr; }
 
-    public: int getReferences() { return references; }
+    public: int getReferences() const { 
+      return references; 
+    }
   };
 
   private: ReferencedPointer *pPointer;
+  private: void decref() { if (pPointer) { pPointer->decref(); } }
+  private: void incref() { if (pPointer) { pPointer->incref(); } }
 
   public: SmartPointer(T* ptr) {
     cout << "SmartPointer(" << (long) ptr << ")" << endl;
@@ -81,21 +91,17 @@ template <class T> class SmartPointer {
 
   public: SmartPointer(const SmartPointer &that) {
     this->pPointer = that.pPointer;
-    this->pPointer->incref();
+    this->incref();
   }
 
   public: ~SmartPointer() {
-    if (pPointer) {
-      pPointer->decref();
-    }
+    decref();
   }
 
-  public: SmartPointer& operator=( const SmartPointer& that ) {
-    if (pPointer) {
-      pPointer->decref();
-    }
+  public: SmartPointer& operator=( SmartPointer that ) {
+    decref();
     this->pPointer = that.pPointer;
-    this->pPointer->incref();
+    incref();
     return *this;
   }
 
@@ -103,7 +109,19 @@ template <class T> class SmartPointer {
     return pPointer ? pPointer->getReferences() : 0;
   }
 
-  public: T* operator->() const {
+  public: T& operator*() {
+    throw "SmartPointer not implemented (1)";
+  }
+
+  public: const T& operator*() const {
+    throw "SmartPointer not implemented (2)";
+  }
+
+  public: T* operator->() {
+    return pPointer ? pPointer->get() : NULL;
+  }
+
+  public: const T* operator->() const {
     return pPointer ? pPointer->get() : NULL;
   }
 
@@ -112,12 +130,12 @@ template <class T> class SmartPointer {
   }
 };
 
-class MockValue {
+template <class T> class MockValue {
 private:
-  int value;
+  T value;
 
 public:
-  MockValue(int aValue) {
+  MockValue(T aValue) {
     cout << "MockValue(" << aValue << ")" << " " << (long) this << endl;
     value = aValue;
   }
@@ -142,11 +160,14 @@ public:
     return *this;
   }
 
-  int getValue() {
+  T getValue() {
     cout << "MockValue.getValue() => " << value << " " << (long) this << endl;
     return value;
   }
 };
+
+//#define SMARTPOINTER shared_ptr
+#define SMARTPOINTER SmartPointer
 
 int testSmartPointer( ){
   cout << "testSmartPointer() ------------------------" << endl;
@@ -156,22 +177,22 @@ int testSmartPointer( ){
   char *pTwo = (char*)malloc(100);
   strcpy(pTwo, "two");
   cout << "pTwo == " << (long) pTwo << endl;
-  MockValue *pMock = new MockValue(123);
+  MockValue<int> *pMock = new MockValue<int>(123);
   cout << "pMock == " << (long) pMock << endl;
   {
-    SmartPointer<char> zero;
+    SMARTPOINTER<char> zero;
     assert(NULL == (char*) zero);
-    SmartPointer<char> one(pOne);
+    SMARTPOINTER<char> one(pOne);
     assert(pOne == (char*)one);
     assert(*pOne == 'o');
     assert(1 == one.getReferences());
     assert(0 == strcmp("one", (char*)one));
     assert(0 == strcmp("one", pOne));
-    SmartPointer<char> oneCopy(one);
+    SMARTPOINTER<char> oneCopy(one);
     assert(0 == strcmp("one", (char*)oneCopy));
     assert(2 == one.getReferences());
     assert(2 == oneCopy.getReferences());
-    SmartPointer<char> two(pTwo);
+    SMARTPOINTER<char> two(pTwo);
     assert(0 == strcmp("two", (char*)two));
     assert(0 != strcmp((char *) one, (char *) two));
     one = two;
@@ -179,7 +200,7 @@ int testSmartPointer( ){
     assert(2 == one.getReferences());
     assert(1 == oneCopy.getReferences());
 
-    SmartPointer<MockValue> mock(pMock);
+    SMARTPOINTER<MockValue<int> > mock(pMock);
     assert(123 == mock->getValue());
   }
   assert(0 != strcmp("one", pOne));
@@ -195,27 +216,30 @@ typedef SmartPointer<char> CharPtr;
 int testCachedValue() {
   cout << "testCachedValue() ------------------------" << endl;
   {
-    CachedValue<MockValue> bufInt(MockValue(1));
+    CachedValue<MockValue<int> > bufInt;
+    bufInt.put(MockValue<int>(1));
 
     cout << "testCachedValue() get" << endl;
     assert(1 == bufInt.get().getValue());
     assert(1 == bufInt.get().getValue());
    
     cout << "testCachedValue() put" << endl;
-    bufInt.put(MockValue(2));
+    bufInt.put(MockValue<int>(2));
     assert(2 == bufInt.get().getValue());
-    bufInt.put(MockValue(3));
+    bufInt.put(MockValue<int>(3));
     const char *caughtMsg = NULL;
     try {
-      bufInt.put(MockValue(4));
+      bufInt.put(MockValue<int>(4));
     } catch (const char * msg) {
       caughtMsg = msg;
     }
     assert(caughtMsg);
 
-    CachedValue<string> bufString("one");
+    CachedValue<string> bufString;
+    bufString.put("one");
     assert(0 == strcmp("one", bufString.get().c_str()));
     assert(0 == strcmp("one", bufString.get().c_str()));
+    assert(1 == bufString.getValueCount());
 
     bufString.put("two");
     assert(0 == strcmp("two", bufString.get().c_str()));
@@ -228,20 +252,21 @@ int testCachedValue() {
     strcpy(two, "two");
     {
       CharPtr spOne(one);
+      assert(1 == spOne.getReferences());
       CharPtr spTwo(two);
-      CachedValue<CharPtr> bufAlloc(CharPtr());
-      SmartPointer<char> spX;
-      assert(NULL == (char *)spX);
-      spX = spOne;
-      assert(one == (char *)spX);
-      //spX = bufAlloc.get();
-      //assert(NULL == (char *)spX);
-//
-      //bufAlloc.put(spOne);
-      //assert(0 == strcmp("one", (char *) bufAlloc.get()));
-      //assert(0 == strcmp("one", (char *) bufAlloc.get()));
-      //bufAlloc.put(spTwo);
-      //assert(0 == strcmp("two", (char *) bufAlloc.get()));
+      CachedValue<CharPtr> bufCharPtr;
+      assert(0 == bufCharPtr.getValueCount());
+      assert(NULL == (char *)bufCharPtr.get());
+      assert(0 == bufCharPtr.get().getReferences());
+      bufCharPtr.put(spOne);
+      assert(1 == bufCharPtr.getValueCount());
+      assert(one == (char *)bufCharPtr.get());
+      assert(2 == bufCharPtr.get().getReferences());
+      bufCharPtr.put(spTwo);
+      assert(2 == bufCharPtr.getValueCount());
+      assert(two == (char *)bufCharPtr.get());
+      assert(1 == bufCharPtr.getValueCount());
+      assert(2 == bufCharPtr.get().getReferences());
     }
     assert(0 != strcmp("one", one));
     assert(0 != strcmp("two", two));
