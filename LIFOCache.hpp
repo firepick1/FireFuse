@@ -1,5 +1,5 @@
-#ifndef CACHEDVALUE_HPP
-#define CACHEDVALUE_HPP
+#ifndef LIFOCache_HPP
+#define LIFOCache_HPP
 
 #include <string.h>
 #include <iostream>
@@ -9,31 +9,57 @@
 
 using namespace std;
 
-template <class T> class CachedValue {
-  private: int valueCount;
-  private: T emptyValue;
-  private: T values[2];
+#ifndef bool
+#define bool int
+#endif
+#ifndef TRUE
+#define TRUE 1
+#define FALSE 0
+#endif
 
-  public: CachedValue() { this->valueCount = 0; }
+/**
+ * Threadsafe LIFO single-producer/single-consumer cache that returns most recently posted value.
+ */
+template <class T> class LIFOCache {
+  private: volatile long readCount;
+  private: volatile long writeCount;
+  private: int nBuffers;
+  private: T emptyValue;
+  private: T *values;
+
+  public: LIFOCache(int nBuffers=3) { 
+    this->readCount = 0;
+    this->writeCount = 0;
+    this->nBuffers = nBuffers;
+    values = new T[nBuffers];
+  }
+
+  public: ~LIFOCache() {
+    delete[] values;
+  }
 
   public: T& get() {
-    if (valueCount > 1) {
-      values[0] = values[1];
-      values[1] = emptyValue;
-      valueCount--;
+    int valueIndex = writeCount - readCount;
+    if (valueIndex > 0) {
+      values[0] = values[valueIndex];
+      for (int i = 1; i <= valueIndex; i++) {
+	values[i] = emptyValue;
+      }
     }
+    readCount = writeCount;
     return values[0];
   }
 
-  public: void put(T value) {
-    if (valueCount > 1) {
-      throw "CachedValue overflow";
+  public: void post(T value) {
+    int valueIndex = writeCount - readCount + 1;
+    if (valueIndex >= nBuffers) {
+      throw "LIFOCache overflow";
     }
-    values[valueCount] = value;
-    valueCount++;
+    values[valueIndex] = value;
+    writeCount++;
   }
 
-  public: int getValueCount() { return valueCount; }
+  public: bool isFresh() { return writeCount && writeCount != readCount; }
 };
 
 template <class T> class SmartPointer {

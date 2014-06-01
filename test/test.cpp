@@ -1,4 +1,4 @@
-#include "CachedValue.hpp"
+#include "LIFOCache.hpp"
 
 template <class T> class MockValue {
 private:
@@ -83,35 +83,38 @@ int testSmartPointer( ){
 
 typedef SmartPointer<char> CharPtr;
 
-int testCachedValue() {
-  cout << "testCachedValue() ------------------------" << endl;
+int testLIFOCache() {
+  cout << "testLIFOCache() ------------------------" << endl;
   {
-    CachedValue<MockValue<int> > bufInt;
-    bufInt.put(MockValue<int>(1));
+    LIFOCache<MockValue<int> > bufInt;
+    bufInt.post(MockValue<int>(1));
 
-    cout << "testCachedValue() get" << endl;
+    cout << "testLIFOCache() get" << endl;
     assert(1 == bufInt.get().getValue());
     assert(1 == bufInt.get().getValue());
    
-    cout << "testCachedValue() put" << endl;
-    bufInt.put(MockValue<int>(2));
+    cout << "testLIFOCache() post" << endl;
+    bufInt.post(MockValue<int>(2));
     assert(2 == bufInt.get().getValue());
-    bufInt.put(MockValue<int>(3));
+    bufInt.post(MockValue<int>(3));
     const char *caughtMsg = NULL;
+    bufInt.post(MockValue<int>(4));
     try {
-      bufInt.put(MockValue<int>(4));
+      bufInt.post(MockValue<int>(5));
     } catch (const char * msg) {
       caughtMsg = msg;
     }
     assert(caughtMsg);
 
-    CachedValue<string> bufString;
-    bufString.put("one");
+    LIFOCache<string> bufString;
+    assert(!bufString.isFresh());
+    bufString.post("one");
+    assert(bufString.isFresh());
     assert(0 == strcmp("one", bufString.get().c_str()));
+    assert(!bufString.isFresh());
     assert(0 == strcmp("one", bufString.get().c_str()));
-    assert(1 == bufString.getValueCount());
 
-    bufString.put("two");
+    bufString.post("two");
     assert(0 == strcmp("two", bufString.get().c_str()));
 
     char *one = (char *) malloc(100);
@@ -124,18 +127,25 @@ int testCachedValue() {
       CharPtr spOne(one);
       assert(1 == spOne.getReferences());
       CharPtr spTwo(two);
-      CachedValue<CharPtr> bufCharPtr;
-      assert(0 == bufCharPtr.getValueCount());
+      LIFOCache<CharPtr> bufCharPtr;
+      assert(!bufCharPtr.isFresh());
       assert(NULL == (char *)bufCharPtr.get());
+      assert(!bufCharPtr.isFresh());
       assert(0 == bufCharPtr.get().getReferences());
-      bufCharPtr.put(spOne);
-      assert(1 == bufCharPtr.getValueCount());
+      bufCharPtr.post(spOne);
+      assert(bufCharPtr.isFresh());
       assert(one == (char *)bufCharPtr.get());
+      assert(!bufCharPtr.isFresh());
       assert(2 == bufCharPtr.get().getReferences());
-      bufCharPtr.put(spTwo);
-      assert(2 == bufCharPtr.getValueCount());
+      bufCharPtr.post(spTwo);
+      assert(bufCharPtr.isFresh());
+      assert(2 == spTwo.getReferences());
+      bufCharPtr.post(spTwo);
+      assert(3 == spTwo.getReferences());
+      assert(bufCharPtr.isFresh());
       assert(two == (char *)bufCharPtr.get());
-      assert(1 == bufCharPtr.getValueCount());
+      assert(!bufCharPtr.isFresh());
+      assert(2 == spTwo.getReferences());
       assert(2 == bufCharPtr.get().getReferences());
     }
     assert(0 != strcmp("one", one));
@@ -143,12 +153,12 @@ int testCachedValue() {
   }
 
   cout << endl;
-  cout << "testCachedValue() PASS" << endl;
+  cout << "testLIFOCache() PASS" << endl;
   cout << endl;
 
   return 0;
 }
 
 int main(int argc, char *argv[]) {
-  return testSmartPointer()==0 && testCachedValue()==0 ? 0 : -1;
+  return testSmartPointer()==0 && testLIFOCache()==0 ? 0 : -1;
 }
