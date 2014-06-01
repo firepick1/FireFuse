@@ -155,7 +155,12 @@ fi
 echo Uninstalling /dev/firefuse...
 fusermount -uq /dev/firefuse 
 if [ $? -ne 0 ]; then 
-  echo "non-zero result: fusermount -uq /dev/firefuse"
+  echo "non-zero result (RETRYING): fusermount -uq /dev/firefuse"
+  fusermount -uq /dev/firefuse 
+  if [ $? -ne 0 ]; then 
+    echo "FAILED: fusermount -uq /dev/firefuse"
+    exit -1
+  fi
 fi
 
 if [ ! -e /dev/firefuse ]; then 
