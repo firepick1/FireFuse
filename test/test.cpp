@@ -98,9 +98,8 @@ int testLIFOCache() {
     assert(2 == bufInt.get().getValue());
     bufInt.post(MockValue<int>(3));
     const char *caughtMsg = NULL;
-    bufInt.post(MockValue<int>(4));
     try {
-      bufInt.post(MockValue<int>(5));
+      bufInt.post(MockValue<int>(4));
     } catch (const char * msg) {
       caughtMsg = msg;
     }
@@ -139,6 +138,10 @@ int testLIFOCache() {
       assert(2 == bufCharPtr.get().getReferences());
       bufCharPtr.post(spTwo);
       assert(bufCharPtr.isFresh());
+      assert(2 == spOne.getReferences());
+      assert(2 == spTwo.getReferences());
+      bufCharPtr.get();
+      assert(1 == spOne.getReferences());
       assert(2 == spTwo.getReferences());
       bufCharPtr.post(spTwo);
       assert(3 == spTwo.getReferences());

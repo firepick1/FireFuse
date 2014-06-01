@@ -23,20 +23,15 @@ using namespace std;
 template <class T> class LIFOCache {
   private: volatile long readCount;
   private: volatile long writeCount;
-  private: int nBuffers;
   private: T emptyValue;
-  private: T *values;
+  private: T values[2];
 
-  public: LIFOCache(int nBuffers=3) { 
+  public: LIFOCache() { 
     this->readCount = 0;
     this->writeCount = 0;
-    this->nBuffers = nBuffers;
-    values = new T[nBuffers];
   }
 
-  public: ~LIFOCache() {
-    delete[] values;
-  }
+  public: ~LIFOCache() { }
 
   public: T& get() {
     int valueIndex = writeCount - readCount;
@@ -52,7 +47,7 @@ template <class T> class LIFOCache {
 
   public: void post(T value) {
     int valueIndex = writeCount - readCount + 1;
-    if (valueIndex >= nBuffers) {
+    if (valueIndex >= 2) {
       throw "LIFOCache overflow";
     }
     values[valueIndex] = value;

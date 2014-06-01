@@ -38,7 +38,7 @@ find_package( OpenCV REQUIRED )
 add_executable(firefuse 
   firerest.cpp
   fuse.c 
-  FirePick.cpp 
+  background.cpp 
   cve.cpp 
   FireStep.cpp 
   )
@@ -48,7 +48,7 @@ add_executable(testfirefuse
   test/test.cpp
   #firerest.cpp
   #fuse.c 
-  #FirePick.cpp 
+  #background.cpp 
   #cve.cpp 
   #FireStep.cpp 
   )

@@ -13,7 +13,7 @@
 #include <time.h>
 #include <pthread.h>
 #include "version.h"
-#include "FirePick.h"
+#include "background.h"
 #include "FirePiCam.h"
 #include "FireStep.h"
 #include "FireLog.h"
@@ -38,7 +38,7 @@ pthread_t tidCamera;
 
 static void * firefuse_cameraThread(void *arg) {
   LOGINFO("firefuse_cameraThread start");
-  firepick_camera_daemon(&headcam_image);
+  background_worker(&headcam_image);
   return NULL;
 }
 
