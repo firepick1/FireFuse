@@ -13,6 +13,7 @@
 *.a
 
 # Other stuff
+core
 firefuse
 !var/firefuse
 firesight
