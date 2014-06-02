@@ -248,8 +248,11 @@ int cve_getattr(const char *path, struct stat *stbuf) {
     cveCam[0].sizeCameraJPG(path, &res); // get current picture but ignore size
     stbuf->st_size = max_json_len;
   } else if (cve_isPathSuffix(path, FIREREST_CAMERA_JPG)) {
-    stbuf->st_size = fusecache.src_camera_jpg.peek().size();
     //stbuf->st_size = cveCam[0].sizeCameraJPG(path, &res);
+    res = 0;
+    SmartPointer<char> jpg = fusecache.src_camera_jpg.peek();
+    LOGTRACE3("cve_getattr(%s) data:%0lx size:%ldB", path, jpg.data(), jpg.size());
+    stbuf->st_size = jpg.size();
   } else if (cve_isPathSuffix(path, FIREREST_MONITOR_JPG)) {
     stbuf->st_size = cveCam[0].sizeMonitorJPG(path, &res);
   } else if (cve_isPathSuffix(path, FIREREST_OUTPUT_JPG)) {
@@ -525,8 +528,8 @@ int cve_read(const char *path, char *buf, size_t size, off_t offset, struct fuse
   (void) fi;
 
   if (cve_isPathSuffix(path, FIREREST_CAMERA_JPG)) {
-    SmartPtr<char> *pJpg = (SmartPointer<char> *) fi->fh;
-    sizeOut = firefuse_readBuffer(buf, pJpg->getData(), size, offset, pJpg->size());
+    SmartPointer<char> *pJpg = (SmartPointer<char> *) fi->fh;
+    sizeOut = firefuse_readBuffer(buf, pJpg->data(), size, offset, pJpg->size());
   } else if (fi->fh) { // data file
     FuseDataBuffer *pBuffer = (FuseDataBuffer *) (size_t) fi->fh;
     sizeOut = firefuse_readBuffer(buf, pBuffer->pData, size, offset, pBuffer->length);

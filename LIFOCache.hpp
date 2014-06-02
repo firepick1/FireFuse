@@ -87,13 +87,13 @@ template <class T> class SmartPointer {
     private: T* ptr;
 
     public: inline ReferencedPointer() { 
-      ptr = NULL;
-      references = 0;
+      this->ptr = NULL;
+      this->references = 0;
     }
 
     public: inline ReferencedPointer(T* ptr) {
-      references = 1;
       this->ptr = ptr;
+      this->references = 1;
     }
 
     public: inline void decref() {
@@ -102,14 +102,14 @@ template <class T> class SmartPointer {
 	throw "ReferencedPointer extra dereference";
       }
       if (ptr && references == 0) {
-	cout << "ReferencedPointer() free " << (long) ptr << endl;
+	//cout << "ReferencedPointer() free " << (long) ptr << endl;
 	* (char *) ptr = 0; // mark as deleted
 	free(ptr);
       }
     }
 
     public: inline void incref() { references++; }
-    public: inline T* get() { return ptr; }
+    public: inline T* data() { return ptr; }
     public: inline int getReferences() const { return references; }
   };
 
@@ -129,8 +129,8 @@ template <class T> class SmartPointer {
    * @param ptr pointer to data. If ptr is null, count must be number of objects to calloc and zero-fill
    * @count number of T objects to calloc for data copied from ptr
    */
-  public: inline SmartPointer(T* ptr, int count=0) {
-    cout << "SmartPointer(" << (long) ptr << ")" << endl;
+  public: inline SmartPointer(T* ptr, size_t count=0) {
+    //cout << "SmartPointer(" << (long) ptr << ")" << endl;
     this->length = count * sizeof(T);
     if (count) {
       T* pData = (T*) calloc(count, sizeof(T));
@@ -144,13 +144,14 @@ template <class T> class SmartPointer {
   }
 
   public: inline SmartPointer() {
-    cout << "SmartPointer(NULL)" << endl;
+    //cout << "SmartPointer(NULL)" << endl;
     this->pPointer = NULL;
     this->length = 0;
   }
 
   public: inline SmartPointer(const SmartPointer &that) {
     this->pPointer = that.pPointer;
+    this->length = that.length;
     this->incref();
   }
 
@@ -159,6 +160,7 @@ template <class T> class SmartPointer {
   public: inline SmartPointer& operator=( SmartPointer that ) {
     decref();
     this->pPointer = that.pPointer;
+    this->length = that.length;
     incref();
     return *this;
   }
@@ -166,9 +168,10 @@ template <class T> class SmartPointer {
   public: inline int getReferences() { return pPointer ? pPointer->getReferences() : 0; }
   public: inline T& operator*() { throw "SmartPointer not implemented (1)"; }
   public: inline const T& operator*() const { throw "SmartPointer not implemented (2)"; }
-  public: inline T* operator->() { return pPointer ? pPointer->get() : NULL; }
-  public: inline const T* operator->() const { return pPointer ? pPointer->get() : NULL; }
-  public: inline operator T*() const { return pPointer ? pPointer->get() : NULL; }
+  public: inline T* operator->() { return pPointer ? pPointer->data() : NULL; }
+  public: inline const T* operator->() const { return pPointer ? pPointer->data() : NULL; }
+  public: inline operator T*() const { return pPointer ? pPointer->data() : NULL; }
+  public: inline T* data() const { return pPointer ? pPointer->data() : NULL; }
   public: inline size_t size() const { return length; }
 };
 

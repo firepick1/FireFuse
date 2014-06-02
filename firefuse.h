@@ -116,16 +116,18 @@ const char * firestep_json();
 
 class FUSE_Cache {
   // Camera
-  LIFOCache<SmartPointer<char> > src_camera_jpg;
-  LIFOCache<SmartPointer<char> > src_monitor_jpg;
+  public: LIFOCache<SmartPointer<char> > src_camera_jpg;
+  public: LIFOCache<SmartPointer<char> > src_monitor_jpg;
 
   // CVE
-  LIFOCache<SmartPointer<char> > src_saved_png;
-  LIFOCache<SmartPointer<char> > src_save_fire;
-  LIFOCache<SmartPointer<char> > src_process_fire;
-  LIFOCache<SmartPointer<char> > src_properties_json;
-  LIFOCache<SmartPointer<char> > snk_properties_json;
+  public: LIFOCache<SmartPointer<char> > src_saved_png;
+  public: LIFOCache<SmartPointer<char> > src_save_fire;
+  public: LIFOCache<SmartPointer<char> > src_process_fire;
+  public: LIFOCache<SmartPointer<char> > src_properties_json;
+  public: LIFOCache<SmartPointer<char> > snk_properties_json;
 };
+
+extern FUSE_Cache fusecache;
 
 #endif
 //////////////////////////////////// FIREFUSE_H ////////////////////////////////////////////////////////

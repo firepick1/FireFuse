@@ -69,9 +69,18 @@ int background_worker(FuseDataBuffer *pJPG) {
     buffer.length = 0;
     
     status = firepicam_acquireImage(&buffer);
-    if (!fusecache.src_camera_jpg.isFresh()) {
+    if (status != 0) {
+      LOGERROR1("firepicam_acquireImage() => %d", status);
+    } else {
+      if (fusecache.src_camera_jpg.isFresh()) {
+        SmartPointer<char> discard = fusecache.src_camera_jpg.get();
+	LOGTRACE2("background_worker() src_camera_jpg.get() -> %ldB@%0lx discarded", discard.size(), discard.data());
+      }
       SmartPointer<char> jpg(buffer.pData, buffer.length);
-      fusecache.src_camera_jpg.push(jpg);
+      LOGTRACE3("background_worker() src_camera_jpg.post(%ldB) %ldB@%0lx", buffer.length, jpg.size(), jpg.data());
+      fusecache.src_camera_jpg.post(jpg);
+      LOGTRACE2("background_worker() src_camera_jpg.get() %ldB@%0lx", 
+        fusecache.src_camera_jpg.peek().size(), fusecache.src_camera_jpg.peek().data());
     }
     pJPG->pData = buffer.pData;
     pJPG->length = buffer.length;
