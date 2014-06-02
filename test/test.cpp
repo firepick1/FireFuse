@@ -51,6 +51,7 @@ int testSmartPointer( ){
   MockValue<int> *pMock = new MockValue<int>(123);
   cout << "pMock == " << (long) pMock << endl;
   {
+    cout << "entering nested block" << endl;
     SmartPointer<char> zero;
     assert(NULL == (char*) zero);
     assert(0 == zero.size());
@@ -77,9 +78,10 @@ int testSmartPointer( ){
 
     SmartPointer<MockValue<int> > mock(pMock);
     assert(123 == mock->getValue());
+    cout << "leaving nested block" << endl;
   }
-  assert(0 != strcmp("one", pOne));
-  assert(0 != strcmp("two", pTwo));
+  assert('o' != *pOne); // dereference freed memory
+  assert('t' != *pTwo); // dereference freed memory
   cout << "testSmartPointer() PASSED" << endl;
   cout << endl;
 
@@ -88,20 +90,21 @@ int testSmartPointer( ){
 
 int testSmartPointer_CopyData( ){
   cout << "testSmartPointer_CopyData() ------------------------" << endl;
-  char *pOne = (char*)malloc(123456);
+  char *pOne = (char*)malloc(100);
   strcpy(pOne, "one");
   cout << "pOne == " << (long) pOne << endl;
-  char *pTwo = (char*)malloc(222222);
+  char *pTwo = (char*)malloc(200);
   strcpy(pTwo, "two");
   cout << "pTwo == " << (long) pTwo << endl;
   MockValue<int> *pMock = new MockValue<int>(123);
   cout << "pMock == " << (long) pMock << endl;
   {
+    cout << "entering nested block" << endl;
     SmartPointer<char> zero;
     assert(NULL == (char*) zero);
     assert(0 == zero.size());
-    SmartPointer<char> one(pOne, 123456);		// COPY DATA ONLY
-    assert(123456 == one.size());
+    SmartPointer<char> one(pOne, 100);		// COPY DATA ONLY
+    assert(100 == one.size());
     assert(pOne != (char*)one);			// COPY DATA ONLY
     strcpy(pOne, "DEAD");			// COPY DATA ONLY
     assert(0 == strcmp("one", (char*) one));
@@ -127,9 +130,10 @@ int testSmartPointer_CopyData( ){
     pMock->setValue(456);			  // COPY DATA ONLY
     free(pMock);				  // COPY DATA ONLY
     assert(123 == mock->getValue());
+    cout << "leaving nested block" << endl;
   }
-  assert(0 != strcmp("one", pOne));
-  assert(0 != strcmp("two", pTwo));
+  assert('o' != *pOne); // dereference freed memory
+  assert('t' != *pTwo); // dereference freed memory
   cout << "testSmartPointer_CopyData() PASSED" << endl;
   cout << endl;
 
@@ -237,8 +241,8 @@ int testLIFOCache() {
       assert(1 == spOne.getReferences());
       assert(3 == spTwo.getReferences());
     }
-    assert(0 != strcmp("one", one));
-    assert(0 != strcmp("two", two));
+    assert('o' != *one);
+    assert('t' != *two);
   }
 
   cout << endl;

@@ -87,13 +87,13 @@ template <class T> class SmartPointer {
     private: T* ptr;
 
     public: inline ReferencedPointer() { 
-      this->ptr = NULL;
-      this->references = 0;
+      ptr = NULL;
+      references = 0;
     }
 
-    public: inline ReferencedPointer(T* ptr) {
-      this->ptr = ptr;
-      this->references = 1;
+    public: inline ReferencedPointer(T* aPtr) {
+      ptr = aPtr;
+      references = 1;
     }
 
     public: inline void decref() {
@@ -129,38 +129,45 @@ template <class T> class SmartPointer {
    * @param ptr pointer to data. If ptr is null, count must be number of objects to calloc and zero-fill
    * @count number of T objects to calloc for data copied from ptr
    */
-  public: inline SmartPointer(T* ptr, size_t count=0) {
-    //cout << "SmartPointer(" << (long) ptr << ")" << endl;
-    this->length = count * sizeof(T);
+  public: inline SmartPointer(T* aPtr, size_t count=0) {
+    //cout << "SmartPointer(" << (long) aPtr << ")" << endl;
+    length = count * sizeof(T);
     if (count) {
       T* pData = (T*) calloc(count, sizeof(T));
-      if (ptr) {
-        memcpy(pData, ptr, this->length);
+      if (aPtr) {
+        memcpy(pData, aPtr, length);
       }
-      this->pPointer = new ReferencedPointer(pData);
+      pPointer = new ReferencedPointer(pData);
     } else {
-      this->pPointer = new ReferencedPointer(ptr);
+      pPointer = new ReferencedPointer(aPtr);
     }
   }
 
   public: inline SmartPointer() {
     //cout << "SmartPointer(NULL)" << endl;
-    this->pPointer = NULL;
-    this->length = 0;
+    pPointer = NULL;
+    length = 0;
   }
 
   public: inline SmartPointer(const SmartPointer &that) {
-    this->pPointer = that.pPointer;
-    this->length = that.length;
-    this->incref();
+    pPointer = that.pPointer;
+    length = that.length;
+    incref();
   }
 
-  public: inline ~SmartPointer() { decref(); }
+  public: inline ~SmartPointer() { 
+    if (pPointer) {
+      //cout << "~SmartPointer(" << (long) pPointer->data() << ") references:" << pPointer->getReferences() << endl;
+    } else {
+      //cout << "~SmartPointer(NULL)" << endl;
+    }
+    decref(); 
+  }
 
   public: inline SmartPointer& operator=( SmartPointer that ) {
     decref();
-    this->pPointer = that.pPointer;
-    this->length = that.length;
+    pPointer = that.pPointer;
+    length = that.length;
     incref();
     return *this;
   }
