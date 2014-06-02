@@ -14,7 +14,6 @@
 #include <pthread.h>
 #include "version.h"
 #include "FirePiCam.h"
-#include "FireStep.h"
 #include "FireLog.h"
 #include "firefuse.h"
 
