@@ -26,33 +26,33 @@ template <class T> class LIFOCache {
   private: volatile long writeCount;
   private: T emptyValue;
   private: T values[2];
-  private: volatile int nReaders;
+  private: pthread_mutex_t readerMutex;
 
   public: LIFOCache() { 
     this->readCount = 0;
     this->writeCount = 0;
-    this->nReaders = 0;
+    int rc = pthread_mutex_init(&readerMutex, NULL);
+    assert(rc == 0);
   }
 
-  public: ~LIFOCache() { }
+  public: ~LIFOCache() { 
+    int rc = pthread_mutex_destroy(&readerMutex);
+    assert(rc == 0);
+  }
 
-  public: T& get() {
-    int valueIndex = writeCount - readCount;
-    if (valueIndex > 0) {
-      ///////////// CRITICAL SECTION BEGIN ///////////////
-      while (++nReaders != 1) {				//
-        --nReaders;					//
-	sched_yield();					//
-      }							//
+  public: T get() {
+    /////////////// CRITICAL SECTION BEGIN ///////////////
+    pthread_mutex_lock(&readerMutex);			//
+							//
+    int valueIndex = writeCount - readCount;		//
+    if (valueIndex > 0) {				//
       values[0] = values[valueIndex];			//
-      for (int i = 1; i <= valueIndex; i++) {		//
-	values[i] = emptyValue;				//
-      }							//
-      nReaders--; 					//
-      ///////////// CRITICAL SECTION END /////////////////
-    }
-    readCount = writeCount;
-    return values[0];
+    }							//
+    readCount = writeCount;				//
+    T result = values[0];				//
+    pthread_mutex_unlock(&readerMutex);			//
+    /////////////// CRITICAL SECTION END /////////////////
+    return result;
   }
 
   public: void post(T value) {

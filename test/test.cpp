@@ -135,21 +135,23 @@ int testLIFOCache() {
       assert(bufCharPtr.isFresh());
       assert(one == (char *)bufCharPtr.get());
       assert(!bufCharPtr.isFresh());
-      assert(2 == bufCharPtr.get().getReferences());
+      assert(3 == spOne.getReferences()); 
+      assert(1 == spTwo.getReferences()); 
       bufCharPtr.post(spTwo);
       assert(bufCharPtr.isFresh());
       assert(2 == spOne.getReferences());
       assert(2 == spTwo.getReferences());
       bufCharPtr.get();
       assert(1 == spOne.getReferences());
-      assert(2 == spTwo.getReferences());
+      assert(3 == spTwo.getReferences());
       bufCharPtr.post(spTwo);
+      assert(1 == spOne.getReferences());
       assert(3 == spTwo.getReferences());
       assert(bufCharPtr.isFresh());
       assert(two == (char *)bufCharPtr.get());
       assert(!bufCharPtr.isFresh());
-      assert(2 == spTwo.getReferences());
-      assert(2 == bufCharPtr.get().getReferences());
+      assert(1 == spOne.getReferences());
+      assert(3 == spTwo.getReferences());
     }
     assert(0 != strcmp("one", one));
     assert(0 != strcmp("two", two));
