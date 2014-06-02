@@ -6,6 +6,7 @@
 #include <cassert>
 #include <stdlib.h>
 #include <memory>
+#include <sched.h>
 
 using namespace std;
 
@@ -18,17 +19,19 @@ using namespace std;
 #endif
 
 /**
- * Threadsafe LIFO single-producer/single-consumer cache that returns most recently posted value.
+ * Threadsafe LIFO single-producer/multi-consumer cache that returns most recently posted value.
  */
 template <class T> class LIFOCache {
   private: volatile long readCount;
   private: volatile long writeCount;
   private: T emptyValue;
   private: T values[2];
+  private: volatile int nReaders;
 
   public: LIFOCache() { 
     this->readCount = 0;
     this->writeCount = 0;
+    this->nReaders = 0;
   }
 
   public: ~LIFOCache() { }
@@ -36,10 +39,17 @@ template <class T> class LIFOCache {
   public: T& get() {
     int valueIndex = writeCount - readCount;
     if (valueIndex > 0) {
-      values[0] = values[valueIndex];
-      for (int i = 1; i <= valueIndex; i++) {
-	values[i] = emptyValue;
-      }
+      ///////////// CRITICAL SECTION BEGIN ///////////////
+      while (++nReaders != 1) {				//
+        --nReaders;					//
+	sched_yield();					//
+      }							//
+      values[0] = values[valueIndex];			//
+      for (int i = 1; i <= valueIndex; i++) {		//
+	values[i] = emptyValue;				//
+      }							//
+      nReaders--; 					//
+      ///////////// CRITICAL SECTION END /////////////////
     }
     readCount = writeCount;
     return values[0];
