@@ -21,6 +21,8 @@ using namespace firesight;
 
 static char status_buffer[STATUS_BUFFER_SIZE];
 
+FUSE_Cache fusecache;
+
 const void* firepick_holes(FuseDataBuffer *pJPG) {
   Mat jpg(1, pJPG->length, CV_8UC1, pJPG->pData);
   Mat matRGB = imdecode(jpg, CV_LOAD_IMAGE_COLOR);
@@ -67,6 +69,8 @@ int background_worker(FuseDataBuffer *pJPG) {
     buffer.length = 0;
     
     status = firepicam_acquireImage(&buffer);
+//    SmartPointer<char> jpg(buffer.pData, buffer.length);
+    //fusecache.src_camera_jpg.push(jpg);
     pJPG->pData = buffer.pData;
     pJPG->length = buffer.length;
   }
