@@ -5,6 +5,10 @@ extern "C" {
 #endif
 
 //////////////////////////////////// C DECLARATIONS ////////////////////////////////////////////////////////
+#define FUSE_USE_VERSION 26
+#include <fuse.h>
+#include <FireLog.h>
+
 #define MAX_GCODE_LEN 255 /* maximum characters in a gcode instruction */
 
 #define STATUS_PATH "/status"
@@ -46,8 +50,8 @@ static inline int firefuse_readBuffer(char *pDst, const char *pSrc, size_t size,
 
 #ifndef bool
 #define bool int
-#define true 1
-#define false 0
+#define TRUE 1
+#define FALSE 0
 #endif
 
 enum CVE_Path {

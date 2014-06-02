@@ -1,17 +1,18 @@
-
-#include <stdio.h>
-#include <time.h>
+#include "FireSight.hpp"
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
-#include "version.h"
+#include <dirent.h>
+#include <stdio.h>
+#include <time.h>
+#include <iostream>
+#include <fstream>
+#include <sstream>
 #include "firefuse.h"
-#include "FireLog.h"
+#include "version.h"
 #include "FirePiCam.h"
-#include "FireSight.hpp"
 
 #include "opencv2/highgui/highgui.hpp"
-#include "opencv2/imgproc/imgproc.hpp"
 
 using namespace cv;
 using namespace firesight;

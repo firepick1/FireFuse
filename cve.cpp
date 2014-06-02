@@ -576,6 +576,6 @@ bool cve_isPathSuffix(const char *value, const char * suffix) {
   if (suffixLen < valueLen) {
     return strcmp(value + valueLen - suffixLen, suffix) == 0;
   }
-  return false;
+  return FALSE;
 }
 

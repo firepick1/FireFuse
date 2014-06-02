@@ -1,15 +1,22 @@
+#include "FireSight.hpp"
+#include <string.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <dirent.h>
+#include <stdio.h>
+#include <time.h>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <math.h>
+#include "firefuse.h"
 
 #include <sys/stat.h> 
 #include <sys/types.h> 
 #include <stdlib.h> 
 #include <unistd.h>
-#include <string.h>
-#include <fcntl.h>
-#include <errno.h>
 #include <pthread.h>
 #include <sched.h>
-#include "FireStep.h"
-#include "FireLog.h"
 
 pthread_t tidReader;
 
@@ -284,7 +291,7 @@ static void * firestep_reader(void *arg) {
 
 	if (fdrTinyG >= 0) {
 		char c;
-		char loop = true;
+		char loop = TRUE;
 		while (loop) {
 			int rc = read(fdrTinyG, readbuf, READBUFLEN);
 			if (rc < 0) {
@@ -302,7 +309,7 @@ static void * firestep_reader(void *arg) {
 			  int i;
 				for (i = 0; i < rc; i++) {
 					if (!firestep_readchar(readbuf[i])) {
-						loop = false;
+						loop = FALSE;
 						break;
 					}
 				}

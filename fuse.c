@@ -1,6 +1,3 @@
-#define FUSE_USE_VERSION 26
-
-#include <fuse.h>
 #include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
