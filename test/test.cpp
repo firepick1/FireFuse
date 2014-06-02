@@ -34,10 +34,11 @@ public:
     cout << "MockValue.getValue() => " << value << " " << (long) this << endl;
     return value;
   }
+  void setValue(T value) {
+    this->value = value;
+  }
 };
 
-//#define SMARTPOINTER shared_ptr
-#define SMARTPOINTER SmartPointer
 
 int testSmartPointer( ){
   cout << "testSmartPointer() ------------------------" << endl;
@@ -50,19 +51,21 @@ int testSmartPointer( ){
   MockValue<int> *pMock = new MockValue<int>(123);
   cout << "pMock == " << (long) pMock << endl;
   {
-    SMARTPOINTER<char> zero;
+    SmartPointer<char> zero;
     assert(NULL == (char*) zero);
-    SMARTPOINTER<char> one(pOne);
+    assert(0 == zero.size());
+    SmartPointer<char> one(pOne);
+    assert(0 == one.size());
     assert(pOne == (char*)one);
-    assert(*pOne == 'o');
+    assert(0 == strcmp("one", (char*)one));
     assert(1 == one.getReferences());
     assert(0 == strcmp("one", (char*)one));
     assert(0 == strcmp("one", pOne));
-    SMARTPOINTER<char> oneCopy(one);
+    SmartPointer<char> oneCopy(one);
     assert(0 == strcmp("one", (char*)oneCopy));
     assert(2 == one.getReferences());
     assert(2 == oneCopy.getReferences());
-    SMARTPOINTER<char> two(pTwo);
+    SmartPointer<char> two(pTwo);
     assert(0 == strcmp("two", (char*)two));
     assert(0 != strcmp((char *) one, (char *) two));
     one = two;
@@ -70,12 +73,60 @@ int testSmartPointer( ){
     assert(2 == one.getReferences());
     assert(1 == oneCopy.getReferences());
 
-    SMARTPOINTER<MockValue<int> > mock(pMock);
+    SmartPointer<MockValue<int> > mock(pMock);
     assert(123 == mock->getValue());
   }
   assert(0 != strcmp("one", pOne));
   assert(0 != strcmp("two", pTwo));
   cout << "testSmartPointer() PASSED" << endl;
+  cout << endl;
+
+  return 0;
+}
+
+int testSmartPointer_CopyData( ){
+  cout << "testSmartPointer_CopyData() ------------------------" << endl;
+  char *pOne = (char*)malloc(100);
+  strcpy(pOne, "one");
+  cout << "pOne == " << (long) pOne << endl;
+  char *pTwo = (char*)malloc(100);
+  strcpy(pTwo, "two");
+  cout << "pTwo == " << (long) pTwo << endl;
+  MockValue<int> *pMock = new MockValue<int>(123);
+  cout << "pMock == " << (long) pMock << endl;
+  {
+    SmartPointer<char> zero;
+    assert(NULL == (char*) zero);
+    assert(0 == zero.size());
+    SmartPointer<char> one(pOne, 100);		// COPY DATA ONLY
+    assert(100 == one.size());
+    assert(pOne != (char*)one);			// COPY DATA ONLY
+    strcpy(pOne, "DEAD");			// COPY DATA ONLY
+    assert(0 == strcmp("one", (char*) one));
+    free(pOne);					// COPY DATA ONLY
+    assert(1 == one.getReferences());
+    assert(0 == strcmp("one", (char*)one));
+    assert(0 != strcmp("one", pOne));		// COPY DATA ONLY
+    SmartPointer<char> oneCopy(one);
+    assert(0 == strcmp("one", (char*)oneCopy));
+    assert(2 == one.getReferences());
+    assert(2 == oneCopy.getReferences());
+    SmartPointer<char> two(pTwo);
+    assert(0 == strcmp("two", (char*)two));
+    assert(0 != strcmp((char *) one, (char *) two));
+    one = two;
+    assert(0 == strcmp((char *) one, (char *) two));
+    assert(2 == one.getReferences());
+    assert(1 == oneCopy.getReferences());
+
+    SmartPointer<MockValue<int> > mock(pMock, 1); // COPY DATA ONLY
+    pMock->setValue(456);			  // COPY DATA ONLY
+    free(pMock);				  // COPY DATA ONLY
+    assert(123 == mock->getValue());
+  }
+  assert(0 != strcmp("one", pOne));
+  assert(0 != strcmp("two", pTwo));
+  cout << "testSmartPointer_CopyData() PASSED" << endl;
   cout << endl;
 
   return 0;
@@ -165,5 +216,5 @@ int testLIFOCache() {
 }
 
 int main(int argc, char *argv[]) {
-  return testSmartPointer()==0 && testLIFOCache()==0 ? 0 : -1;
+  return testSmartPointer()==0 && testSmartPointer_CopyData()==0 && testLIFOCache()==0 ? 0 : -1;
 }

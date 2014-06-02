@@ -68,7 +68,7 @@ template <class T> class LIFOCache {
 };
 
 template <class T> class SmartPointer {
-  public: class ReferencedPointer {
+  private: class ReferencedPointer {
     private: int references;
     private: T* ptr;
 
@@ -100,17 +100,39 @@ template <class T> class SmartPointer {
   };
 
   private: ReferencedPointer *pPointer;
+  private: size_t length;
   private: inline void decref() { if (pPointer) { pPointer->decref(); } }
   private: inline void incref() { if (pPointer) { pPointer->incref(); } }
 
-  public: inline SmartPointer(T* ptr) {
+  /**
+   * Create a smart pointer for the given data. Copied SmartPointers 
+   * share the same data block, which is freed when all SmartPointers 
+   * referencing that data are destroyed. Clients can provide data to 
+   * be managed (i.e., count==0) or have SmartPointer allocate new memory initialized
+   * from the provided data (i.e., count>0). Managed data will eventually be freed
+   * by SmartPointer. Initialization data will not be freed by SmartPointer.
+   *
+   * @param ptr pointer to data. If ptr is null, count must be number of objects to calloc and zero-fill
+   * @count number of T objects to calloc for data copied from ptr
+   */
+  public: inline SmartPointer(T* ptr, int count=0) {
     cout << "SmartPointer(" << (long) ptr << ")" << endl;
-    this->pPointer = new ReferencedPointer(ptr);
+    this->length = count * sizeof(T);
+    if (count) {
+      T* pData = (T*) calloc(count, sizeof(T));
+      if (ptr) {
+        memcpy(pData, ptr, this->length);
+      }
+      this->pPointer = new ReferencedPointer(pData);
+    } else {
+      this->pPointer = new ReferencedPointer(ptr);
+    }
   }
 
   public: inline SmartPointer() {
     cout << "SmartPointer(NULL)" << endl;
     this->pPointer = NULL;
+    this->length = 0;
   }
 
   public: inline SmartPointer(const SmartPointer &that) {
@@ -133,6 +155,7 @@ template <class T> class SmartPointer {
   public: inline T* operator->() { return pPointer ? pPointer->get() : NULL; }
   public: inline const T* operator->() const { return pPointer ? pPointer->get() : NULL; }
   public: inline operator T*() const { return pPointer ? pPointer->get() : NULL; }
+  public: inline size_t size() const { return length; }
 };
 
 #endif
