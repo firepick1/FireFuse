@@ -15,7 +15,7 @@ extern "C" {
 #include <math.h>
 #include "FireSight.hpp"
 #include "FireLog.h"
-#include "FireREST.h"
+#include "firefuse.h"
 #include "version.h"
 
 using namespace std;

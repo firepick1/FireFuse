@@ -13,11 +13,10 @@
 #include <time.h>
 #include <pthread.h>
 #include "version.h"
-#include "background.h"
 #include "FirePiCam.h"
 #include "FireStep.h"
 #include "FireLog.h"
-#include "FireREST.h"
+#include "firefuse.h"
 
 long bytes_read = 0;
 

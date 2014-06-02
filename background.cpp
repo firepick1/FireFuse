@@ -5,7 +5,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include "version.h"
-#include "background.h"
+#include "firefuse.h"
 #include "FireLog.h"
 #include "FirePiCam.h"
 #include "FireSight.hpp"
