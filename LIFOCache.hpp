@@ -40,10 +40,24 @@ template <class T> class LIFOCache {
     assert(rc == 0);
   }
 
+  public: T peek() {
+    /////////////// CRITICAL SECTION BEGIN ///////////////
+    pthread_mutex_lock(&readerMutex);			//
+    int valueIndex = writeCount - readCount;		//
+    T result;						//
+    if (valueIndex > 0) {				//
+      result = values[valueIndex];			//
+    } else {						//
+      result = values[0];				//
+    }							//
+    pthread_mutex_unlock(&readerMutex);			//
+    /////////////// CRITICAL SECTION END /////////////////
+    return result;
+  }
+
   public: T get() {
     /////////////// CRITICAL SECTION BEGIN ///////////////
     pthread_mutex_lock(&readerMutex);			//
-							//
     int valueIndex = writeCount - readCount;		//
     if (valueIndex > 0) {				//
       values[0] = values[valueIndex];			//

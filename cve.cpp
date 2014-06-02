@@ -248,7 +248,8 @@ int cve_getattr(const char *path, struct stat *stbuf) {
     cveCam[0].sizeCameraJPG(path, &res); // get current picture but ignore size
     stbuf->st_size = max_json_len;
   } else if (cve_isPathSuffix(path, FIREREST_CAMERA_JPG)) {
-    stbuf->st_size = cveCam[0].sizeCameraJPG(path, &res);
+    stbuf->st_size = fusecache.src_camera_jpg.peek().size();
+    //stbuf->st_size = cveCam[0].sizeCameraJPG(path, &res);
   } else if (cve_isPathSuffix(path, FIREREST_MONITOR_JPG)) {
     stbuf->st_size = cveCam[0].sizeMonitorJPG(path, &res);
   } else if (cve_isPathSuffix(path, FIREREST_OUTPUT_JPG)) {
@@ -484,7 +485,8 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
       FuseDataBuffer *pJPG = cveCam[0].produceCameraJPG(path, &result);
       fi->fh = (uint64_t) (size_t) cve_save(pJPG, path, &result);
     } else if (cve_isPathSuffix(path, FIREREST_CAMERA_JPG)) {
-      fi->fh = (uint64_t) (size_t) cveCam[0].produceCameraJPG(path, &result);
+      SmartPointer<char> *pCameraJPG = new SmartPointer<char>(fusecache.src_camera_jpg.get());
+      fi->fh = (uint64_t) (size_t) pCameraJPG;
     } else if (cve_isPathSuffix(path, FIREREST_OUTPUT_JPG)) {
       fi->fh = (uint64_t) (size_t) cveCam[0].produceOutputJPG(path, &result);
     } else if (cve_isPathSuffix(path, FIREREST_MONITOR_JPG)) {
@@ -522,7 +524,10 @@ int cve_read(const char *path, char *buf, size_t size, off_t offset, struct fuse
   size_t len;
   (void) fi;
 
-  if (fi->fh) { // data file
+  if (cve_isPathSuffix(path, FIREREST_CAMERA_JPG)) {
+    SmartPtr<char> *pJpg = (SmartPointer<char> *) fi->fh;
+    sizeOut = firefuse_readBuffer(buf, pJpg->getData(), size, offset, pJpg->size());
+  } else if (fi->fh) { // data file
     FuseDataBuffer *pBuffer = (FuseDataBuffer *) (size_t) fi->fh;
     sizeOut = firefuse_readBuffer(buf, pBuffer->pData, size, offset, pBuffer->length);
   } else {
@@ -549,7 +554,7 @@ int cve_release(const char *path, struct fuse_file_info *fi) {
   } else if (cve_isPathSuffix(path, FIREREST_PROPERTIES_JSON)) {
     firefuse_freeDataBuffer(path, fi);
   } else if (cve_isPathSuffix(path, FIREREST_CAMERA_JPG)) {
-    firefuse_freeDataBuffer(path, fi);
+    free( (SmartPointer<char> *) fi->fh);
   } else if (cve_isPathSuffix(path, FIREREST_SAVE_JSON)) {
     firefuse_freeDataBuffer(path, fi);
   }

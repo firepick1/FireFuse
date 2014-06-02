@@ -69,8 +69,10 @@ int background_worker(FuseDataBuffer *pJPG) {
     buffer.length = 0;
     
     status = firepicam_acquireImage(&buffer);
-//    SmartPointer<char> jpg(buffer.pData, buffer.length);
-    //fusecache.src_camera_jpg.push(jpg);
+    if (!fusecache.src_camera_jpg.isFresh()) {
+      SmartPointer<char> jpg(buffer.pData, buffer.length);
+      fusecache.src_camera_jpg.push(jpg);
+    }
     pJPG->pData = buffer.pData;
     pJPG->length = buffer.length;
   }

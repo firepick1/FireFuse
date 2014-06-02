@@ -141,8 +141,15 @@ int testLIFOCache() {
     bufInt.post(MockValue<int>(1));
 
     cout << "testLIFOCache() get" << endl;
+    assert(bufInt.isFresh());
+    assert(1 == bufInt.peek().getValue());
+    assert(bufInt.isFresh());
     assert(1 == bufInt.get().getValue());
+    assert(!bufInt.isFresh());
     assert(1 == bufInt.get().getValue());
+    assert(!bufInt.isFresh());
+    assert(1 == bufInt.peek().getValue());
+    assert(!bufInt.isFresh());
    
     cout << "testLIFOCache() post" << endl;
     bufInt.post(MockValue<int>(2));
@@ -160,11 +167,21 @@ int testLIFOCache() {
     assert(!bufString.isFresh());
     bufString.post("one");
     assert(bufString.isFresh());
+    assert(0 == strcmp("one", bufString.peek().c_str()));
+    assert(bufString.isFresh());
     assert(0 == strcmp("one", bufString.get().c_str()));
     assert(!bufString.isFresh());
+    assert(0 == strcmp("one", bufString.peek().c_str()));
+    assert(!bufString.isFresh());
     assert(0 == strcmp("one", bufString.get().c_str()));
+    assert(!bufString.isFresh());
 
     bufString.post("two");
+    assert(bufString.isFresh());
+    assert(0 == strcmp("two", bufString.peek().c_str()));
+    assert(bufString.isFresh());
+    assert(0 == strcmp("two", bufString.get().c_str()));
+    assert(!bufString.isFresh());
     assert(0 == strcmp("two", bufString.get().c_str()));
 
     char *one = (char *) malloc(100);
@@ -179,10 +196,15 @@ int testLIFOCache() {
       CharPtr spTwo(two);
       LIFOCache<CharPtr> bufCharPtr;
       assert(!bufCharPtr.isFresh());
+      assert(NULL == (char *)bufCharPtr.peek());
+      assert(!bufCharPtr.isFresh());
       assert(NULL == (char *)bufCharPtr.get());
       assert(!bufCharPtr.isFresh());
+      assert(0 == bufCharPtr.peek().getReferences());
       assert(0 == bufCharPtr.get().getReferences());
       bufCharPtr.post(spOne);
+      assert(bufCharPtr.isFresh());
+      assert(one == (char *)bufCharPtr.peek());
       assert(bufCharPtr.isFresh());
       assert(one == (char *)bufCharPtr.get());
       assert(!bufCharPtr.isFresh());
@@ -192,12 +214,17 @@ int testLIFOCache() {
       assert(bufCharPtr.isFresh());
       assert(2 == spOne.getReferences());
       assert(2 == spTwo.getReferences());
+      bufCharPtr.peek();
+      assert(2 == spOne.getReferences());
+      assert(2 == spTwo.getReferences());
       bufCharPtr.get();
       assert(1 == spOne.getReferences());
       assert(3 == spTwo.getReferences());
       bufCharPtr.post(spTwo);
       assert(1 == spOne.getReferences());
       assert(3 == spTwo.getReferences());
+      assert(bufCharPtr.isFresh());
+      assert(two == (char *)bufCharPtr.peek());
       assert(bufCharPtr.isFresh());
       assert(two == (char *)bufCharPtr.get());
       assert(!bufCharPtr.isFresh());
