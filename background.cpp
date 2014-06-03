@@ -23,7 +23,7 @@ static char status_buffer[STATUS_BUFFER_SIZE];
 extern double monitor_seconds;
 extern double output_seconds;
 
-FUSE_Cache fusecache;
+DataFactory factory;
 
 const void* firepick_holes(FuseDataBuffer *pJPG) {
   Mat jpg(1, pJPG->length, CV_8UC1, pJPG->pData);
@@ -60,53 +60,64 @@ const char* firepick_status() {
   return status_buffer;
 }
 
-void update_camera_jpg() {
-  if (!fusecache.src_camera_jpg.isFresh()) {
-    SmartPointer<uchar> jpg((uchar *)buffer.pData, buffer.length);
-    LOGTRACE2("update_camera_jpg() src_camera_jpg.post(%ldB) %0lx", jpg.size(), jpg.data());
-    fusecache.src_camera_jpg.post(jpg);
-  }
-}
-
-void update_monitor_jpg() {
-  if (!fusecache.src_monitor_jpg.isFresh()) {
-    if (cve_seconds() - output_seconds < monitor_seconds) {
-      fusecache.src_monitor_jpg.post(fusecache.src_output_jpg.get());
-    } else {
-      fusecache.src_monitor_jpg.post(fusecache.src_camera_jpg.get());
-    }
-  }
-}
-
 int background_worker(FuseDataBuffer *pJPG) {
+  return factory.process(pJPG);
+}
+
+int DataFactory::update_camera_jpg() {
+  if (src_camera_jpg.isFresh()) {
+    return 0;
+  }
+  JPG_Buffer buffer;
+  buffer.pData = NULL;
+  buffer.length = 0;
+  
+  status = firepicam_acquireImage(&buffer);
+  if (status != 0) {
+    LOGERROR1("update_camera_jpg() firepicam_acquireImage() => %d", status);
+    throw "could not acquire image";
+  } 
+
+  SmartPointer<uchar> jpg((uchar *)buffer.pData, buffer.length);
+  LOGTRACE2("update_camera_jpg() src_camera_jpg.post(%ldB) %0lx", jpg.size(), jpg.data());
+  src_camera_jpg.post(jpg);
+
+  return 1;
+}
+
+int DataFactory::update_monitor_jpg() {
+  if (src_monitor_jpg.isFresh()) {
+    return 0;
+  }
+  if (cve_seconds() - output_seconds < monitor_seconds) {
+    src_monitor_jpg.post(src_output_jpg.get());
+  } else {
+    src_monitor_jpg.post(src_camera_jpg.get());
+  }
+  return 1;
+}
+
+int DataFactory::process(FuseDataBuffer *pJPG) {
   int status = firepicam_create(0, NULL);
 
-  LOGINFO1("background_worker start -> %d", status);
+  LOGINFO1("DataFactory::process() start -> %d", status);
   output_seconds = 0;
   monitor_seconds = 3;
 
   for (;;) {
-    JPG_Buffer buffer;
-    buffer.pData = NULL;
-    buffer.length = 0;
-    
-    status = firepicam_acquireImage(&buffer);
-    if (status != 0) {
-      LOGERROR1("firepicam_acquireImage() => %d", status);
-    } else {
-      if (fusecache.src_camera_jpg.isFresh()) {
-        SmartPointer<uchar> discard = fusecache.src_camera_jpg.get();
-	LOGTRACE2("background_worker() src_camera_jpg.get() -> %ldB@%0lx discarded", discard.size(), discard.data());
-      }
-      update_camera_jpg();
-      update_monitor_jpg();
+    int processed = 0;
+    processed += update_camera_jpg();
+    processed += update_monitor_jpg();
+
+    if (processed == 0) {
+      SmartPointer<uchar> discard = src_camera_jpg.get();
+      LOGTRACE2("DataFactory::process() src_camera_jpg.get() -> %ldB@%0lx discarded", discard.size(), discard.data());
     }
-    pJPG->pData = buffer.pData;
-    pJPG->length = buffer.length;
   }
 
-  LOGINFO1("background_worker exit -> %d", status);
+  LOGINFO1("DataFactory::process() exit -> %d", status);
   firepicam_destroy(status);
+  return 0;
 }
 
 

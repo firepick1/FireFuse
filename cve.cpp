@@ -76,11 +76,11 @@ class CveCam {
 	vector<uchar> vJPG;
 	imencode(".jpg", output_image, vJPG);
 	SmartPointer<uchar> jpg(vJPG.data(), vJPG.size());
-	fusecache.src_output_jpg.post(jpg);
+	factory.src_output_jpg.post(jpg);
 	pJPG = firefuse_allocDataBuffer(path, pResult, (const char*) vJPG.data(), vJPG.size());
 	LOGTRACE2("CveCam::createOutputJPG(%s) %ldB", path, pJPG->length);
       } else {
-        fusecache.src_output_jpg.post(fusecache.src_camera_jpg.get());
+        factory.src_output_jpg.post(factory.src_camera_jpg.get());
 	pJPG = produceCameraJPG(path, pResult);
 	LOGTRACE2("CveCam::createOutputJPG(%s) unavailable (using camera image) %ldB", path, pJPG->length);
       }
@@ -89,9 +89,9 @@ class CveCam {
 
     FuseDataBuffer *createMonitorJPG(const char *path, int *pResult) {
       if (cve_seconds() - output_seconds < monitor_seconds) {
-        fusecache.src_monitor_jpg.post(fusecache.src_output_jpg.get());
+        factory.src_monitor_jpg.post(factory.src_output_jpg.get());
       } else {
-        fusecache.src_monitor_jpg.post(fusecache.src_camera_jpg.get());
+        factory.src_monitor_jpg.post(factory.src_camera_jpg.get());
       }
       FuseDataBuffer *pJPG = 
       	cve_seconds() - output_seconds < monitor_seconds ?
@@ -218,11 +218,11 @@ int cve_getattr(const char *path, struct stat *stbuf) {
   int res = 0;
 
   if (cve_isPathSuffix(path, FIREREST_CAMERA_JPG)) {
-    res = cve_getattr_cache(path, stbuf, fusecache.src_camera_jpg);
+    res = cve_getattr_cache(path, stbuf, factory.src_camera_jpg);
   } else if (cve_isPathSuffix(path, FIREREST_OUTPUT_JPG)) {
-    res = cve_getattr_cache(path, stbuf, fusecache.src_output_jpg);
+    res = cve_getattr_cache(path, stbuf, factory.src_output_jpg);
   } else if (cve_isPathSuffix(path, FIREREST_MONITOR_JPG)) {
-    res = cve_getattr_cache(path, stbuf, fusecache.src_monitor_jpg);
+    res = cve_getattr_cache(path, stbuf, factory.src_monitor_jpg);
   } else {
     string sVarPath = buildVarPath(path, "", 0);
     const char* pVarPath = sVarPath.c_str();
@@ -480,11 +480,11 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
       FuseDataBuffer *pJPG = cveCam[0].produceCameraJPG(path, &result);
       fi->fh = (uint64_t) (size_t) cve_save(pJPG, path, &result);
     } else if (cve_isPathSuffix(path, FIREREST_CAMERA_JPG)) {
-      fi->fh = (uint64_t) (size_t) new SmartPointer<uchar>(fusecache.src_camera_jpg.get());
+      fi->fh = (uint64_t) (size_t) new SmartPointer<uchar>(factory.src_camera_jpg.get());
     } else if (cve_isPathSuffix(path, FIREREST_OUTPUT_JPG)) {
-      fi->fh = (uint64_t) (size_t) new SmartPointer<uchar>(fusecache.src_output_jpg.get());
+      fi->fh = (uint64_t) (size_t) new SmartPointer<uchar>(factory.src_output_jpg.get());
     } else if (cve_isPathSuffix(path, FIREREST_MONITOR_JPG)) {
-      fi->fh = (uint64_t) (size_t) = new SmartPointer<char>(fusecache.src_monitor_jpg.get());
+      fi->fh = (uint64_t) (size_t) = new SmartPointer<char>(factory.src_monitor_jpg.get());
     } else if (cve_isPathSuffix(path, FIREREST_FIRESIGHT_JSON)) {
       result = cve_openVarFile(path, fi);
     } else if (cve_isPathSuffix(path, FIREREST_PROPERTIES_JSON)) {

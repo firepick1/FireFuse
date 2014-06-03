@@ -114,25 +114,33 @@ const char * firestep_json();
 } // __cplusplus
 #include "LIFOCache.hpp"
 
-class FUSE_Cache {
-  // Most recent
+class DataFactory {
+  private: double output_seconds;
+  private: double monitor_seconds;
+
+  // Common data
   public: LIFOCache<SmartPointer<uchar> > src_camera_jpg;
   public: LIFOCache<SmartPointer<uchar> > src_monitor_jpg;
   public: LIFOCache<SmartPointer<uchar> > src_output_jpg;
 
-  // CVE
+  // CVE-specific data
   public: LIFOCache<SmartPointer<uchar> > src_saved_png;
   public: LIFOCache<SmartPointer<uchar> > src_save_fire;
   public: LIFOCache<SmartPointer<uchar> > src_process_fire;
   public: LIFOCache<SmartPointer<uchar> > src_properties_json;
   public: LIFOCache<SmartPointer<uchar> > snk_properties_json;
-};
 
-extern double output_seconds;
-extern double monitor_seconds;
+  // Class
+  public: DataFactory();
+  public: ~DataFactory();
+
+  public: void process();
+
+  private: int update_camera_jpg();
+  private: int update_monitor_jpg();
+} factory; // DataFactory singleton background worker
+
 extern double cve_seconds();
-
-extern FUSE_Cache fusecache;
 
 #endif
 //////////////////////////////////// FIREFUSE_H ////////////////////////////////////////////////////////
