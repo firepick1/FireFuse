@@ -62,7 +62,7 @@ const char* firepick_status() {
 
 void update_camera_jpg() {
   if (!fusecache.src_camera_jpg.isFresh()) {
-    SmartPointer<char> jpg(buffer.pData, buffer.length);
+    SmartPointer<uchar> jpg((uchar *)buffer.pData, buffer.length);
     LOGTRACE2("update_camera_jpg() src_camera_jpg.post(%ldB) %0lx", jpg.size(), jpg.data());
     fusecache.src_camera_jpg.post(jpg);
   }
@@ -95,7 +95,7 @@ int background_worker(FuseDataBuffer *pJPG) {
       LOGERROR1("firepicam_acquireImage() => %d", status);
     } else {
       if (fusecache.src_camera_jpg.isFresh()) {
-        SmartPointer<char> discard = fusecache.src_camera_jpg.get();
+        SmartPointer<uchar> discard = fusecache.src_camera_jpg.get();
 	LOGTRACE2("background_worker() src_camera_jpg.get() -> %ldB@%0lx discarded", discard.size(), discard.data());
       }
       update_camera_jpg();
