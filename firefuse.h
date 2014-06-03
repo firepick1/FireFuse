@@ -115,9 +115,10 @@ const char * firestep_json();
 #include "LIFOCache.hpp"
 
 class FUSE_Cache {
-  // Camera
+  // Most recent
   public: LIFOCache<SmartPointer<char> > src_camera_jpg;
   public: LIFOCache<SmartPointer<char> > src_monitor_jpg;
+  public: LIFOCache<SmartPointer<char> > src_output_jpg;
 
   // CVE
   public: LIFOCache<SmartPointer<char> > src_saved_png;

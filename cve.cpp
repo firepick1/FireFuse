@@ -79,9 +79,12 @@ class CveCam {
       if (output_image.rows && output_image.cols) {
 	vector<uchar> vJPG;
 	imencode(".jpg", output_image, vJPG);
+	SmartPointer<char> jpg(vJPG.data(), vJPG.size());
+	fusecache.src_output_jpg.post(jpg);
 	pJPG = firefuse_allocDataBuffer(path, pResult, (const char*) vJPG.data(), vJPG.size());
 	LOGTRACE2("CveCam::createOutputJPG(%s) %ldB", path, pJPG->length);
       } else {
+        fusecache.src_output_jpg.post(fusecache.src_camera_jpg.get());
 	pJPG = produceCameraJPG(path, pResult);
 	LOGTRACE2("CveCam::createOutputJPG(%s) unavailable (using camera image) %ldB", path, pJPG->length);
       }
