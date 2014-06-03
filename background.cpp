@@ -20,6 +20,8 @@ using namespace firesight;
 #define STATUS_BUFFER_SIZE 1024
 
 static char status_buffer[STATUS_BUFFER_SIZE];
+extern double monitor_seconds;
+extern double output_seconds;
 
 FUSE_Cache fusecache;
 
@@ -58,10 +60,30 @@ const char* firepick_status() {
   return status_buffer;
 }
 
+void update_camera_jpg() {
+  if (!fusecache.src_camera_jpg.isFresh()) {
+    SmartPointer<char> jpg(buffer.pData, buffer.length);
+    LOGTRACE2("update_camera_jpg() src_camera_jpg.post(%ldB) %0lx", jpg.size(), jpg.data());
+    fusecache.src_camera_jpg.post(jpg);
+  }
+}
+
+void update_monitor_jpg() {
+  if (!fusecache.src_monitor_jpg.isFresh()) {
+    if (cve_seconds() - output_seconds < monitor_seconds) {
+      fusecache.src_monitor_jpg.post(fusecache.src_output_jpg.get());
+    } else {
+      fusecache.src_monitor_jpg.post(fusecache.src_camera_jpg.get());
+    }
+  }
+}
+
 int background_worker(FuseDataBuffer *pJPG) {
   int status = firepicam_create(0, NULL);
 
   LOGINFO1("background_worker start -> %d", status);
+  output_seconds = 0;
+  monitor_seconds = 3;
 
   for (;;) {
     JPG_Buffer buffer;
@@ -76,11 +98,8 @@ int background_worker(FuseDataBuffer *pJPG) {
         SmartPointer<char> discard = fusecache.src_camera_jpg.get();
 	LOGTRACE2("background_worker() src_camera_jpg.get() -> %ldB@%0lx discarded", discard.size(), discard.data());
       }
-      SmartPointer<char> jpg(buffer.pData, buffer.length);
-      LOGTRACE3("background_worker() src_camera_jpg.post(%ldB) %ldB@%0lx", buffer.length, jpg.size(), jpg.data());
-      fusecache.src_camera_jpg.post(jpg);
-      LOGTRACE2("background_worker() src_camera_jpg.get() %ldB@%0lx", 
-        fusecache.src_camera_jpg.peek().size(), fusecache.src_camera_jpg.peek().data());
+      update_camera_jpg();
+      update_monitor_jpg();
     }
     pJPG->pData = buffer.pData;
     pJPG->length = buffer.length;

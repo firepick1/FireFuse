@@ -128,6 +128,10 @@ class FUSE_Cache {
   public: LIFOCache<SmartPointer<char> > snk_properties_json;
 };
 
+extern double output_seconds;
+extern double monitor_seconds;
+extern double cve_seconds();
+
 extern FUSE_Cache fusecache;
 
 #endif
