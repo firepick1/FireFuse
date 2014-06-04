@@ -76,28 +76,14 @@ class CveCam {
 	vector<uchar> vJPG;
 	imencode(".jpg", output_image, vJPG);
 	SmartPointer<uchar> jpg(vJPG.data(), vJPG.size());
-	factory.src_output_jpg.post(jpg);
+	factory.cameras[0].src_output_jpg.post(jpg);
 	pJPG = firefuse_allocDataBuffer(path, pResult, (const char*) vJPG.data(), vJPG.size());
 	LOGTRACE2("CveCam::createOutputJPG(%s) %ldB", path, pJPG->length);
       } else {
-        factory.src_output_jpg.post(factory.src_camera_jpg.get());
+        factory.cameras[0].src_output_jpg.post(factory.cameras[0].src_camera_jpg.get());
 	pJPG = produceCameraJPG(path, pResult);
 	LOGTRACE2("CveCam::createOutputJPG(%s) unavailable (using camera image) %ldB", path, pJPG->length);
       }
-      return pJPG;
-    }
-
-    FuseDataBuffer *createMonitorJPG(const char *path, int *pResult) {
-      if (cve_seconds() - output_seconds < monitor_seconds) {
-        factory.src_monitor_jpg.post(factory.src_output_jpg.get());
-      } else {
-        factory.src_monitor_jpg.post(factory.src_camera_jpg.get());
-      }
-      FuseDataBuffer *pJPG = 
-      	cve_seconds() - output_seconds < monitor_seconds ?
-	produceOutputJPG(path, pResult) : 
-	produceCameraJPG(path, pResult);
-      LOGTRACE2("CveCam::createMonitorJPG(%s) %ldB", path, pJPG->length);
       return pJPG;
     }
 
@@ -106,7 +92,7 @@ class CveCam {
 
     void setOutput(Mat value) {
        output_image = value;
-       output_seconds = cve_seconds();
+       factory.cameras[0].temp_set_output_seconds();
     }
 
     size_t sizeCameraJPG(const char *path, int *pResult) {
@@ -133,14 +119,6 @@ class CveCam {
       return pJPG;
     }
 
-    FuseDataBuffer *produceMonitorJPG(const char *path, int *pResult) {
-      FuseDataBuffer *pJPG = monitorJPG.pop(path);
-      if (!pJPG) {
-        pJPG = createMonitorJPG(path, pResult);
-      }
-      LOGTRACE2("CveCam::produceMonitorJPG(%s) %ldB", path, pJPG->length);
-      return pJPG;
-    }
 } cveCam[1];
 
 static FuseDataBuffer * allocJSONBuffer(const char * path, FuseDataBuffer *pBuffer, int *pResult, size_t len) {
@@ -218,11 +196,11 @@ int cve_getattr(const char *path, struct stat *stbuf) {
   int res = 0;
 
   if (cve_isPathSuffix(path, FIREREST_CAMERA_JPG)) {
-    res = cve_getattr_cache(path, stbuf, factory.src_camera_jpg);
+    res = cve_getattr_cache(path, stbuf, factory.cameras[0].src_camera_jpg);
   } else if (cve_isPathSuffix(path, FIREREST_OUTPUT_JPG)) {
-    res = cve_getattr_cache(path, stbuf, factory.src_output_jpg);
+    res = cve_getattr_cache(path, stbuf, factory.cameras[0].src_output_jpg);
   } else if (cve_isPathSuffix(path, FIREREST_MONITOR_JPG)) {
-    res = cve_getattr_cache(path, stbuf, factory.src_monitor_jpg);
+    res = cve_getattr_cache(path, stbuf, factory.cameras[0].src_monitor_jpg);
   } else {
     string sVarPath = buildVarPath(path, "", 0);
     const char* pVarPath = sVarPath.c_str();
@@ -453,6 +431,16 @@ static FuseDataBuffer * cve_process(FuseDataBuffer *pJPG, const char *path, int 
     LOGERROR2(fmt, path, ex);
     pJSON = allocJSONBuffer(path, pJPG, pResult, max_json_len);
     snprintf(pJSON->pData, pJSON->length, "{\"error\":\"%s\"}", ex);
+  } catch (string ex) {
+    const char *fmt = "cve_process(%s) EXCEPTION: %s";
+    LOGERROR2(fmt, path, ex.c_str());
+    pJSON = allocJSONBuffer(path, pJPG, pResult, max_json_len);
+    snprintf(pJSON->pData, pJSON->length, "{\"error\":\"%s\"}", ex.c_str());
+  } catch (json_error_t ex) {
+    const char *fmt = "cve_process(%s) JSON EXCEPTION: %s";
+    LOGERROR2(fmt, path, ex.text);
+    pJSON = allocJSONBuffer(path, pJPG, pResult, max_json_len);
+    snprintf(pJSON->pData, pJSON->length, "{\"error\":\"%s %s:%d\"}", ex.text, ex.source, ex.line);
   } catch (...) {
     const char *fmt = "cve_process(%s) UNKNOWN EXCEPTION";
     LOGERROR1(fmt, path);
@@ -480,11 +468,11 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
       FuseDataBuffer *pJPG = cveCam[0].produceCameraJPG(path, &result);
       fi->fh = (uint64_t) (size_t) cve_save(pJPG, path, &result);
     } else if (cve_isPathSuffix(path, FIREREST_CAMERA_JPG)) {
-      fi->fh = (uint64_t) (size_t) new SmartPointer<uchar>(factory.src_camera_jpg.get());
+      fi->fh = (uint64_t) (size_t) new SmartPointer<uchar>(factory.cameras[0].src_camera_jpg.get());
     } else if (cve_isPathSuffix(path, FIREREST_OUTPUT_JPG)) {
-      fi->fh = (uint64_t) (size_t) new SmartPointer<uchar>(factory.src_output_jpg.get());
+      fi->fh = (uint64_t) (size_t) new SmartPointer<uchar>(factory.cameras[0].src_output_jpg.get());
     } else if (cve_isPathSuffix(path, FIREREST_MONITOR_JPG)) {
-      fi->fh = (uint64_t) (size_t) = new SmartPointer<char>(factory.src_monitor_jpg.get());
+      fi->fh = (uint64_t) (size_t) new SmartPointer<uchar>(factory.cameras[0].src_monitor_jpg.get());
     } else if (cve_isPathSuffix(path, FIREREST_FIRESIGHT_JSON)) {
       result = cve_openVarFile(path, fi);
     } else if (cve_isPathSuffix(path, FIREREST_PROPERTIES_JSON)) {
@@ -506,6 +494,9 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
     default:
       if (fi->fh) {
 	fi->direct_io = 1;
+	LOGTRACE1("cve_open(%s) direct_io:1", path);
+      } else {
+	LOGTRACE1("cve_open(%s) direct_io:0", path);
       }
       break;
   }
@@ -520,6 +511,7 @@ int cve_read(const char *path, char *buf, size_t size, off_t offset, struct fuse
   (void) fi;
 
   if (cve_isPathSuffix(path, FIREREST_CAMERA_JPG) ||
+      cve_isPathSuffix(path, FIREREST_MONITOR_JPG) ||
       cve_isPathSuffix(path, FIREREST_OUTPUT_JPG)) {
     SmartPointer<uchar> *pJpg = (SmartPointer<uchar> *) fi->fh;
     sizeOut = firefuse_readBuffer(buf, (char *)pJpg->data(), size, offset, pJpg->size());
@@ -540,7 +532,7 @@ int cve_release(const char *path, struct fuse_file_info *fi) {
   if (cve_isPathSuffix(path, FIREREST_PROCESS_JSON)) {
     firefuse_freeDataBuffer(path, fi);
   } else if (cve_isPathSuffix(path, FIREREST_MONITOR_JPG)) {
-    if (fi->fh) { free( (SmartPointer<char> *) fi->fh); }
+    if (fi->fh) { free( (SmartPointer<uchar> *) fi->fh); }
   } else if (cve_isPathSuffix(path, FIREREST_SAVED_PNG)) {
     firefuse_freeDataBuffer(path, fi);
   } else if (cve_isPathSuffix(path, FIREREST_OUTPUT_JPG)) {

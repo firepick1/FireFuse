@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <memory>
 #include <sched.h>
+#include <FireLog.h>
 
 using namespace std;
 
@@ -81,10 +82,12 @@ template <class T> class LIFOCache {
   public: bool isFresh() { return writeCount && writeCount != readCount; }
 };
 
+#define SMARTPOINTER_FREE
+
 template <class T> class SmartPointer {
   private: class ReferencedPointer {
-    private: int references;
-    private: T* ptr;
+    private: volatile int references;
+    private: T* volatile ptr;
 
     public: inline ReferencedPointer() { 
       ptr = NULL;
@@ -94,6 +97,7 @@ template <class T> class SmartPointer {
     public: inline ReferencedPointer(T* aPtr) {
       ptr = aPtr;
       references = 1;
+      LOGTRACE1("ReferencedPointer(%0lx) managing allocated memory", ptr);
     }
 
     public: inline void decref() {
@@ -102,9 +106,12 @@ template <class T> class SmartPointer {
 	throw "ReferencedPointer extra dereference";
       }
       if (ptr && references == 0) {
-	//cout << "ReferencedPointer() free " << (long) ptr << endl;
+	LOGTRACE1("ReferencedPointer(%0lx) free", ptr);
+	// Comment out the following to determine if memory is accessed after being freed
+	///////////// FREE BEGIN
 	* (char *) ptr = 0; // mark as deleted
 	free(ptr);
+	///////////// FREE END
       }
     }
 
@@ -115,8 +122,18 @@ template <class T> class SmartPointer {
 
   private: ReferencedPointer *pPointer;
   private: size_t length;
-  private: inline void decref() { if (pPointer) { pPointer->decref(); } }
-  private: inline void incref() { if (pPointer) { pPointer->incref(); } }
+  private: inline void decref() { 
+    if (pPointer) { 
+      pPointer->decref(); 
+      //LOGTRACE2("SmartPointer(%0lx) decref:%d", pPointer->data(), pPointer->getReferences());
+    } 
+  }
+  private: inline void incref() { 
+    if (pPointer) { 
+      pPointer->incref(); 
+      //LOGTRACE2("SmartPointer(%0lx) incref:%d", pPointer->data(), pPointer->getReferences());
+    } 
+  }
 
   /**
    * Create a smart pointer for the given data. Copied SmartPointers 
@@ -130,21 +147,21 @@ template <class T> class SmartPointer {
    * @count number of T objects to calloc for data copied from ptr
    */
   public: inline SmartPointer(T* aPtr, size_t count=0) {
-    //cout << "SmartPointer(" << (long) aPtr << ")" << endl;
     length = count * sizeof(T);
     if (count) {
       T* pData = (T*) calloc(count, sizeof(T));
       if (aPtr) {
         memcpy(pData, aPtr, length);
       }
+      LOGTRACE3("SmartPointer(%0lx,%d) calloc:%0lx", aPtr, count, pData);
       pPointer = new ReferencedPointer(pData);
     } else {
+      LOGTRACE2("SmartPointer(%0lx,%d)", aPtr, count);
       pPointer = new ReferencedPointer(aPtr);
     }
   }
 
   public: inline SmartPointer() {
-    //cout << "SmartPointer(NULL)" << endl;
     pPointer = NULL;
     length = 0;
   }
@@ -156,20 +173,20 @@ template <class T> class SmartPointer {
   }
 
   public: inline ~SmartPointer() { 
-    if (pPointer) {
-      //cout << "~SmartPointer(" << (long) pPointer->data() << ") references:" << pPointer->getReferences() << endl;
-    } else {
-      //cout << "~SmartPointer(NULL)" << endl;
-    }
     decref(); 
   }
 
   public: inline SmartPointer& operator=( SmartPointer that ) {
+    that.incref();
     decref();
     pPointer = that.pPointer;
     length = that.length;
-    incref();
     return *this;
+  }
+
+  public: inline T* data() const { 
+    T* pData = pPointer ? pPointer->data() : NULL; 
+    return pData;
   }
 
   public: inline int getReferences() { return pPointer ? pPointer->getReferences() : 0; }
@@ -178,7 +195,6 @@ template <class T> class SmartPointer {
   public: inline T* operator->() { return pPointer ? pPointer->data() : NULL; }
   public: inline const T* operator->() const { return pPointer ? pPointer->data() : NULL; }
   public: inline operator T*() const { return pPointer ? pPointer->data() : NULL; }
-  public: inline T* data() const { return pPointer ? pPointer->data() : NULL; }
   public: inline size_t size() const { return length; }
 };
 

@@ -62,6 +62,14 @@ int testSmartPointer( ){
     assert(1 == one.getReferences());
     assert(0 == strcmp("one", (char*)one));
     assert(0 == strcmp("one", pOne));
+    void *hideOne = &one;
+    LOGTRACE("one = one START");
+    one = *(SmartPointer<char> *) hideOne;
+    LOGTRACE("one = one END");
+    assert(0 == strcmp("one", (char*)one));
+    assert(1 == one.getReferences());
+    assert(0 == strcmp("one", (char*)one));
+    assert(0 == strcmp("one", pOne));
     SmartPointer<char> oneCopy(one);
     assert(0 == strcmp("one", (char*)oneCopy));
     assert(one.size() == oneCopy.size());
@@ -253,5 +261,6 @@ int testLIFOCache() {
 }
 
 int main(int argc, char *argv[]) {
+  firelog_level(FIRELOG_TRACE);
   return testSmartPointer()==0 && testSmartPointer_CopyData()==0 && testLIFOCache()==0 ? 0 : -1;
 }

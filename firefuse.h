@@ -114,9 +114,11 @@ const char * firestep_json();
 } // __cplusplus
 #include "LIFOCache.hpp"
 
-class DataFactory {
-  private: double output_seconds;
-  private: double monitor_seconds;
+extern double cve_seconds();
+
+class CameraNode {
+  private: double output_seconds; // time of last FireSight pipeline completion
+  private: double monitor_duration; // number of seconds to show last output
 
   // Common data
   public: LIFOCache<SmartPointer<uchar> > src_camera_jpg;
@@ -130,17 +132,31 @@ class DataFactory {
   public: LIFOCache<SmartPointer<uchar> > src_properties_json;
   public: LIFOCache<SmartPointer<uchar> > snk_properties_json;
 
+  // For DataFactory use
+  public: CameraNode();
+  public: ~CameraNode();
+  public: void init();
+  public: int update_camera_jpg();
+  public: int update_monitor_jpg();
+
+  public: void temp_set_output_seconds() { output_seconds = cve_seconds(); }
+};
+
+class DataFactory {
+  private: double idle_seconds; // time of last idle() execution
+  private: double idle_period; // minimum seconds between idle() execution
+
+  public: CameraNode cameras[1];
+
   // Class
   public: DataFactory();
   public: ~DataFactory();
 
-  public: void process();
+  public: void process(FuseDataBuffer *pJPG);
+  protected: void idle();
+};
 
-  private: int update_camera_jpg();
-  private: int update_monitor_jpg();
-} factory; // DataFactory singleton background worker
-
-extern double cve_seconds();
+extern DataFactory factory; // DataFactory singleton background worker
 
 #endif
 //////////////////////////////////// FIREFUSE_H ////////////////////////////////////////////////////////

@@ -18,10 +18,7 @@ using namespace cv;
 using namespace firesight;
 
 #define STATUS_BUFFER_SIZE 1024
-
 static char status_buffer[STATUS_BUFFER_SIZE];
-extern double monitor_seconds;
-extern double output_seconds;
 
 DataFactory factory;
 
@@ -61,63 +58,115 @@ const char* firepick_status() {
 }
 
 int background_worker(FuseDataBuffer *pJPG) {
-  return factory.process(pJPG);
+  factory.process(pJPG);
+  return 0;
 }
 
-int DataFactory::update_camera_jpg() {
+/////////////////////////// CameraNode ///////////////////////////////////
+
+CameraNode::CameraNode() {
+  output_seconds = 0;
+  monitor_duration = 3;
+}
+
+CameraNode::~CameraNode() {
+  firepicam_destroy(0);
+}
+
+void CameraNode::init() {
+  int status = firepicam_create(0, NULL);
+  if (status != 0) {
+    LOGERROR1("DataFactory::process() could not initialize camera -> %d", status);
+    throw "Could not initialize camera";
+  }
+  LOGINFO1("CameraNode::init() -> %d", status);
+}
+
+int CameraNode::update_camera_jpg() {
   if (src_camera_jpg.isFresh()) {
     return 0;
   }
+  LOGTRACE("update_camera_jpg()");
+  
   JPG_Buffer buffer;
   buffer.pData = NULL;
   buffer.length = 0;
   
-  status = firepicam_acquireImage(&buffer);
+  int status = firepicam_acquireImage(&buffer);
   if (status != 0) {
     LOGERROR1("update_camera_jpg() firepicam_acquireImage() => %d", status);
     throw "could not acquire image";
   } 
+  assert(buffer.pData);
+  assert(buffer.length);
 
   SmartPointer<uchar> jpg((uchar *)buffer.pData, buffer.length);
-  LOGTRACE2("update_camera_jpg() src_camera_jpg.post(%ldB) %0lx", jpg.size(), jpg.data());
+  LOGDEBUG3("update_camera_jpg() src_camera_jpg.post(%ldB) %0lx [0]:%0lx", jpg.size(), jpg.data(), (int) *jpg.data());
   src_camera_jpg.post(jpg);
 
   return 1;
 }
 
-int DataFactory::update_monitor_jpg() {
+int CameraNode::update_monitor_jpg() {
   if (src_monitor_jpg.isFresh()) {
     return 0;
   }
-  if (cve_seconds() - output_seconds < monitor_seconds) {
-    src_monitor_jpg.post(src_output_jpg.get());
+  LOGTRACE("update_monitor_jpg()");
+
+  const char *fmt;
+  SmartPointer<uchar> jpg;
+  if (cve_seconds() - output_seconds < monitor_duration) {
+    jpg = src_output_jpg.get();
+    fmt = "update_monitor_jpg() src_output_jpg.post(%ldB) %0lx [0]:%0lx";
   } else {
-    src_monitor_jpg.post(src_camera_jpg.get());
+    jpg = src_camera_jpg.get();
+    fmt = "update_monitor_jpg() src_camera_jpg.post(%ldB) %0lx [0]:%0lx";
   }
+  src_monitor_jpg.post(jpg);
+
+  LOGDEBUG3(fmt, jpg.size(), jpg.data(), (int) *jpg.data());
   return 1;
 }
 
-int DataFactory::process(FuseDataBuffer *pJPG) {
-  int status = firepicam_create(0, NULL);
+/////////////////////////// DataFactory ///////////////////////////////////
 
-  LOGINFO1("DataFactory::process() start -> %d", status);
-  output_seconds = 0;
-  monitor_seconds = 3;
-
-  for (;;) {
-    int processed = 0;
-    processed += update_camera_jpg();
-    processed += update_monitor_jpg();
-
-    if (processed == 0) {
-      SmartPointer<uchar> discard = src_camera_jpg.get();
-      LOGTRACE2("DataFactory::process() src_camera_jpg.get() -> %ldB@%0lx discarded", discard.size(), discard.data());
-    }
-  }
-
-  LOGINFO1("DataFactory::process() exit -> %d", status);
-  firepicam_destroy(status);
-  return 0;
+DataFactory::DataFactory() {
+  idle_seconds = 0;
+  idle_period = 15;
 }
 
+DataFactory::~DataFactory() {}
+
+void DataFactory::idle() {
+  if (cve_seconds() - idle_seconds >= idle_period) {
+    LOGTRACE("DataFactory::idle()");
+    idle_seconds = cve_seconds();
+    SmartPointer<uchar> discard = cameras[0].src_camera_jpg.get();
+    LOGINFO2("DataFactory::idle() src_camera_jpg.get() -> %ldB@%0lx discarded", discard.size(), discard.data());
+  }
+}
+
+void DataFactory::process(FuseDataBuffer *pJPG) {
+  try {
+    cameras[0].init();
+
+    for (;;) {
+      int processed = 0;
+      processed += cameras[0].update_camera_jpg();
+      processed += cameras[0].update_monitor_jpg();
+
+      if (processed == 0) {
+	idle();
+      }
+    }
+
+    LOGINFO("DataFactory::process() exiting");
+  } catch (const char * ex) {
+    LOGERROR1("DataFactory::process() FATAL EXCEPTION: %s", ex);
+  } catch (string ex) {
+    LOGERROR1("DataFactory::process() FATAL EXCEPTION: %s", ex.c_str());
+  } catch (...) {
+    LOGERROR("DataFactory::process() FATAL UNKNOWN EXCEPTION");
+  }
+}
 
