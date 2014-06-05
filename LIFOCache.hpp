@@ -97,7 +97,7 @@ template <class T> class SmartPointer {
     public: inline ReferencedPointer(T* aPtr) {
       ptr = aPtr;
       references = 1;
-      LOGTRACE1("ReferencedPointer(%0lx) managing allocated memory", ptr);
+      LOGTRACE1("ReferencedPointer(%0lx) managing allocated memory", (ulong) ptr);
     }
 
     public: inline void decref() {
@@ -106,7 +106,7 @@ template <class T> class SmartPointer {
 	throw "ReferencedPointer extra dereference";
       }
       if (ptr && references == 0) {
-	LOGTRACE1("ReferencedPointer(%0lx) free", ptr);
+	LOGTRACE1("ReferencedPointer(%0lx) free", (ulong) ptr);
 	// Comment out the following to determine if memory is accessed after being freed
 	///////////// FREE BEGIN
 	* (char *) ptr = 0; // mark as deleted
@@ -153,11 +153,11 @@ template <class T> class SmartPointer {
       if (aPtr) {
         memcpy(pData, aPtr, length);
       }
-      LOGTRACE3("SmartPointer(%0lx,%d) calloc:%0lx", aPtr, count, pData);
+      LOGTRACE3("SmartPointer(%0lx,%ld) calloc:%0lx", (ulong) aPtr, (ulong) count, (ulong) pData);
       pPointer = new ReferencedPointer(pData);
     } else {
-      LOGTRACE2("SmartPointer(%0lx,%d)", aPtr, count);
-      pPointer = new ReferencedPointer(aPtr);
+      LOGTRACE2("SmartPointer(%0lx,%ld)", (ulong) aPtr, (ulong) count);
+      pPointer = aPtr ? new ReferencedPointer(aPtr) : NULL;
     }
   }
 

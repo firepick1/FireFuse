@@ -16,36 +16,49 @@
 int cameraTime;
 char *cameraBuffer;
 
-int firepicam_create(int a, void *ptr) {
+int firepicam_create(int argc, const char **argv) {
   cameraTime = 0;
   cameraBuffer = NULL;
   return 0;
 }
 
-void firepicam_destroy(int count) {
+int firepicam_destroy(int status) {
   if (cameraBuffer) {
     free(cameraBuffer);
   }
+  return 0;
 }
 
-int firepicam_acquireImage(JPG_Buffer & buffer) {
-  string path = "../img/headcam";
+int firepicam_acquireImage(JPG_Buffer *pBuffer) {
+  string path = "headcam";
   if ((cameraTime++ % 2) == 0) {
     path.append("0.jpg");
   } else {
     path.append("1.jpg");
   }
   FILE *fImage = fopen(path.c_str(), "r");
+  if (fImage) {
+    LOGINFO1("firepicam_acquireImage(%s)", path.c_str());
+  } else {
+    path.insert(0, "test/"); 
+    LOGINFO1("firepicam_acquireImage(%s)", path.c_str());
+    fImage = fopen(path.c_str(), "r");
+  }
   assert(fImage);
   fseek(fImage, 0, SEEK_END);
-  buffer.length = ftell(fImage);
+  pBuffer->length = ftell(fImage);
   fseek(fImage, 0, SEEK_SET);
   if (cameraBuffer) {
     free(cameraBuffer);
   }
-  cameraBuffer = malloc(length);
-  size_t bytesRead = fread(cameraBuffer, 1, length, fImage);
-  assert(bytesRead == length);
+  cameraBuffer = (char *) malloc(pBuffer->length);
+  pBuffer->pData = cameraBuffer;
+  size_t bytesRead = fread(cameraBuffer, 1, pBuffer->length, fImage);
+  assert(bytesRead == pBuffer->length);
 
   return 0;
+}
+
+void firepicam_print_elapsed() {
+  LOGINFO("firepicam_print_elapsed()");
 }

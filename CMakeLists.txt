@@ -42,7 +42,7 @@ add_executable(firefuse
   cve.cpp 
   FireStep.cpp 
   )
-target_link_libraries(firefuse libfirepicam.so lib_firesight.so libfuse.so ${OpenCV_LIBS})
+target_link_libraries(firefuse libfirepicam.so lib_firesight.so libjansson.so libfuse.so ${OpenCV_LIBS})
 
 add_executable(testfirefuse
   test/test.cpp
@@ -53,7 +53,7 @@ add_executable(testfirefuse
   cve.cpp 
   #FireStep.cpp 
   )
-target_link_libraries(testfirefuse lib_firesight.so )
+target_link_libraries(testfirefuse lib_firesight.so libjansson.so ${OpenCV_LIBS})
 
 INSTALL(TARGETS firefuse DESTINATION bin)
 INSTALL(PROGRAMS mountfirefuse.sh DESTINATION /etc/init.d/)

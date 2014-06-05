@@ -114,8 +114,9 @@ const char * firestep_json();
 } // __cplusplus
 #include "LIFOCache.hpp"
 
-double cve_seconds();
-string cve_path(const char *pPath);
+double 	cve_seconds();
+void 	cve_process(const char *path, int *pResult);
+string 	cve_path(const char *pPath);
 
 typedef class CVE {
   public: LIFOCache<SmartPointer<uchar> > src_saved_png;
@@ -131,6 +132,8 @@ class CameraNode {
 
   // Common data
   public: LIFOCache<SmartPointer<uchar> > src_camera_jpg;
+  public: LIFOCache<Mat> src_camera_mat_gray;
+  public: LIFOCache<Mat> src_camera_mat_bgr;
   public: LIFOCache<SmartPointer<uchar> > src_monitor_jpg;
   public: LIFOCache<SmartPointer<uchar> > src_output_jpg;
 
@@ -145,25 +148,23 @@ class CameraNode {
 };
 
 class DataFactory {
-  private: double idle_seconds; // time of last idle() execution
   private: double idle_period; // minimum seconds between idle() execution
-  private: std:map<string, CVEPtr> cveMap;
-  private: CVEPtr getCve(string path);
+  private: std::map<string, CVEPtr> cveMap;
+  private: double idle_seconds; // time of last idle() execution
 
   public: CameraNode cameras[1];
 
   public: DataFactory();
   public: ~DataFactory();
-  public: void processInit();
-  public: void processLoop();
+  public: CVE& cve(string path);
   public: void process(FuseDataBuffer *pJPG);
-  public: SmartPointer<uchar> get_saved_png(string path);
-  public: SmartPointer<uchar> get_save_fire(string path);
-  public: SmartPointer<uchar> get_process_fire(string path);
-  public: SmartPointer<uchar> get_properties_json(string path);
-  public: SmartPointer<uchar> put_properties_json(string path);
+  public: inline void setIdlePeriod(double value) { idle_period = value; }
+  public: inline double getIdlePeriod() { return idle_period; }
 
-  private: void idle();
+  // TESTING ONLY
+  public: void processInit();
+  public: int processLoop();
+  public: void idle();
 };
 
 extern DataFactory factory; // DataFactory singleton background worker

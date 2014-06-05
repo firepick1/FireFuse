@@ -83,28 +83,50 @@ void CameraNode::init() {
 }
 
 int CameraNode::update_camera_jpg() {
-  if (src_camera_jpg.isFresh()) {
-    return 0;
+  int actions = 0;
+  if (!src_camera_jpg.isFresh() || !src_camera_mat_bgr.isFresh() || !src_camera_mat_gray.isFresh()) {
+    actions++;
+    LOGTRACE("update_camera_jpg()");
+    src_camera_jpg.get(); // make room for post
+    
+    JPG_Buffer buffer;
+    buffer.pData = NULL;
+    buffer.length = 0;
+    int status = firepicam_acquireImage(&buffer);
+    if (status != 0) {
+      LOGERROR1("update_camera_jpg() firepicam_acquireImage() => %d", status);
+      throw "could not acquire image";
+    } 
+    assert(buffer.pData);
+    assert(buffer.length);
+
+    SmartPointer<uchar> jpg((uchar *)buffer.pData, buffer.length);
+    src_camera_jpg.post(jpg);
+    if (src_camera_mat_bgr.isFresh() && src_camera_mat_gray.isFresh()) {
+      // proactively update all decoded images to eliminate post-idle refresh lag
+      src_camera_mat_bgr.get();
+      src_camera_mat_gray.get();
+    } else {
+      // To eliminate unnecessary conversion we will only update active Mat
+    }
+    LOGDEBUG3("update_camera_jpg() src_camera_jpg.post(%ldB) %0lx [0]:%0x", (ulong) jpg.size(), (ulong) jpg.data(), (int) *jpg.data());
+
+    std::vector<uchar> vJPG(jpg.data(), jpg.data() + jpg.size());
+    if (!src_camera_mat_bgr.isFresh()) {
+      actions++;
+      Mat image = imdecode(vJPG, CV_LOAD_IMAGE_COLOR); 
+      src_camera_mat_bgr.post(image);
+      LOGTRACE3("update_camera_jpg() src_camera_mat_bgr.post(%ldB) %0lx [0]:%0x", (ulong) jpg.size(), (ulong) jpg.data(), (int) *jpg.data());
+    }
+    if (!src_camera_mat_gray.isFresh()) {
+      actions++;
+      Mat image = imdecode(vJPG, CV_LOAD_IMAGE_GRAYSCALE); 
+      src_camera_mat_gray.post(image);
+      LOGTRACE3("update_camera_jpg() src_camera_mat_gray.post(%ldB) %0lx [0]:%0x", (ulong) jpg.size(), (ulong) jpg.data(), (int) *jpg.data());
+    }
   }
-  LOGTRACE("update_camera_jpg()");
-  
-  JPG_Buffer buffer;
-  buffer.pData = NULL;
-  buffer.length = 0;
-  
-  int status = firepicam_acquireImage(&buffer);
-  if (status != 0) {
-    LOGERROR1("update_camera_jpg() firepicam_acquireImage() => %d", status);
-    throw "could not acquire image";
-  } 
-  assert(buffer.pData);
-  assert(buffer.length);
 
-  SmartPointer<uchar> jpg((uchar *)buffer.pData, buffer.length);
-  LOGDEBUG3("update_camera_jpg() src_camera_jpg.post(%ldB) %0lx [0]:%0lx", jpg.size(), jpg.data(), (int) *jpg.data());
-  src_camera_jpg.post(jpg);
-
-  return 1;
+  return actions;
 }
 
 int CameraNode::update_monitor_jpg() {
@@ -117,10 +139,10 @@ int CameraNode::update_monitor_jpg() {
   SmartPointer<uchar> jpg;
   if (cve_seconds() - output_seconds < monitor_duration) {
     jpg = src_output_jpg.get();
-    fmt = "update_monitor_jpg() src_output_jpg.post(%ldB) %0lx [0]:%0lx";
+    fmt = "update_monitor_jpg() src_output_jpg.get(%ldB) %0lx [0]:%0lx";
   } else {
     jpg = src_camera_jpg.get();
-    fmt = "update_monitor_jpg() src_camera_jpg.post(%ldB) %0lx [0]:%0lx";
+    fmt = "update_monitor_jpg() src_camera_jpg.get(%ldB) %0lx [0]:%0lx";
   }
   src_monitor_jpg.post(jpg);
 
@@ -131,78 +153,47 @@ int CameraNode::update_monitor_jpg() {
 /////////////////////////// DataFactory ///////////////////////////////////
 
 DataFactory::DataFactory() {
-  idle_seconds = 0;
+  idle_seconds = cve_seconds();
   idle_period = 15;
 }
 
 DataFactory::~DataFactory() {
   for (std::map<string,CVEPtr>::iterator it=cveMap.begin(); it!=cveMap.end(); ++it){
-    new it->second;
+    delete it->second;
   }
 }
 
-CVEPtr DataFactory::getCve(string path) {
-  string cvePath = cve_path(path);
+CVE& DataFactory::cve(string path) {
+  string cvePath = cve_path(path.c_str());
   CVEPtr pCve = cveMap[cvePath]; 
-  if (pCve == null) {
+  if (!pCve) {
     pCve = new CVE();
     cveMap[cvePath] = pCve;
   }
-  return pCve;
-}
-
-SmartPointer<uchar> DataFactory::get_saved_png(string path) {
-  CVEPtr pCve = getCve(path);
-  SmartPointer<uchar> result(pCve->src_saved_png.get());
-  return result;
-}
-
-SmartPointer<uchar> DataFactory::get_save_fire(string path) {
-  CVEPtr pCve = getCve(path);
-  SmartPointer<uchar> result(pCve->src_save_fire.get());
-  return result;
-}
-
-SmartPointer<uchar> DataFactory::get_process_fire(string path) {
-  CVEPtr pCve = getCve(path);
-  SmartPointer<uchar> result(pCve->src_process_fire.get());
-  return result;
-}
-
-SmartPointer<uchar> DataFactory::get)properties_json(string path) {
-  CVEPtr pCve = getCve(path);
-  SmartPointer<uchar> result(pCve->src_properties_json.get());
-  return result;
-}
-
-void DataFactory::put_properties_json(string path, SmartPointer<uchar> value) {
-  CVEPtr pCve = getCve(path);
-  pCve->snk_properties_json.post(value);
+  return *pCve;
 }
 
 void DataFactory::idle() {
-  if (cve_seconds() - idle_seconds >= idle_period) {
-    LOGTRACE("DataFactory::idle()");
-    idle_seconds = cve_seconds();
-    SmartPointer<uchar> discard = cameras[0].src_camera_jpg.get();
-    LOGINFO2("DataFactory::idle() src_camera_jpg.get() -> %ldB@%0lx discarded", discard.size(), discard.data());
-  }
+  LOGTRACE("DataFactory::idle()");
+  idle_seconds = cve_seconds();
+  SmartPointer<uchar> discard = cameras[0].src_monitor_jpg.get();
+  idle_seconds = cve_seconds();
+  LOGINFO2("DataFactory::idle() src_monitor_jpg.get() -> %ldB@%0lx discarded", (ulong) discard.size(), (ulong) discard.data());
 }
 
 void DataFactory::processInit() {
   cameras[0].init();
 }
 
-void DataFactory::processLoop() {
+int DataFactory::processLoop() {
   int processed = 0;
   processed += cameras[0].update_camera_jpg();
   processed += cameras[0].update_monitor_jpg();
 
-  if (processed == 0) {
+  if (processed == 0 && (cve_seconds() - idle_seconds >= idle_period)) {
     idle();
-  } else {
-    idle_seconds = cve_seconds();
   } 
+  return processed;
 }
 
 void DataFactory::process(FuseDataBuffer *pJPG) {
