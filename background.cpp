@@ -83,9 +83,9 @@ void CameraNode::init() {
 }
 
 int CameraNode::update_camera_jpg() {
-  int actions = 0;
+  int processed = 0;
   if (!src_camera_jpg.isFresh() || !src_camera_mat_bgr.isFresh() || !src_camera_mat_gray.isFresh()) {
-    actions++;
+    processed++;
     LOGTRACE("update_camera_jpg()");
     src_camera_jpg.get(); // make room for post
     
@@ -113,20 +113,20 @@ int CameraNode::update_camera_jpg() {
 
     std::vector<uchar> vJPG((uchar *)jpg.data(), (uchar *)jpg.data() + jpg.size());
     if (!src_camera_mat_bgr.isFresh()) {
-      actions++;
+      processed++;
       Mat image = imdecode(vJPG, CV_LOAD_IMAGE_COLOR); 
       src_camera_mat_bgr.post(image);
       LOGTRACE3("update_camera_jpg() src_camera_mat_bgr.post(%ldB) %0lx [0]:%0x", (ulong) jpg.size(), (ulong) jpg.data(), (int) *jpg.data());
     }
     if (!src_camera_mat_gray.isFresh()) {
-      actions++;
+      processed++;
       Mat image = imdecode(vJPG, CV_LOAD_IMAGE_GRAYSCALE); 
       src_camera_mat_gray.post(image);
       LOGTRACE3("update_camera_jpg() src_camera_mat_gray.post(%ldB) %0lx [0]:%0x", (ulong) jpg.size(), (ulong) jpg.data(), (int) *jpg.data());
     }
   }
 
-  return actions;
+  return processed;
 }
 
 int CameraNode::update_monitor_jpg() {
@@ -181,7 +181,7 @@ CVE& DataFactory::cve(string path) {
   string cvePath = cve_path(path.c_str());
   CVEPtr pCve = cveMap[cvePath]; 
   if (!pCve) {
-    pCve = new CVE();
+    pCve = new CVE(cvePath);
     cveMap[cvePath] = pCve;
   }
   return *pCve;
@@ -199,10 +199,22 @@ void DataFactory::processInit() {
   cameras[0].init();
 }
 
+int DataFactory::update_saved_png() {
+  int processed = 0;
+  for (std::map<string,CVEPtr>::iterator it=cveMap.begin(); it!=cveMap.end(); ++it){
+    CVEPtr pCve = it->second;
+    if (!pCve->src_save_fire.isFresh()) {
+      processed++;
+    }
+  }
+  return processed;
+}
+
 int DataFactory::processLoop() {
   int processed = 0;
   processed += cameras[0].update_camera_jpg();
   processed += cameras[0].update_monitor_jpg();
+  processed += update_saved_png();
 
   if (processed == 0 && (cve_seconds() - idle_seconds >= idle_period)) {
     idle();

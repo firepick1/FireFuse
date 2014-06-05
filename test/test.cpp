@@ -417,6 +417,7 @@ int testCve() {
   assert(1 == cveNames.size());
   cout << "cveNames[0]: " << cveNames[0] << endl;
   assert(0 == strcmp("/cv/1/gray/cve/calc-offset", cveNames[0].c_str()));
+  assert(0 == cveNames[0].compare(cve.getName()));
 
   /////////// firesight.json
   cout << firesightPath << " => " << (char *)cve.src_firesight_json.peek().data() << endl;

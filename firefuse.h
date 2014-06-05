@@ -119,13 +119,15 @@ void 	cve_process(const char *path, int *pResult);
 string 	cve_path(const char *pPath);
 
 typedef class CVE {
+  private: string name;
   public: LIFOCache<SmartPointer<char> > src_saved_png;
   public: LIFOCache<SmartPointer<char> > src_save_fire;
   public: LIFOCache<SmartPointer<char> > src_process_fire;
   public: LIFOCache<SmartPointer<char> > src_firesight_json;
   public: LIFOCache<SmartPointer<char> > src_properties_json;
   public: LIFOCache<SmartPointer<char> > snk_properties_json;
-  public: CVE();
+  public: inline string getName() { return name; }
+  public: CVE(string name);
   public: ~CVE();
 } CVE, *CVEPtr;
 
@@ -154,6 +156,7 @@ class DataFactory {
   private: double idle_period; // minimum seconds between idle() execution
   private: std::map<string, CVEPtr> cveMap;
   private: double idle_seconds; // time of last idle() execution
+  private: int update_saved_png();
 
   public: CameraNode cameras[1];
 

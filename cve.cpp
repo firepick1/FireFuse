@@ -301,13 +301,9 @@ int cve_save(const char *path) {
   string savedPath = buildVarPath(path, FIREREST_SAVED_PNG);
   LOGTRACE2("cve_save(%s) saving to %s", path, savedPath.c_str());
   bool isColor = strcmp("bgr", camera_profile(path).c_str()) == 0;
-  SmartPointer<char> camera_jpg = factory.cameras[0].src_camera_jpg.get();
-  Mat image;
-  if (isColor) {
-    image = factory.cameras[0].src_camera_mat_bgr.get();
-  } else {
+  Mat image = isColor ?
+    image = factory.cameras[0].src_camera_mat_bgr.get() :
     image = factory.cameras[0].src_camera_mat_gray.get();
-  }
   CVE& cve = factory.cve(path);
   if (image.rows && image.cols) {
     vector<uchar> pngBuf;
@@ -542,7 +538,8 @@ bool cve_isPathSuffix(const char *value, const char * suffix) {
   return FALSE;
 }
 
-CVE::CVE() {
+CVE::CVE(string name) {
+  this->name = name;
   const char *firesight = "[{\"op\":\"putText\", \"text\":\"CVE::CVE()\"}]";
   src_firesight_json.post(SmartPointer<char>((char *)firesight, strlen(firesight)+1));
   const char *emptyJson = "{}";
