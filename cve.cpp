@@ -120,13 +120,26 @@ string cve_path(const char *pPath) {
   assert(pPath);
   const char *pSlash = pPath;
   const char *pCv = pPath;
+  const char *pCve = NULL;
   for (const char *s=pPath; *s; s++) {
     if (*s == '/') {
       pSlash = s;
       if (strncmp("/cv/", s, 4) == 0) {
         pCv = s;
+	s += 3;
+      } else if (strncmp("/cve/", s, 5) == 0) {
+        pCve = s;
+	s += 4;
+      } else if (pCve) {
+        break;
       }
     }
+  }
+  if (!pCve) {
+    return "invalid-cve-path";
+  }
+  if (pSlash <= pCve) {
+    return string(pCv);
   }
   return string(pCv, pSlash-pCv);
 }

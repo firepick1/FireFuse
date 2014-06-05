@@ -439,6 +439,9 @@ int testCve() {
   assert(0==strcmp("/cv/1/bgr/cve/two", cveNames[1].c_str()));
   assert(0==strcmp("/cv/1/gray/cve/one", cveNames[2].c_str()));
   assert(0==strcmp("/cv/1/gray/cve/two", cveNames[3].c_str()));
+  SmartPointer<char> one_json(factory.cve("/cv/1/gray/cve/one").src_firesight_json.get());
+  cout << one_json.data() << " " << one_json.size() << "B" << endl;
+  assert(32 == one_json.size());
 
   cout << "testCve() PASS" << endl;
   cout << endl;
