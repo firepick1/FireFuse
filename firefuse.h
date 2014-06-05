@@ -114,7 +114,16 @@ const char * firestep_json();
 } // __cplusplus
 #include "LIFOCache.hpp"
 
-extern double cve_seconds();
+double cve_seconds();
+string cve_path(const char *pPath);
+
+typedef class CVE {
+  public: LIFOCache<SmartPointer<uchar> > src_saved_png;
+  public: LIFOCache<SmartPointer<uchar> > src_save_fire;
+  public: LIFOCache<SmartPointer<uchar> > src_process_fire;
+  public: LIFOCache<SmartPointer<uchar> > src_properties_json;
+  public: LIFOCache<SmartPointer<uchar> > snk_properties_json;
+} CVE, *CVEPtr;
 
 class CameraNode {
   private: double output_seconds; // time of last FireSight pipeline completion
@@ -124,13 +133,6 @@ class CameraNode {
   public: LIFOCache<SmartPointer<uchar> > src_camera_jpg;
   public: LIFOCache<SmartPointer<uchar> > src_monitor_jpg;
   public: LIFOCache<SmartPointer<uchar> > src_output_jpg;
-
-  // CVE-specific data
-  public: LIFOCache<SmartPointer<uchar> > src_saved_png;
-  public: LIFOCache<SmartPointer<uchar> > src_save_fire;
-  public: LIFOCache<SmartPointer<uchar> > src_process_fire;
-  public: LIFOCache<SmartPointer<uchar> > src_properties_json;
-  public: LIFOCache<SmartPointer<uchar> > snk_properties_json;
 
   // For DataFactory use
   public: CameraNode();
@@ -145,15 +147,23 @@ class CameraNode {
 class DataFactory {
   private: double idle_seconds; // time of last idle() execution
   private: double idle_period; // minimum seconds between idle() execution
+  private: std:map<string, CVEPtr> cveMap;
+  private: CVEPtr getCve(string path);
 
   public: CameraNode cameras[1];
 
-  // Class
   public: DataFactory();
   public: ~DataFactory();
-
+  public: void processInit();
+  public: void processLoop();
   public: void process(FuseDataBuffer *pJPG);
-  protected: void idle();
+  public: SmartPointer<uchar> get_saved_png(string path);
+  public: SmartPointer<uchar> get_save_fire(string path);
+  public: SmartPointer<uchar> get_process_fire(string path);
+  public: SmartPointer<uchar> get_properties_json(string path);
+  public: SmartPointer<uchar> put_properties_json(string path);
+
+  private: void idle();
 };
 
 extern DataFactory factory; // DataFactory singleton background worker

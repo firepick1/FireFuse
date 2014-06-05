@@ -260,7 +260,43 @@ int testLIFOCache() {
   return 0;
 }
 
+void testDataFactory() {
+  factory.processInit();
+  assert(!factory.cameras[0].src_camera_jpg.isFresh());
+  assert(!factory.cameras[0].src_monitor_jpg.isFresh());
+  assert(!factory.cameras[0].src_output_jpg.isFresh());
+
+  factory.processLoop();
+  assert(!factory.cameras[0].src_camera_jpg.isFresh());
+  assert(factory.cameras[0].src_monitor_jpg.isFresh());
+  assert(!factory.cameras[0].src_output_jpg.isFresh());
+
+  SmartPointer<uchar> jpg;
+  
+  jpg = factory.cameras[0].src_camera_jpg.peek();
+  assert(129579 == jpg.size());
+  factory.processLoop();
+  assert(!factory.cameras[0].src_camera_jpg.isFresh());
+  assert(factory.cameras[0].src_monitor_jpg.isFresh());
+  assert(!factory.cameras[0].src_output_jpg.isFresh());
+
+  jpg = factory.cameras[0].src_camera_jpg.peek();
+  assert(128948 == jpg.size());
+
+  /*
+  public: SmartPointer<uchar> get_saved_png(string path);
+  public: SmartPointer<uchar> get_save_fire(string path);
+  public: SmartPointer<uchar> get_process_fire(string path);
+  public: SmartPointer<uchar> get_properties_json(string path);
+  public: SmartPointer<uchar> put_properties_json(string path);
+  */
+}
+
 int main(int argc, char *argv[]) {
   firelog_level(FIRELOG_TRACE);
-  return testSmartPointer()==0 && testSmartPointer_CopyData()==0 && testLIFOCache()==0 ? 0 : -1;
+  return 
+    testDataFactory() &&
+    testSmartPointer()==0 && 
+    testSmartPointer_CopyData()==0 && 
+    testLIFOCache()==0 ? 0 : -1;
 }

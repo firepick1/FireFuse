@@ -135,7 +135,50 @@ DataFactory::DataFactory() {
   idle_period = 15;
 }
 
-DataFactory::~DataFactory() {}
+DataFactory::~DataFactory() {
+  for (std::map<string,CVEPtr>::iterator it=cveMap.begin(); it!=cveMap.end(); ++it){
+    new it->second;
+  }
+}
+
+CVEPtr DataFactory::getCve(string path) {
+  string cvePath = cve_path(path);
+  CVEPtr pCve = cveMap[cvePath]; 
+  if (pCve == null) {
+    pCve = new CVE();
+    cveMap[cvePath] = pCve;
+  }
+  return pCve;
+}
+
+SmartPointer<uchar> DataFactory::get_saved_png(string path) {
+  CVEPtr pCve = getCve(path);
+  SmartPointer<uchar> result(pCve->src_saved_png.get());
+  return result;
+}
+
+SmartPointer<uchar> DataFactory::get_save_fire(string path) {
+  CVEPtr pCve = getCve(path);
+  SmartPointer<uchar> result(pCve->src_save_fire.get());
+  return result;
+}
+
+SmartPointer<uchar> DataFactory::get_process_fire(string path) {
+  CVEPtr pCve = getCve(path);
+  SmartPointer<uchar> result(pCve->src_process_fire.get());
+  return result;
+}
+
+SmartPointer<uchar> DataFactory::get)properties_json(string path) {
+  CVEPtr pCve = getCve(path);
+  SmartPointer<uchar> result(pCve->src_properties_json.get());
+  return result;
+}
+
+void DataFactory::put_properties_json(string path, SmartPointer<uchar> value) {
+  CVEPtr pCve = getCve(path);
+  pCve->snk_properties_json.post(value);
+}
 
 void DataFactory::idle() {
   if (cve_seconds() - idle_seconds >= idle_period) {
@@ -146,18 +189,28 @@ void DataFactory::idle() {
   }
 }
 
+void DataFactory::processInit() {
+  cameras[0].init();
+}
+
+void DataFactory::processLoop() {
+  int processed = 0;
+  processed += cameras[0].update_camera_jpg();
+  processed += cameras[0].update_monitor_jpg();
+
+  if (processed == 0) {
+    idle();
+  } else {
+    idle_seconds = cve_seconds();
+  } 
+}
+
 void DataFactory::process(FuseDataBuffer *pJPG) {
   try {
-    cameras[0].init();
+    processInit();
 
     for (;;) {
-      int processed = 0;
-      processed += cameras[0].update_camera_jpg();
-      processed += cameras[0].update_monitor_jpg();
-
-      if (processed == 0) {
-	idle();
-      }
+      processLoop();
     }
 
     LOGINFO("DataFactory::process() exiting");
