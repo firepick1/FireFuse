@@ -408,6 +408,7 @@ int testCve() {
   factory.clear();
   factory.processInit();
 
+  //////////// cveNames
   vector<string> cveNames = factory.getCveNames();
   assert(0 == cveNames.size());
   string firesightPath = "/cv/1/gray/cve/calc-offset/firesight.json";
@@ -416,16 +417,27 @@ int testCve() {
   assert(1 == cveNames.size());
   cout << "cveNames[0]: " << cveNames[0] << endl;
   assert(0 == strcmp("/cv/1/gray/cve/calc-offset", cveNames[0].c_str()));
+
+  /////////// firesight.json
   cout << firesightPath << " => " << (char *)cve.src_firesight_json.peek().data() << endl;
   const char * firesightJson = "[{\"op\":\"putText\", \"text\":\"CVE::CVE()\"}]";
   assert(factory.cve(firesightPath).src_firesight_json.isFresh());
-  assert(0==strcmp(firesightJson, factory.cve(firesightPath).src_firesight_json.get().data()));
+  /*GET*/ assert(0==strcmp(firesightJson, factory.cve(firesightPath).src_firesight_json.get().data()));
   assert(!factory.cve(firesightPath).src_firesight_json.isFresh());
-
   processed = factory.processLoop();
   assert(!factory.cve(firesightPath).src_firesight_json.isFresh()); // we don't refresh firesight.json in background
   assert(0==strcmp(firesightJson, factory.cve(firesightPath).src_firesight_json.get().data()));
+  assert(factory.cve(firesightPath).src_save_fire.isFresh());
+  assert(0==strcmp("{}",factory.cve(firesightPath).src_save_fire.peek().data()));
 
+  /////////// save.fire test
+  assert(factory.cve(firesightPath).src_save_fire.isFresh());
+  assert(0==strcmp("{}",factory.cve(firesightPath).src_save_fire.peek().data()));
+  assert(factory.cve(firesightPath).src_save_fire.isFresh());
+  /*GET*/ assert(0==strcmp("{}",factory.cve(firesightPath).src_save_fire.get().data()));
+  assert(!factory.cve(firesightPath).src_save_fire.isFresh());
+
+  /////////// config test
   factory.clear();
   firerest_config(config_json);
   cveNames = factory.getCveNames();

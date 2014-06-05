@@ -545,6 +545,9 @@ bool cve_isPathSuffix(const char *value, const char * suffix) {
 CVE::CVE() {
   const char *firesight = "[{\"op\":\"putText\", \"text\":\"CVE::CVE()\"}]";
   src_firesight_json.post(SmartPointer<char>((char *)firesight, strlen(firesight)+1));
+  const char *emptyJson = "{}";
+  src_save_fire.post(SmartPointer<char>((char *)emptyJson, strlen(emptyJson)+1));
+  src_process_fire.post(SmartPointer<char>((char *)emptyJson, strlen(emptyJson)+1));
 }
 
 CVE::~CVE() {
