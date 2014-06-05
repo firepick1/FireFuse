@@ -82,8 +82,6 @@ template <class T> class LIFOCache {
   public: bool isFresh() { return writeCount && writeCount != readCount; }
 };
 
-#define SMARTPOINTER_FREE
-
 template <class T> class SmartPointer {
   private: class ReferencedPointer {
     private: volatile int references;

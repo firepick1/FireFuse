@@ -55,7 +55,7 @@ public:
 
 int testSmartPointer( ){
   cout << "testSmartPointer() ------------------------" << endl;
-  SmartPointer<uchar> empty(NULL, 0);
+  SmartPointer<char> empty(NULL, 0);
   assert(0 == empty.size());
   assert(!empty.data());
   char *pOne = (char*)malloc(100);
@@ -276,10 +276,29 @@ int testLIFOCache() {
   return 0;
 }
 
+static void assert_headcam(SmartPointer<char> jpg, int headcam) {
+  char message[100];
+  snprintf(message, sizeof(message), "jpg.data()[1520] %0x", jpg.data()[1520]);
+  cout << message << endl;
+  switch (headcam) {
+    case 0:
+      assert(129579 == jpg.size());
+      assert(0xdc == (uchar)jpg.data()[1520]);
+      break;
+    case 1:
+      assert(128948 == jpg.size());
+      assert(0x32 == (uchar)jpg.data()[1520]);
+      break;
+    default:
+      assert(FALSE);
+      break;
+  }
+}
+
 int testCamera() {
   cout << "testCamera() --------------------------" << endl;
   int processed;
-  SmartPointer<uchar> jpg;
+  SmartPointer<char> jpg;
   factory.processInit();
   assert(!factory.cameras[0].src_camera_jpg.isFresh());
   assert(!factory.cameras[0].src_camera_mat_gray.isFresh());
@@ -296,8 +315,7 @@ int testCamera() {
   assert(factory.cameras[0].src_monitor_jpg.isFresh());
   assert(!factory.cameras[0].src_output_jpg.isFresh());
   jpg = factory.cameras[0].src_camera_jpg.peek();
-  assert(129579 == jpg.size());
-  assert(0xdc == jpg.data()[1520]);
+  assert_headcam(jpg, 0);
 
   processed = factory.processLoop();
   cout << "processed:" << processed << endl;
@@ -308,8 +326,7 @@ int testCamera() {
   assert(factory.cameras[0].src_monitor_jpg.isFresh());
   assert(!factory.cameras[0].src_output_jpg.isFresh());
   jpg = factory.cameras[0].src_camera_jpg.peek();
-  assert(128948 == jpg.size());
-  assert(0x32 == jpg.data()[1520]);
+  assert_headcam(jpg, 1);
 
   processed = factory.processLoop();
   cout << "processed:" << processed << endl;
@@ -320,8 +337,7 @@ int testCamera() {
   assert(factory.cameras[0].src_monitor_jpg.isFresh());
   assert(!factory.cameras[0].src_output_jpg.isFresh());
   jpg = factory.cameras[0].src_camera_jpg.peek();
-  assert(128948 == jpg.size());
-  assert(0x32 == jpg.data()[1520]);
+  assert_headcam(jpg, 1);
 
   factory.setIdlePeriod(0.1d);
   cout << "idle: " << factory.getIdlePeriod() << endl;
@@ -336,8 +352,7 @@ int testCamera() {
   assert(!factory.cameras[0].src_monitor_jpg.isFresh());  // consumed by idle()
   assert(!factory.cameras[0].src_output_jpg.isFresh());
   jpg = factory.cameras[0].src_camera_jpg.peek();
-  assert(128948 == jpg.size());
-  assert(0x32 == jpg.data()[1520]);
+  assert_headcam(jpg, 1);
 
   processed = factory.processLoop();
   cout << "processed:" << processed << endl;
@@ -348,8 +363,7 @@ int testCamera() {
   assert(factory.cameras[0].src_monitor_jpg.isFresh());
   assert(!factory.cameras[0].src_output_jpg.isFresh());
   jpg = factory.cameras[0].src_camera_jpg.peek();
-  assert(128948 == jpg.size());
-  assert(0x32 == jpg.data()[1520]);
+  assert_headcam(jpg, 1);
 
   processed = factory.processLoop();
   cout << "processed:" << processed << endl;
@@ -360,8 +374,7 @@ int testCamera() {
   assert(factory.cameras[0].src_monitor_jpg.isFresh());
   assert(!factory.cameras[0].src_output_jpg.isFresh());
   jpg = factory.cameras[0].src_camera_jpg.peek();
-  assert(129579 == jpg.size());
-  assert(0xdc == jpg.data()[1520]);
+  assert_headcam(jpg, 0);
 
   factory.cameras[0].src_camera_mat_gray.get();
   processed = factory.processLoop();
@@ -373,9 +386,7 @@ int testCamera() {
   assert(factory.cameras[0].src_monitor_jpg.isFresh());
   assert(!factory.cameras[0].src_output_jpg.isFresh());
   jpg = factory.cameras[0].src_camera_jpg.peek();
-  assert(128948 == jpg.size());
-  assert(0x32 == jpg.data()[1520]);
-
+  assert_headcam(jpg, 1);
 
   cout << "testCamera() PASS" << endl;
   cout << endl;
@@ -384,23 +395,46 @@ int testCamera() {
 
 int testCve() {
   cout << "testCve() --------------------------" << endl;
+  int processed;
+  factory.processInit();
+
+  string firesightPath = "cv/1/gray/cve/calc-offset/firesight.json";
+  cout << firesightPath << " => " << (char *)factory.cve(firesightPath).src_firesight_json.peek().data() << endl;
+  const char * firesightJson = "[{\"op\":\"putText\", \"text\":\"CVE::CVE()\"}]";
+  assert(factory.cve(firesightPath).src_firesight_json.isFresh());
+  assert(0==strcmp(firesightJson, factory.cve(firesightPath).src_firesight_json.get().data()));
+  assert(!factory.cve(firesightPath).src_firesight_json.isFresh());
+
+  processed = factory.processLoop();
+  assert(!factory.cve(firesightPath).src_firesight_json.isFresh()); // we don't refresh firesight.json in background
+  assert(0==strcmp(firesightJson, factory.cve(firesightPath).src_firesight_json.get().data()));
 
   /*
-  public: SmartPointer<uchar> get_saved_png(string path);
-  public: SmartPointer<uchar> get_save_fire(string path);
-  public: SmartPointer<uchar> get_process_fire(string path);
-  public: SmartPointer<uchar> get_properties_json(string path);
-  public: SmartPointer<uchar> put_properties_json(string path);
+  public: SmartPointer<char> get_saved_png(string path);
+  public: SmartPointer<char> get_save_fire(string path);
+  public: SmartPointer<char> get_process_fire(string path);
+  public: SmartPointer<char> get_properties_json(string path);
+  public: SmartPointer<char> put_properties_json(string path);
   */
+
+  cout << "testCve() PASS" << endl;
+  cout << endl;
   return 0;
 }
 
 int main(int argc, char *argv[]) {
   firelog_level(FIRELOG_TRACE);
-  return 
-    testCve()==0 &&
+  if (
     testCamera()==0 &&
     testSmartPointer()==0 && 
     testSmartPointer_CopyData()==0 && 
-    testLIFOCache()==0 ? 0 : -1;
+    testLIFOCache()==0 &&
+    testCve()==0 &&
+    TRUE) {
+    cout << "ALL TESTS PASS!!!" << endl;
+    return 1;
+  } else {
+    cout << "*** TEST(S) FAILED ***" << endl;
+    return 0;
+  }
 }

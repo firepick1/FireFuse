@@ -100,7 +100,7 @@ int CameraNode::update_camera_jpg() {
     assert(buffer.pData);
     assert(buffer.length);
 
-    SmartPointer<uchar> jpg((uchar *)buffer.pData, buffer.length);
+    SmartPointer<char> jpg((char *)buffer.pData, buffer.length);
     src_camera_jpg.post(jpg);
     if (src_camera_mat_bgr.isFresh() && src_camera_mat_gray.isFresh()) {
       // proactively update all decoded images to eliminate post-idle refresh lag
@@ -111,7 +111,7 @@ int CameraNode::update_camera_jpg() {
     }
     LOGDEBUG3("update_camera_jpg() src_camera_jpg.post(%ldB) %0lx [0]:%0x", (ulong) jpg.size(), (ulong) jpg.data(), (int) *jpg.data());
 
-    std::vector<uchar> vJPG(jpg.data(), jpg.data() + jpg.size());
+    std::vector<uchar> vJPG((uchar *)jpg.data(), (uchar *)jpg.data() + jpg.size());
     if (!src_camera_mat_bgr.isFresh()) {
       actions++;
       Mat image = imdecode(vJPG, CV_LOAD_IMAGE_COLOR); 
@@ -136,7 +136,7 @@ int CameraNode::update_monitor_jpg() {
   LOGTRACE("update_monitor_jpg()");
 
   const char *fmt;
-  SmartPointer<uchar> jpg;
+  SmartPointer<char> jpg;
   if (cve_seconds() - output_seconds < monitor_duration) {
     jpg = src_output_jpg.get();
     fmt = "update_monitor_jpg() src_output_jpg.get(%ldB) %0lx [0]:%0lx";
@@ -176,7 +176,7 @@ CVE& DataFactory::cve(string path) {
 void DataFactory::idle() {
   LOGTRACE("DataFactory::idle()");
   idle_seconds = cve_seconds();
-  SmartPointer<uchar> discard = cameras[0].src_monitor_jpg.get();
+  SmartPointer<char> discard = cameras[0].src_monitor_jpg.get();
   idle_seconds = cve_seconds();
   LOGINFO2("DataFactory::idle() src_monitor_jpg.get() -> %ldB@%0lx discarded", (ulong) discard.size(), (ulong) discard.data());
 }

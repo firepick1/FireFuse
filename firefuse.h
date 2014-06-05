@@ -119,11 +119,14 @@ void 	cve_process(const char *path, int *pResult);
 string 	cve_path(const char *pPath);
 
 typedef class CVE {
-  public: LIFOCache<SmartPointer<uchar> > src_saved_png;
-  public: LIFOCache<SmartPointer<uchar> > src_save_fire;
-  public: LIFOCache<SmartPointer<uchar> > src_process_fire;
-  public: LIFOCache<SmartPointer<uchar> > src_properties_json;
-  public: LIFOCache<SmartPointer<uchar> > snk_properties_json;
+  public: LIFOCache<SmartPointer<char> > src_saved_png;
+  public: LIFOCache<SmartPointer<char> > src_save_fire;
+  public: LIFOCache<SmartPointer<char> > src_process_fire;
+  public: LIFOCache<SmartPointer<char> > src_firesight_json;
+  public: LIFOCache<SmartPointer<char> > src_properties_json;
+  public: LIFOCache<SmartPointer<char> > snk_properties_json;
+  public: CVE();
+  public: ~CVE();
 } CVE, *CVEPtr;
 
 class CameraNode {
@@ -131,11 +134,11 @@ class CameraNode {
   private: double monitor_duration; // number of seconds to show last output
 
   // Common data
-  public: LIFOCache<SmartPointer<uchar> > src_camera_jpg;
+  public: LIFOCache<SmartPointer<char> > src_camera_jpg;
   public: LIFOCache<Mat> src_camera_mat_gray;
   public: LIFOCache<Mat> src_camera_mat_bgr;
-  public: LIFOCache<SmartPointer<uchar> > src_monitor_jpg;
-  public: LIFOCache<SmartPointer<uchar> > src_output_jpg;
+  public: LIFOCache<SmartPointer<char> > src_monitor_jpg;
+  public: LIFOCache<SmartPointer<char> > src_output_jpg;
 
   // For DataFactory use
   public: CameraNode();
