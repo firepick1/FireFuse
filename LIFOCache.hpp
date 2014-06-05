@@ -47,6 +47,7 @@ template <class T> class LIFOCache {
     int valueIndex = writeCount - readCount;		//
     T result;						//
     if (valueIndex > 0) {				//
+      valueIndex = 1;					//
       result = values[valueIndex];			//
     } else {						//
       result = values[0];				//
@@ -61,6 +62,7 @@ template <class T> class LIFOCache {
     pthread_mutex_lock(&readerMutex);			//
     int valueIndex = writeCount - readCount;		//
     if (valueIndex > 0) {				//
+      valueIndex = 1;					//
       values[0] = values[valueIndex];			//
     }							//
     readCount = writeCount;				//
@@ -71,12 +73,16 @@ template <class T> class LIFOCache {
   }
 
   public: void post(T value) {
-    int valueIndex = writeCount - readCount + 1;
-    if (valueIndex >= 2) {
-      throw "LIFOCache overflow";
-    }
-    values[valueIndex] = value;
-    writeCount++;
+    /////////////// CRITICAL SECTION BEGIN ///////////////
+    pthread_mutex_lock(&readerMutex);			//
+    int valueIndex = writeCount - readCount + 1;	//
+    if (valueIndex >= 2) {				//
+      valueIndex = 1; // overwrite existing		//
+    }							//
+    values[valueIndex] = value;				//
+    writeCount++;					//
+    pthread_mutex_unlock(&readerMutex);			//
+    /////////////// CRITICAL SECTION END /////////////////
   }
 
   public: bool isFresh() { return writeCount && writeCount != readCount; }

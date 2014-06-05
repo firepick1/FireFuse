@@ -158,9 +158,23 @@ DataFactory::DataFactory() {
 }
 
 DataFactory::~DataFactory() {
+}
+
+void DataFactory::clear() {
   for (std::map<string,CVEPtr>::iterator it=cveMap.begin(); it!=cveMap.end(); ++it){
     delete it->second;
   }
+  cveMap.clear();
+}
+
+vector<string> DataFactory::getCveNames() {
+  vector<string> result;
+
+  for (std::map<string,CVEPtr>::iterator it=cveMap.begin(); it!=cveMap.end(); ++it){
+    result.push_back(it->first);
+  }
+
+  return result;
 }
 
 CVE& DataFactory::cve(string path) {

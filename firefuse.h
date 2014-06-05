@@ -160,6 +160,8 @@ class DataFactory {
   public: DataFactory();
   public: ~DataFactory();
   public: CVE& cve(string path);
+  public: vector<string> getCveNames();
+  public: void clear();
   public: void process(FuseDataBuffer *pJPG);
   public: inline void setIdlePeriod(double value) { idle_period = value; }
   public: inline double getIdlePeriod() { return idle_period; }

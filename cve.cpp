@@ -115,15 +115,20 @@ class CveCam {
 
 } cveCam[1];
 
+// Return canonical CVE path  (e.g., "/cv/1/gray/calc-offset")
 string cve_path(const char *pPath) {
   assert(pPath);
   const char *pSlash = pPath;
+  const char *pCv = pPath;
   for (const char *s=pPath; *s; s++) {
     if (*s == '/') {
       pSlash = s;
+      if (strncmp("/cv/", s, 4) == 0) {
+        pCv = s;
+      }
     }
   }
-  return string(pPath, pSlash-pPath);
+  return string(pCv, pSlash-pCv);
 }
 
 static string camera_profile(const char * path) {

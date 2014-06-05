@@ -189,13 +189,9 @@ int testLIFOCache() {
     bufInt.post(MockValue<int>(2));
     assert(2 == bufInt.get().getValue());
     bufInt.post(MockValue<int>(3));
-    const char *caughtMsg = NULL;
-    try {
-      bufInt.post(MockValue<int>(4));
-    } catch (const char * msg) {
-      caughtMsg = msg;
-    }
-    assert(caughtMsg);
+    bufInt.post(MockValue<int>(4));
+    cout << "Overwritten value: " << bufInt.peek().getValue() << endl;
+    assert(4 == bufInt.get().getValue());
 
     LIFOCache<string> bufString;
     assert(!bufString.isFresh());
@@ -393,13 +389,34 @@ int testCamera() {
   return 0;
 }
 
+const char *config_json = \
+"{ \"FireREST\":{\"title\":\"Raspberry Pi FireFUSE\",\"provider\":\"FireFUSE\", \"version\":{\"major\":0, \"minor\":6, \"patch\":0}},\n" \
+  "\"cv\":{\n" \
+    "\"cve_map\":{\n" \
+      "\"one\":{ \"firesight\": [ {\"op\":\"putText\", \"text\":\"one\"} ], \"properties\": { \"caps\":\"ONE\" } },\n" \
+      "\"two\":{ \"firesight\": [ {\"op\":\"putText\", \"text\":\"two\"} ], \"properties\": { \"caps\":\"TWO\" } }\n" \
+    "},\n" \
+    "\"camera_map\":{\n" \
+      "\"1\":{ \"profile_map\":{ \"gray\":{ \"cve_names\":[ \"one\", \"two\" ] }, \"bgr\":{ \"cve_names\":[ \"one\", \"two\" ] }}}\n" \
+    "}\n" \
+  "}\n" \
+"}\n"; 
+
 int testCve() {
   cout << "testCve() --------------------------" << endl;
   int processed;
+  factory.clear();
   factory.processInit();
 
-  string firesightPath = "cv/1/gray/cve/calc-offset/firesight.json";
-  cout << firesightPath << " => " << (char *)factory.cve(firesightPath).src_firesight_json.peek().data() << endl;
+  vector<string> cveNames = factory.getCveNames();
+  assert(0 == cveNames.size());
+  string firesightPath = "/cv/1/gray/cve/calc-offset/firesight.json";
+  CVE& cve = factory.cve(firesightPath);
+  cveNames = factory.getCveNames();
+  assert(1 == cveNames.size());
+  cout << "cveNames[0]: " << cveNames[0] << endl;
+  assert(0 == strcmp("/cv/1/gray/cve/calc-offset", cveNames[0].c_str()));
+  cout << firesightPath << " => " << (char *)cve.src_firesight_json.peek().data() << endl;
   const char * firesightJson = "[{\"op\":\"putText\", \"text\":\"CVE::CVE()\"}]";
   assert(factory.cve(firesightPath).src_firesight_json.isFresh());
   assert(0==strcmp(firesightJson, factory.cve(firesightPath).src_firesight_json.get().data()));
@@ -409,13 +426,19 @@ int testCve() {
   assert(!factory.cve(firesightPath).src_firesight_json.isFresh()); // we don't refresh firesight.json in background
   assert(0==strcmp(firesightJson, factory.cve(firesightPath).src_firesight_json.get().data()));
 
-  /*
-  public: SmartPointer<char> get_saved_png(string path);
-  public: SmartPointer<char> get_save_fire(string path);
-  public: SmartPointer<char> get_process_fire(string path);
-  public: SmartPointer<char> get_properties_json(string path);
-  public: SmartPointer<char> put_properties_json(string path);
-  */
+  factory.clear();
+  firerest_config(config_json);
+  cveNames = factory.getCveNames();
+  cout << "cveNames.size(): " << cveNames.size() << endl;
+  assert(4 == cveNames.size());
+  cout << "cveNames[0]: " << cveNames[0] << endl;
+  cout << "cveNames[1]: " << cveNames[1] << endl;
+  cout << "cveNames[2]: " << cveNames[2] << endl;
+  cout << "cveNames[3]: " << cveNames[3] << endl;
+  assert(0==strcmp("/cv/1/bgr/cve/one", cveNames[0].c_str()));
+  assert(0==strcmp("/cv/1/bgr/cve/two", cveNames[1].c_str()));
+  assert(0==strcmp("/cv/1/gray/cve/one", cveNames[2].c_str()));
+  assert(0==strcmp("/cv/1/gray/cve/two", cveNames[3].c_str()));
 
   cout << "testCve() PASS" << endl;
   cout << endl;
@@ -424,17 +447,27 @@ int testCve() {
 
 int main(int argc, char *argv[]) {
   firelog_level(FIRELOG_TRACE);
-  if (
-    testCamera()==0 &&
-    testSmartPointer()==0 && 
-    testSmartPointer_CopyData()==0 && 
-    testLIFOCache()==0 &&
-    testCve()==0 &&
-    TRUE) {
-    cout << "ALL TESTS PASS!!!" << endl;
-    return 1;
-  } else {
-    cout << "*** TEST(S) FAILED ***" << endl;
-    return 0;
+  try {
+    if (
+      testCamera()==0 &&
+      testSmartPointer()==0 && 
+      testSmartPointer_CopyData()==0 && 
+      testLIFOCache()==0 &&
+      testCve()==0 &&
+      TRUE) {
+      cout << "ALL TESTS PASS!!!" << endl;
+      return 0;
+    } else {
+      cout << "*** TEST(S) FAILED ***" << endl;
+    }
+  } catch (const char *ex) {
+    cout << "EXCEPTION: " << ex << endl;    
+  } catch (string ex) {
+    cout << "EXCEPTION: " << ex << endl;    
+  } catch (json_error_t ex) {
+    cout << "JSON EXCEPTION: " << ex.text << " line:" << ex.line << endl;    
+  } catch (...) {
+    cout << "UNKNOWN EXCEPTION"<< endl;
   }
+  return -1;
 }

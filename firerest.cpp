@@ -19,16 +19,13 @@ static string firerest_write_file(const char * path, const char *text) {
   string errMsg;
   FILE * pFile = fopen(path, "w");
   if (pFile == 0) {
-    errMsg = "firerest_write_file() could not create: ";
-    errMsg += path;
-    return errMsg;
-  }
-  size_t bytesWritten = fwrite( text, 1, strlen(text), pFile);
-  fclose(pFile);
-  if (bytesWritten != strlen(text)) {
-    errMsg = "firerest_config_camera() could not write: ";
-    errMsg += path;
-    return errMsg;
+    LOGWARN1("firerest_write_file(%s) not created", path);
+  } else {
+    size_t bytesWritten = fwrite( text, 1, strlen(text), pFile);
+    fclose(pFile);
+    if (bytesWritten != strlen(text)) {
+      LOGWARN1("firerest_write_file(%s) could not write", path);
+    }
   }
   return errMsg;
 }
@@ -42,13 +39,11 @@ static string firerest_config_camera(json_t *pCamera, const char *pCameraName, j
   if (cameraDir) {
     LOGINFO1("firererest_config_camera() using existing configuration:", cameraPath.c_str() );
     closedir(cameraDir);
-    return errMsg;
+    //TODO return errMsg;
   }
-  int rc = mkdir(cameraPath.c_str(), 0755);
+  int rc = !cameraDir && mkdir(cameraPath.c_str(), 0755);
   if (rc) {
-    errMsg = "firerest_config_camera() could not create directory: ";
-    errMsg += cameraPath;
-    return errMsg;
+    LOGWARN1("firerest_config_camera(%s) directory not created", cameraPath.c_str());
   }
 
   string cameraJpgPath(cameraPath);
@@ -79,17 +74,13 @@ static string firerest_config_camera(json_t *pCamera, const char *pCameraName, j
     profilePath += pProfileName;
     rc = mkdir(profilePath.c_str(), 0755);
     if (rc) {
-      errMsg = "firerest_config_camera() could not create profile directory: ";
-      errMsg += profilePath;
-      return errMsg;
+      LOGWARN1("firerest_config_camera(%s) directory not created", profilePath.c_str());
     }
 
     profilePath += "/cve/";
     rc = mkdir(profilePath.c_str(), 0755);
     if (rc) {
-      errMsg = "firerest_config_camera() could not create profile cve directory: ";
-      errMsg += profilePath;
-      return errMsg;
+      LOGWARN1("firerest_config_camera(%s) directory not created", profilePath.c_str());
     }
     json_t *pCveNames = json_object_get(pProfile, "cve_names");
     if (pCveNames == 0) {
@@ -111,9 +102,7 @@ static string firerest_config_camera(json_t *pCamera, const char *pCameraName, j
       cvePath += "/";
       rc = mkdir(cvePath.c_str(), 0755);
       if (rc) {
-	errMsg = "firerest_config_camera() could not create cve directory: ";
-	errMsg += cvePath;
-	return errMsg;
+	LOGWARN1("firerest_config_camera(%s) directory not created", cvePath.c_str());
       }
       json_t *pFireSight = json_object_get(pCve, "firesight");
       if (pFireSight == 0) {
@@ -145,6 +134,8 @@ static string firerest_config_camera(json_t *pCamera, const char *pCameraName, j
       string firesightPath(cvePath);
       firesightPath += "firesight.json";
       errMsg = firerest_write_file(firesightPath.c_str(), pFireSightJson);
+      SmartPointer<char> firesightJson(pFireSightJson, strlen(pFireSightJson)+1);
+      factory.cve(firesightPath).src_firesight_json.post(firesightJson);
       free(pFireSightJson);
 
       json_t *pProperties = json_object_get(pCve, "properties");

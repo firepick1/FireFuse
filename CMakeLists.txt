@@ -47,7 +47,7 @@ target_link_libraries(firefuse libfirepicam.so lib_firesight.so libjansson.so li
 add_executable(testfirefuse
   test/test.cpp
   test/mock.cpp
-  #firerest.cpp
+  firerest.cpp
   #fuse.c 
   background.cpp 
   cve.cpp 
