@@ -230,23 +230,21 @@ static SmartPointer<char> buildErrorMessage(const char* fmt, const char *path, c
 
 int CVE::process(DataFactory *pFactory) {
   int result = 0;
-  string pathBuf(name);
-  const char *path = pathBuf.c_str(); // TODO;
+
   double sStart = cve_seconds();
-  string firesightPath = buildVarPath(path, FIREREST_FIRESIGHT_JSON);
-  LOGTRACE2("cve_process(%s) loading JSON: %s", path, firesightPath.c_str());
+  string pathBuf(name);
+  const char *path = pathBuf.c_str(); 
+  SmartPointer<char> pipelineJson(src_firesight_json.get());
   string propertiesPath = buildVarPath(path, FIREREST_PROPERTIES_JSON);
   LOGTRACE2("cve_process(%s) loading JSON: %s", path, propertiesPath.c_str());
   char *pModelStr = NULL;
   FuseDataBuffer *pJSON = NULL;
   SmartPointer<char> jsonResult;
   try {
-    Pipeline pipeline(firesightPath.c_str(), Pipeline::PATH);
-    SmartPointer<char> jpg(pFactory->cameras[0].src_camera_jpg.get());
-    const uchar * pJPGBytes = (uchar*)jpg.data();
-    std::vector<uchar> vJPG (pJPGBytes, pJPGBytes + jpg.size() / sizeof(uchar) );
-    LOGTRACE1("cve_process(%s) decode image", path);
-    Mat image = imdecode(vJPG, _isColor ? CV_LOAD_IMAGE_COLOR : CV_LOAD_IMAGE_GRAYSCALE); 
+    Pipeline pipeline(pipelineJson.data(), Pipeline::JSON);
+    Mat image = _isColor ?
+      pFactory->cameras[0].src_camera_mat_bgr.get() :
+      pFactory->cameras[0].src_camera_mat_gray.get();
     string savedPath = buildVarPath(path, FIREREST_SAVED_PNG);
     ArgMap argMap;
     json_t *pProperties = NULL;
@@ -271,9 +269,11 @@ int CVE::process(DataFactory *pFactory) {
       }
     }
     argMap["saved"] = savedPath.c_str();
+
     LOGTRACE1("cve_process(%s) process begin", path);
     json_t *pModel = pipeline.process(image, argMap);
     LOGTRACE1("cve_process(%s) process end", path);
+
     if (json_is_object(pProperties)) {
       const char * key;
       json_t *pValue;
