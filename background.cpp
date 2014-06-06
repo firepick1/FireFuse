@@ -215,7 +215,19 @@ void DataFactory::processInit() {
   cameras[0].init();
 }
 
-int DataFactory::update_saved_png() {
+int DataFactory::async_process_fire() {
+  int processed = 0;
+  for (std::map<string,CVEPtr>::iterator it=cveMap.begin(); it!=cveMap.end(); ++it){
+    CVEPtr pCve = it->second;
+    if (!pCve->src_process_fire.isFresh()) {
+      processed++;
+      pCve->process(this);
+    }
+  }
+  return processed;
+}
+
+int DataFactory::async_save_fire() {
   int processed = 0;
   for (std::map<string,CVEPtr>::iterator it=cveMap.begin(); it!=cveMap.end(); ++it){
     CVEPtr pCve = it->second;
@@ -231,7 +243,8 @@ int DataFactory::processLoop() {
   int processed = 0;
   processed += cameras[0].update_camera_jpg();
   processed += cameras[0].update_monitor_jpg();
-  processed += update_saved_png();  
+  processed += async_save_fire();  
+  processed += async_process_fire();  
 
   if (processed == 0 && (cve_seconds() - idle_seconds >= idle_period)) {
     idle();

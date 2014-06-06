@@ -162,7 +162,8 @@ class DataFactory {
   private: double idle_period; // minimum seconds between idle() execution
   private: std::map<string, CVEPtr> cveMap;
   private: double idle_seconds; // time of last idle() execution
-  private: int update_saved_png();
+  private: int async_save_fire();
+  private: int async_process_fire();
 
   public: CameraNode cameras[1];
 
