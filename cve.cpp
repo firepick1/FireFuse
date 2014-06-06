@@ -238,7 +238,7 @@ int CVE::process(DataFactory *pFactory) {
     string propertiesString;
     SmartPointer<char> properties_json(src_properties_json.get());
     if (properties_json.size()) {
-      propertiesString = properties_json.data();
+      propertiesString = string(properties_json.data(), properties_json.data()+properties_json.size());
       json_error_t jerr;
       pProperties = json_loads(propertiesString.c_str(), 0, &jerr);
       if (json_is_object(pProperties)) {
@@ -250,6 +250,7 @@ int CVE::process(DataFactory *pFactory) {
 	}
       } else {
 	LOGERROR2("cve_process(%s) Could not load properties: %s", name.c_str(), propertiesString.c_str());
+	throw "could not load properties";
       }
     }
     argMap["saved"] = savedPath.c_str();
@@ -276,7 +277,7 @@ int CVE::process(DataFactory *pFactory) {
     pFactory->cameras[0].setOutput(image);
     double sElapsed = cve_seconds() - sStart;
     LOGDEBUG3("cve_process(%s) -> JSON %dB %0.3fs", path, modelLen, sElapsed);
-  } catch (char * ex) {
+  } catch (const char * ex) {
     jsonResult = buildErrorMessage("cve_process(%s) EXCEPTION: %s", path, ex);
   } catch (string ex) {
     jsonResult = buildErrorMessage("cve_process(%s) EXCEPTION: %s", path, ex.c_str());
