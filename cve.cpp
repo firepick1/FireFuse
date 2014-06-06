@@ -25,67 +25,11 @@ using namespace cv;
 using namespace std;
 using namespace firesight;
 
-int max_json_len = 1024;
-
 typedef enum{UI_STILL, UI_VIDEO} UIMode;
-
-typedef class CachedJPG {
-  private:
-    FuseDataBuffer *pCachedJPG;
-    void freeBuffer(const char *path) {
-      if (pCachedJPG) {
-	LOGTRACE2("CachedJPG::freeBuffer(%s) MEMORY-FREE %ldB", path, (ulong) pCachedJPG->length);
-        free(pCachedJPG);
-	pCachedJPG = NULL;
-      }
-    }
-
-  public:
-    CachedJPG() {
-      pCachedJPG = NULL;
-    }
-    ~CachedJPG() {
-      freeBuffer("CachedJPG::destructor");
-    }
-
-    int push(const char* path, FuseDataBuffer *pValue) {
-      freeBuffer(path);
-      pCachedJPG = pValue;
-      return pCachedJPG ? pCachedJPG->length: 0;
-    }
-    FuseDataBuffer *peek(const char *path) {
-      return pCachedJPG;
-    }
-    FuseDataBuffer *pop(const char *path) {
-      FuseDataBuffer *pBuffer = pCachedJPG;
-      pCachedJPG = NULL;
-      return pBuffer;
-    }
-} CachedJPGType;
 
 class CveCam {
   private:
-    CachedJPGType cameraJPG;
-    CachedJPGType outputJPG;
-    CachedJPGType monitorJPG;
     Mat output_image;
-
-    FuseDataBuffer *createOutputJPG(const char *path, int *pResult) {
-      FuseDataBuffer *pJPG = NULL;
-      if (output_image.rows && output_image.cols) {
-	vector<uchar> vJPG;
-	imencode(".jpg", output_image, vJPG);
-	SmartPointer<char> jpg((char *)vJPG.data(), vJPG.size());
-	factory.cameras[0].src_output_jpg.post(jpg);
-	pJPG = firefuse_allocDataBuffer(path, pResult, (const char*) vJPG.data(), vJPG.size());
-	LOGTRACE2("CveCam::createOutputJPG(%s) %ldB", path, (ulong) pJPG->length);
-      } else {
-        factory.cameras[0].src_output_jpg.post(factory.cameras[0].src_camera_jpg.get());
-	pJPG = produceCameraJPG(path, pResult);
-	LOGTRACE2("CveCam::createOutputJPG(%s) unavailable (using camera image) %ldB", path, (ulong) pJPG->length);
-      }
-      return pJPG;
-    }
 
   public:
     CveCam() { }
@@ -93,24 +37,6 @@ class CveCam {
     void setOutput(Mat value) {
        output_image = value;
        factory.cameras[0].temp_set_output_seconds();
-    }
-
-    FuseDataBuffer *produceCameraJPG(const char *path, int *pResult) {
-      FuseDataBuffer *pJPG = cameraJPG.pop(path);
-      if (!pJPG) {
-	pJPG = firefuse_allocDataBuffer(path, pResult, headcam_image.pData, headcam_image.length);
-      }
-      LOGTRACE2("CveCam::produceCameraJPG(%s) %ldB", path, (ulong) pJPG->length);
-      return pJPG;
-    }
-
-    FuseDataBuffer *produceOutputJPG(const char *path, int *pResult) {
-      FuseDataBuffer *pJPG = outputJPG.pop(path);
-      if (!pJPG) {
-	pJPG = createOutputJPG(path, pResult);
-      }
-      LOGTRACE2("CveCam::produceOutputJPG(%s) %ldB", path, (ulong) pJPG->length);
-      return pJPG;
     }
 
 } cveCam[1];
