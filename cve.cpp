@@ -303,7 +303,8 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
     if (cve_isPathSuffix(path, FIREREST_PROCESS_FIRE)) {
       fi->fh = (uint64_t) (size_t) new SmartPointer<char>(factory.cve(path).src_process_fire.get());
     } else if (cve_isPathSuffix(path, FIREREST_SAVE_FIRE)) {
-      fi->fh = (uint64_t) (size_t) new SmartPointer<char>(factory.cve(path).src_save_fire.get());
+      factory.cve(path).save(&factory); // Fast, infrequent operation can be synchronous
+      fi->fh = (uint64_t) (size_t) new SmartPointer<char>(factory.cve(path).src_save_fire.peek()); // PEEK for SYNC
     } else if (cve_isPathSuffix(path, FIREREST_CAMERA_JPG)) {
       fi->fh = (uint64_t) (size_t) new SmartPointer<char>(factory.cameras[0].src_camera_jpg.get());
     } else if (cve_isPathSuffix(path, FIREREST_OUTPUT_JPG)) {
@@ -315,8 +316,7 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
     } else if (cve_isPathSuffix(path, FIREREST_PROPERTIES_JSON)) {
       fi->fh = (uint64_t) (size_t) new SmartPointer<char>(factory.cve(path).src_properties_json.get());
     } else if (cve_isPathSuffix(path, FIREREST_SAVED_PNG)) {
-      factory.cve(path).save(&factory); // Fast, infrequent operation can be synchronous
-      fi->fh = (uint64_t) (size_t) new SmartPointer<char>(factory.cve(path).src_saved_png.peek()); // PEEK for SYNC
+      fi->fh = (uint64_t) (size_t) new SmartPointer<char>(factory.cve(path).src_saved_png.get());
     } else {
       result = -ENOENT;
     }

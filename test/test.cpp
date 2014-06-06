@@ -60,6 +60,31 @@ template <class T> bool testNumber(T expected, T actual) {
   return true;
 }
 
+bool testFile(const char * title, const char * path, SmartPointer<char> &contents) {
+  struct fuse_file_info file_info;
+  struct stat file_stat;
+  int rc;
+
+  rc = cve_getattr(path, &file_stat);
+  LOGINFO3("TEST %s st_size:%ld contents.size():%ld", title, file_stat.st_size, contents.size());
+  assert(rc == 0);
+  assert(file_stat.st_uid == getuid());
+  assert(file_stat.st_gid == getgid());
+  assert(file_stat.st_atime == file_stat.st_mtime);
+  assert(file_stat.st_atime == file_stat.st_ctime);
+  assert(file_stat.st_atime);
+  assert(file_stat.st_nlink == 1);
+  assert(file_stat.st_mode == (S_IFREG | 0444));
+  assert(file_stat.st_size == contents.size());
+  rc = cve_open(path, &file_info);
+  assert(rc == 0);
+  // TODO verify contents
+  rc = cve_release(path, &file_info);
+  assert(rc == 0);
+
+  return true;
+}
+
 int testSmartPointer( ){
   cout << "testSmartPointer() ------------------------" << endl;
   SmartPointer<char> empty(NULL, 0);
@@ -453,6 +478,7 @@ int testConfig() {
 }
 
 int testCve() {
+  /////////// process.fire test
   cout << "testCve() --------------------------" << endl;
   factory.clear();
   factory.processInit();
@@ -490,9 +516,13 @@ int testCve() {
   assert(testString("save.fire GET", "{}",save_fire));
   assert(!factory.cve(firesightPath).src_save_fire.isFresh());
   assert(testProcess(1));
+  assert(factory.cve(firesightPath).src_save_fire.isFresh());
   save_fire = factory.cve(firesightPath).src_save_fire.peek();
   assert(testString("save.fire processLoop ", "{\"bytes\":72944}", save_fire));
   assert(testNumber((size_t) 72944, factory.cve(firesightPath).src_saved_png.peek().size()));
+  SmartPointer<char> save_fire_contents = factory.cve(firesightPath).src_save_fire.peek();
+  testFile("save.fire", "/cv/1/gray/cve/calc-offset/save.fire", save_fire_contents);
+  assert(factory.cve(firesightPath).src_save_fire.isFresh()); // Verify async never triggered
 
   /////////// process.fire test
   assert(testNumber((size_t)0, factory.cameras[0].src_output_jpg.peek().size()));
