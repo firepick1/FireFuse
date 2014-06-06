@@ -392,6 +392,13 @@ int testCamera() {
   return 0;
 }
 
+void assertString(const char*expected, SmartPointer<char> actual) {
+  string actualValue(actual.data(), actual.data() + actual.size());
+  cout << "expected:" << expected << "actual:" << actualValue << endl;
+  assert(strlen(expected) == actualValue.size());
+  assert(0==strcmp(expected, actualValue.c_str()));
+}
+
 int testConfig() {
   cout << "testConfig() --------------------------" << endl;
   int processed;
@@ -426,7 +433,7 @@ int testConfig() {
   assert(0==strcmp("/cv/1/gray/cve/two", cveNames[3].c_str()));
   SmartPointer<char> one_json(factory.cve("/cv/1/gray/cve/one").src_firesight_json.get());
   cout << one_json.data() << " " << one_json.size() << "B" << endl;
-  assert(32 == one_json.size());
+  assertString("[{\"op\":\"putText\",\"text\":\"one\"}]", one_json);
   SmartPointer<char> two_properties(factory.cve("/cv/1/bgr/cve/two").src_properties_json.get());
   cout << two_properties.data() << " " << two_properties.size() << "B" << endl;
   assert(0==strcmp("{\"caps\":\"TWO\"}", two_properties.data()));
@@ -434,13 +441,6 @@ int testConfig() {
   cout << "testConfig() PASS" << endl;
   cout << endl;
   return 0;
-}
-
-void assertString(const char*expected, SmartPointer<char> actual) {
-  string actualValue(actual.data(), actual.data() + actual.size());
-  cout << "expected:" << expected << "actual:" << actualValue << endl;
-  assert(strlen(expected) == actualValue.size());
-  assert(0==strcmp(expected, actualValue.c_str()));
 }
 
 int testCve() {

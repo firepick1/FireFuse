@@ -415,10 +415,10 @@ bool cve_isPathSuffix(const char *value, const char * suffix) {
 CVE::CVE(string name) {
   this->name = name;
   const char *firesight = "[{\"op\":\"putText\", \"text\":\"CVE::CVE()\"}]";
-  src_firesight_json.post(SmartPointer<char>((char *)firesight, strlen(firesight)+1));
+  src_firesight_json.post(SmartPointer<char>((char *)firesight, strlen(firesight)));
   const char *emptyJson = "{}";
   src_save_fire.post(SmartPointer<char>((char *)emptyJson, strlen(emptyJson)));
-  src_process_fire.post(SmartPointer<char>((char *)emptyJson, strlen(emptyJson)+1));
+  src_process_fire.post(SmartPointer<char>((char *)emptyJson, strlen(emptyJson)));
   this->_isColor = strcmp("bgr", camera_profile(name.c_str()).c_str()) == 0;
 }
 
@@ -458,7 +458,7 @@ int CVE::save(DataFactory *pFactory) {
     snprintf(jsonBuf, sizeof(jsonBuf), "{\"status\":{\"result\":\"ENOENT\",\"time\":\"%.1f\",\"message\":\"%s\"}}\n", 
       cve_seconds(), errMsg.c_str());
   }
-  SmartPointer<char> json(jsonBuf, strlen(jsonBuf)+1);
+  SmartPointer<char> json(jsonBuf, strlen(jsonBuf));
   src_save_fire.post(json);
   double sElapsed = cve_seconds() - sStart;
   LOGDEBUG3("CVE::save(%s) -> %ldB %0.3fs", name.c_str(), (ulong) json.size(), sElapsed);

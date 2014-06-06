@@ -134,7 +134,7 @@ static string firerest_config_camera(json_t *pCamera, const char *pCameraName, j
       string firesightPath(cvePath);
       firesightPath += "firesight.json";
       errMsg = firerest_write_file(firesightPath.c_str(), pFireSightJson);
-      SmartPointer<char> firesightJson(pFireSightJson, strlen(pFireSightJson)+1);
+      SmartPointer<char> firesightJson(pFireSightJson, strlen(pFireSightJson));
       factory.cve(firesightPath).src_firesight_json.post(firesightJson);
       free(pFireSightJson);
 
@@ -147,7 +147,7 @@ static string firerest_config_camera(json_t *pCamera, const char *pCameraName, j
 	  return errMsg;
 	}
 
-	SmartPointer<char> props(pPropertiesJson, strlen(pPropertiesJson)+1);
+	SmartPointer<char> props(pPropertiesJson, strlen(pPropertiesJson));
 	factory.cve(cvePath).src_properties_json.post(props);
 	free(pPropertiesJson);
       }
