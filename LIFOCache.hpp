@@ -124,6 +124,7 @@ template <class T> class SmartPointer {
     public: inline int getReferences() const { return references; }
   };
 
+  public: enum { MANAGE, ALLOCATE };
   private: ReferencedPointer *pPointer;
   private: size_t length;
   private: inline void decref() { 
@@ -150,9 +151,9 @@ template <class T> class SmartPointer {
    * @param ptr pointer to data. If ptr is null, count must be number of objects to calloc and zero-fill
    * @count number of T objects to calloc for data copied from ptr
    */
-  public: inline SmartPointer(T* aPtr, size_t count=0) {
+  public: inline SmartPointer(T* aPtr, size_t count=0, int flags=ALLOCATE) {
     length = count * sizeof(T);
-    if (count) {
+    if (count && flags == ALLOCATE) {
       T* pData = (T*) calloc(count, sizeof(T));
       if (aPtr) {
         memcpy(pData, aPtr, length);

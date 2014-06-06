@@ -151,8 +151,8 @@ class CameraNode {
   public: CameraNode();
   public: ~CameraNode();
   public: void init();
-  public: int update_camera_jpg();
-  public: int update_monitor_jpg();
+  public: int async_update_camera_jpg();
+  public: int async_update_monitor_jpg();
   public: void setOutput(Mat image);
 
   public: void temp_set_output_seconds() { output_seconds = cve_seconds(); }

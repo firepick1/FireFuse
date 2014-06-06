@@ -271,7 +271,7 @@ int CVE::process(DataFactory *pFactory) {
     int jsonIndent = 0;
     pModelStr = json_dumps(pModel, JSON_PRESERVE_ORDER|JSON_COMPACT|JSON_INDENT(0));
     int modelLen = pModelStr ? strlen(pModelStr) : 0;
-    jsonResult = SmartPointer<char>(pModelStr, 0);
+    jsonResult = SmartPointer<char>(pModelStr, strlen(pModelStr), SmartPointer<char>::MANAGE);
     json_decref(pModel);
     pFactory->cameras[0].setOutput(image);
     double sElapsed = cve_seconds() - sStart;

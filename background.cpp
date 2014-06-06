@@ -82,11 +82,11 @@ void CameraNode::init() {
   LOGINFO1("CameraNode::init() -> %d", status);
 }
 
-int CameraNode::update_camera_jpg() {
+int CameraNode::async_update_camera_jpg() {
   int processed = 0;
   if (!src_camera_jpg.isFresh() || !src_camera_mat_bgr.isFresh() || !src_camera_mat_gray.isFresh()) {
     processed++;
-    LOGTRACE("update_camera_jpg()");
+    LOGTRACE("async_update_camera_jpg()");
     src_camera_jpg.get(); // make room for post
     
     JPG_Buffer buffer;
@@ -94,7 +94,7 @@ int CameraNode::update_camera_jpg() {
     buffer.length = 0;
     int status = firepicam_acquireImage(&buffer);
     if (status != 0) {
-      LOGERROR1("update_camera_jpg() firepicam_acquireImage() => %d", status);
+      LOGERROR1("async_update_camera_jpg() firepicam_acquireImage() => %d", status);
       throw "could not acquire image";
     } 
     assert(buffer.pData);
@@ -109,20 +109,20 @@ int CameraNode::update_camera_jpg() {
     } else {
       // To eliminate unnecessary conversion we will only update active Mat
     }
-    LOGDEBUG3("update_camera_jpg() src_camera_jpg.post(%ldB) %0lx [0]:%0x", (ulong) jpg.size(), (ulong) jpg.data(), (int) *jpg.data());
+    LOGDEBUG3("async_update_camera_jpg() src_camera_jpg.post(%ldB) %0lx [0]:%0x", (ulong) jpg.size(), (ulong) jpg.data(), (int) *jpg.data());
 
     std::vector<uchar> vJPG((uchar *)jpg.data(), (uchar *)jpg.data() + jpg.size());
     if (!src_camera_mat_bgr.isFresh()) {
       processed++;
       Mat image = imdecode(vJPG, CV_LOAD_IMAGE_COLOR); 
       src_camera_mat_bgr.post(image);
-      LOGTRACE2("update_camera_jpg() src_camera_mat_bgr.post(%dx%d)", image.rows, image.cols);
+      LOGTRACE2("async_update_camera_jpg() src_camera_mat_bgr.post(%dx%d)", image.rows, image.cols);
     }
     if (!src_camera_mat_gray.isFresh()) {
       processed++;
       Mat image = imdecode(vJPG, CV_LOAD_IMAGE_GRAYSCALE); 
       src_camera_mat_gray.post(image);
-      LOGTRACE2("update_camera_jpg() src_camera_mat_gray.post(%dx%d)", image.rows, image.cols);
+      LOGTRACE2("async_update_camera_jpg() src_camera_mat_gray.post(%dx%d)", image.rows, image.cols);
     }
   }
 
@@ -145,20 +145,20 @@ void CameraNode::setOutput(Mat image) {
   LOGTRACE1("CameraNode::setOutput(%ldB)", (ulong)jpg.size());
 }
 
-int CameraNode::update_monitor_jpg() {
+int CameraNode::async_update_monitor_jpg() {
   if (src_monitor_jpg.isFresh()) {
     return 0;
   }
-  LOGTRACE("update_monitor_jpg()");
+  LOGTRACE("async_update_monitor_jpg()");
 
   const char *fmt;
   SmartPointer<char> jpg;
   if (cve_seconds() - output_seconds < monitor_duration) {
     jpg = src_output_jpg.get();
-    fmt = "update_monitor_jpg() src_output_jpg.get(%ldB) %0lx [0]:%0lx";
+    fmt = "async_update_monitor_jpg() src_output_jpg.get(%ldB) %0lx [0]:%0lx";
   } else {
     jpg = src_camera_jpg.get();
-    fmt = "update_monitor_jpg() src_camera_jpg.get(%ldB) %0lx [0]:%0lx";
+    fmt = "async_update_monitor_jpg() src_camera_jpg.get(%ldB) %0lx [0]:%0lx";
   }
   src_monitor_jpg.post(jpg);
 
@@ -221,6 +221,7 @@ int DataFactory::async_process_fire() {
     CVEPtr pCve = it->second;
     if (!pCve->src_process_fire.isFresh()) {
       processed++;
+      LOGTRACE1("DataFactory::async_process_fire(%s)", it->first.c_str());
       pCve->process(this);
     }
   }
@@ -233,6 +234,7 @@ int DataFactory::async_save_fire() {
     CVEPtr pCve = it->second;
     if (!pCve->src_save_fire.isFresh()) {
       processed++;
+      LOGTRACE1("DataFactory::async_save_fire(%s)", it->first.c_str());
       pCve->save(this);
     }
   }
@@ -241,8 +243,8 @@ int DataFactory::async_save_fire() {
 
 int DataFactory::processLoop() {
   int processed = 0;
-  processed += cameras[0].update_camera_jpg();
-  processed += cameras[0].update_monitor_jpg();
+  processed += cameras[0].async_update_camera_jpg();
+  processed += cameras[0].async_update_monitor_jpg();
   processed += async_save_fire();  
   processed += async_process_fire();  
 
