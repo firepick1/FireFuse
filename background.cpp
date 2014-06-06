@@ -130,7 +130,8 @@ int CameraNode::async_update_camera_jpg() {
 }
 
 void CameraNode::setOutput(Mat image) {
-  if (src_output_jpg.isFresh() || image.rows==0 || image.cols==0) {
+  if (image.rows==0 || image.cols==0) {
+    output_seconds = 0;
     return; // no interest
   }
   LOGTRACE2("CameraNode::setOutput(%dx%d)", image.rows, image.cols);
