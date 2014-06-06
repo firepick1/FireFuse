@@ -116,13 +116,13 @@ int CameraNode::update_camera_jpg() {
       processed++;
       Mat image = imdecode(vJPG, CV_LOAD_IMAGE_COLOR); 
       src_camera_mat_bgr.post(image);
-      LOGTRACE3("update_camera_jpg() src_camera_mat_bgr.post(%ldB) %0lx [0]:%0x", (ulong) jpg.size(), (ulong) jpg.data(), (int) *jpg.data());
+      LOGTRACE2("update_camera_jpg() src_camera_mat_bgr.post(%dx%d)", image.rows, image.cols);
     }
     if (!src_camera_mat_gray.isFresh()) {
       processed++;
       Mat image = imdecode(vJPG, CV_LOAD_IMAGE_GRAYSCALE); 
       src_camera_mat_gray.post(image);
-      LOGTRACE3("update_camera_jpg() src_camera_mat_gray.post(%ldB) %0lx [0]:%0x", (ulong) jpg.size(), (ulong) jpg.data(), (int) *jpg.data());
+      LOGTRACE2("update_camera_jpg() src_camera_mat_gray.post(%dx%d)", image.rows, image.cols);
     }
   }
 
@@ -205,6 +205,7 @@ int DataFactory::update_saved_png() {
     CVEPtr pCve = it->second;
     if (!pCve->src_save_fire.isFresh()) {
       processed++;
+      pCve->save(this);
     }
   }
   return processed;

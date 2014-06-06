@@ -294,47 +294,6 @@ static int cve_openVarFile(const char *path, struct fuse_file_info *fi) {
   return result;
 }
 
-int cve_save(const char *path) {
-  double sStart = cve_seconds();
-  string errMsg;
-
-  string savedPath = buildVarPath(path, FIREREST_SAVED_PNG);
-  LOGTRACE2("cve_save(%s) saving to %s", path, savedPath.c_str());
-  bool isColor = strcmp("bgr", camera_profile(path).c_str()) == 0;
-  Mat image = isColor ?
-    image = factory.cameras[0].src_camera_mat_bgr.get() :
-    image = factory.cameras[0].src_camera_mat_gray.get();
-  CVE& cve = factory.cve(path);
-  if (image.rows && image.cols) {
-    vector<uchar> pngBuf;
-    vector<int> param = vector<int>(2);
-    param[0] = CV_IMWRITE_PNG_COMPRESSION;
-    param[1] = 3;//default(3)  0-9.
-    imencode(".png", image, pngBuf, param);
-    SmartPointer<char> png((char *)pngBuf.data(), pngBuf.size());
-    cve.src_saved_png.post(png);
-    LOGTRACE4("cve_save(%s) %s image saved (%ldB) %0.3fs", path, isColor ? "color" : "gray", pngBuf.size(), cve_seconds() - sStart);
-  } else {
-    errMsg = "cve_save(";
-    errMsg.append(path);
-    errMsg.append(") => cannot save empty camera image");
-  }
-
-  char jsonBuf[255];
-  if (errMsg.empty()) {
-    snprintf(jsonBuf, sizeof(jsonBuf), "{\"status\":{\"time\":\"%.1f\",\"result\":\"OK\"}}\n", cve_seconds());
-  } else {
-    snprintf(jsonBuf, sizeof(jsonBuf), "{\"status\":{\"time\":\"%.1f\",\"result\":\"ENOENT\",\"message\":\"%s\"}}\n", 
-      cve_seconds(), errMsg.c_str());
-  }
-  SmartPointer<char> json(jsonBuf, strlen(jsonBuf)+1);
-  cve.src_save_fire.post(json);
-  double sElapsed = cve_seconds() - sStart;
-  LOGDEBUG3("cve_save(%s) -> %ldB %0.3fs", path, (ulong) json.size(), sElapsed);
-
-  return errMsg.empty() ? 0 : -ENOENT;
-}
-
 static SmartPointer<char> buildErrorMessage(const char* fmt, const char *path, const char * ex) {
   LOGERROR2(fmt, path, ex);
   string errMsg = "{\"error\":\"";
@@ -343,9 +302,10 @@ static SmartPointer<char> buildErrorMessage(const char* fmt, const char *path, c
   return SmartPointer<char>((char *)errMsg.c_str(), errMsg.size()+1);
 }
 
-void cve_process(const char *path, int *pResult) {
-  assert(path);
-  assert(pResult);
+int CVE::process(DataFactory *pFactory) {
+  int result = 0;
+  string pathBuf(name);
+  const char *path = pathBuf.c_str(); // TODO;
   double sStart = cve_seconds();
   string firesightPath = buildVarPath(path, FIREREST_FIRESIGHT_JSON);
   LOGTRACE2("cve_process(%s) loading JSON: %s", path, firesightPath.c_str());
@@ -353,16 +313,14 @@ void cve_process(const char *path, int *pResult) {
   LOGTRACE2("cve_process(%s) loading JSON: %s", path, propertiesPath.c_str());
   char *pModelStr = NULL;
   FuseDataBuffer *pJSON = NULL;
-  *pResult = 0;
   SmartPointer<char> jsonResult;
   try {
     Pipeline pipeline(firesightPath.c_str(), Pipeline::PATH);
-    SmartPointer<char> jpg(factory.cameras[0].src_camera_jpg.get());
+    SmartPointer<char> jpg(pFactory->cameras[0].src_camera_jpg.get());
     const uchar * pJPGBytes = (uchar*)jpg.data();
     std::vector<uchar> vJPG (pJPGBytes, pJPGBytes + jpg.size() / sizeof(uchar) );
     LOGTRACE1("cve_process(%s) decode image", path);
-    bool isColor = strcmp("bgr", camera_profile(path).c_str()) == 0;
-    Mat image = imdecode(vJPG, isColor ? CV_LOAD_IMAGE_COLOR : CV_LOAD_IMAGE_GRAYSCALE); 
+    Mat image = imdecode(vJPG, _isColor ? CV_LOAD_IMAGE_COLOR : CV_LOAD_IMAGE_GRAYSCALE); 
     string savedPath = buildVarPath(path, FIREREST_SAVED_PNG);
     ArgMap argMap;
     json_t *pProperties = NULL;
@@ -421,7 +379,8 @@ void cve_process(const char *path, int *pResult) {
   } catch (...) {
     jsonResult = buildErrorMessage("cve_process(%s) UNKNOWN EXCEPTION: %s", path, "UNKOWN EXCEPTION");
   }
-  factory.cve(path).src_process_fire.post(jsonResult);
+  src_process_fire.post(jsonResult);
+  return result;
 }
 
 int cve_open(const char *path, struct fuse_file_info *fi) {
@@ -545,7 +504,50 @@ CVE::CVE(string name) {
   const char *emptyJson = "{}";
   src_save_fire.post(SmartPointer<char>((char *)emptyJson, strlen(emptyJson)+1));
   src_process_fire.post(SmartPointer<char>((char *)emptyJson, strlen(emptyJson)+1));
+  this->_isColor = strcmp("bgr", camera_profile(name.c_str()).c_str()) == 0;
 }
 
 CVE::~CVE() {
 }
+
+
+int CVE::save(DataFactory *pFactory) {
+  double sStart = cve_seconds();
+  string errMsg;
+
+  string savedPath = buildVarPath(name.c_str(), FIREREST_SAVED_PNG);
+  savedPath += "/saved.png";
+  LOGTRACE2("cve_save(%s) saving to %s", savedPath.c_str(), savedPath.c_str());
+  Mat image = _isColor ?
+    pFactory->cameras[0].src_camera_mat_bgr.get() :
+    pFactory->cameras[0].src_camera_mat_gray.get();
+  if (image.rows && image.cols) {
+    vector<uchar> pngBuf;
+    vector<int> param = vector<int>(2);
+    param[0] = CV_IMWRITE_PNG_COMPRESSION;
+    param[1] = 3;//default(3)  0-9.
+    imencode(".png", image, pngBuf, param);
+    SmartPointer<char> png((char *)pngBuf.data(), pngBuf.size());
+    src_saved_png.post(png);
+    LOGTRACE4("CVE::save(%s) %s image saved (%ldB) %0.3fs", name.c_str(), _isColor ? "color" : "gray", pngBuf.size(), cve_seconds() - sStart);
+  } else {
+    errMsg = "CVE::save(";
+    errMsg.append(name);
+    errMsg.append(") => cannot save empty camera image");
+  }
+
+  char jsonBuf[255];
+  if (errMsg.empty()) {
+    snprintf(jsonBuf, sizeof(jsonBuf), "{\"status\":{\"time\":\"%.1f\",\"result\":\"OK\"}}\n", cve_seconds());
+  } else {
+    snprintf(jsonBuf, sizeof(jsonBuf), "{\"status\":{\"time\":\"%.1f\",\"result\":\"ENOENT\",\"message\":\"%s\"}}\n", 
+      cve_seconds(), errMsg.c_str());
+  }
+  SmartPointer<char> json(jsonBuf, strlen(jsonBuf)+1);
+  src_save_fire.post(json);
+  double sElapsed = cve_seconds() - sStart;
+  LOGDEBUG3("CVE::save(%s) -> %ldB %0.3fs", name.c_str(), (ulong) json.size(), sElapsed);
+
+  return errMsg.empty() ? 0 : -ENOENT;
+}
+

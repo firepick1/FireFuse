@@ -117,9 +117,11 @@ const char * firestep_json();
 double 	cve_seconds();
 void 	cve_process(const char *path, int *pResult);
 string 	cve_path(const char *pPath);
+class DataFactory;
 
 typedef class CVE {
   private: string name;
+  private: bool _isColor;
   public: LIFOCache<SmartPointer<char> > src_saved_png;
   public: LIFOCache<SmartPointer<char> > src_save_fire;
   public: LIFOCache<SmartPointer<char> > src_process_fire;
@@ -129,6 +131,9 @@ typedef class CVE {
   public: inline string getName() { return name; }
   public: CVE(string name);
   public: ~CVE();
+  public: int save(DataFactory *pFactory);
+  public: int process(DataFactory *pFactory);
+  public: inline bool isColor() { return _isColor; }
 } CVE, *CVEPtr;
 
 class CameraNode {
