@@ -492,6 +492,11 @@ int testCve() {
   cout << "saved.png:" << factory.cve(firesightPath).src_saved_png.peek().size() << "B" << endl;
   assert(72944 == factory.cve(firesightPath).src_saved_png.peek().size());
 
+  /////////// process.fire test
+  assert(0 == factory.cameras[0].src_output_jpg.peek().size());
+  assertString("{}",factory.cve(firesightPath).src_process_fire.peek());
+  assert(factory.cve(firesightPath).src_process_fire.isFresh());
+
   cout << "testCve() PASS" << endl;
   cout << endl;
   return 0;
