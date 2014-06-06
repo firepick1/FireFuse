@@ -427,6 +427,9 @@ int testConfig() {
   SmartPointer<char> one_json(factory.cve("/cv/1/gray/cve/one").src_firesight_json.get());
   cout << one_json.data() << " " << one_json.size() << "B" << endl;
   assert(32 == one_json.size());
+  SmartPointer<char> two_properties(factory.cve("/cv/1/bgr/cve/two").src_properties_json.get());
+  cout << two_properties.data() << " " << two_properties.size() << "B" << endl;
+  assert(0==strcmp("{\"caps\":\"TWO\"}", two_properties.data()));
 
   cout << "testConfig() PASS" << endl;
   cout << endl;

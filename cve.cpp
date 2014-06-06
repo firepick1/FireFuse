@@ -216,13 +216,11 @@ int CVE::process(DataFactory *pFactory) {
   int result = 0;
 
   double sStart = cve_seconds();
+  LOGTRACE1("cve_process(%s) init", name.c_str());
   string pathBuf(name);
   const char *path = pathBuf.c_str(); 
   SmartPointer<char> pipelineJson(src_firesight_json.get());
-  string propertiesPath = buildVarPath(path, FIREREST_PROPERTIES_JSON);
-  LOGTRACE2("cve_process(%s) loading JSON: %s", path, propertiesPath.c_str());
   char *pModelStr = NULL;
-  FuseDataBuffer *pJSON = NULL;
   SmartPointer<char> jsonResult;
   try {
     Pipeline pipeline(pipelineJson.data(), Pipeline::JSON);
@@ -233,23 +231,21 @@ int CVE::process(DataFactory *pFactory) {
     ArgMap argMap;
     json_t *pProperties = NULL;
     struct stat propertiesStat;   
-    if (stat (propertiesPath.c_str(), &propertiesStat) == 0) {
-      string propertiesString;
-      ifstream ifs(propertiesPath.c_str());
-      stringstream propertiesStream;
-      propertiesStream << ifs.rdbuf();
-      propertiesString = propertiesStream.str();
+    string propertiesString;
+    SmartPointer<char> properties_json(src_properties_json.get());
+    if (properties_json.size()) {
+      propertiesString = properties_json.data();
       json_error_t jerr;
       pProperties = json_loads(propertiesString.c_str(), 0, &jerr);
       if (json_is_object(pProperties)) {
 	const char * key;
 	json_t *pValue;
-        json_object_foreach(pProperties, key, pValue) {
+	json_object_foreach(pProperties, key, pValue) {
 	  char *valueStr = json_dumps(pValue, JSON_PRESERVE_ORDER|JSON_COMPACT|JSON_INDENT(0));
 	  argMap[key] = valueStr;
 	}
       } else {
-        LOGERROR2("cve_process(%s) Could not load properties: %s", path, propertiesString.c_str());
+	LOGERROR2("cve_process(%s) Could not load properties: %s", name.c_str(), propertiesString.c_str());
       }
     }
     argMap["saved"] = savedPath.c_str();
@@ -275,7 +271,7 @@ int CVE::process(DataFactory *pFactory) {
     json_decref(pModel);
     pFactory->cameras[0].setOutput(image);
     double sElapsed = cve_seconds() - sStart;
-    LOGDEBUG3("cve_process(%s) -> JSON %dB %0.3fs", path, pJSON->length, sElapsed);
+    LOGDEBUG3("cve_process(%s) -> JSON %dB %0.3fs", path, modelLen, sElapsed);
   } catch (char * ex) {
     jsonResult = buildErrorMessage("cve_process(%s) EXCEPTION: %s", path, ex);
   } catch (string ex) {
