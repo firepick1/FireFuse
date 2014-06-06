@@ -390,6 +390,14 @@ int testCamera() {
   return 0;
 }
 
+bool testString(const char * name, const char*expected, const char*actualValue) {
+  if (strcmp(expected, actualValue)) {
+    LOGTRACE3("TEST %s expected:\"%s\" actual:\"%s\"", name, expected, actualValue);
+    return false;
+  }
+  return true;
+}
+
 bool testString(const char * name, const char*expected, SmartPointer<char> actual) {
   string actualValue(actual.data(), actual.data() + actual.size());
   if (strlen(expected) != actualValue.size() || strncmp(expected, actualValue.c_str(), strlen(expected))) {
@@ -416,6 +424,8 @@ int testConfig() {
     "}\n" \
   "}\n"; 
 
+
+  assert(testString("TEST fuse_root", "/dev/firefuse", fuse_root));
 
   /////////// config test
   firerest_config(config_json);
@@ -474,8 +484,7 @@ int testCve() {
   assert(factory.cameras[0].src_camera_mat_bgr.isFresh());
   assert(factory.cve(firesightPath).src_save_fire.isFresh());
   assert(testString("save.fire BEFORE", "{}",factory.cve(firesightPath).src_save_fire.peek()));
-  cout << "saved.png:" << factory.cve(firesightPath).src_saved_png.peek().size() << "B" << endl;
-  assert(0 == factory.cve(firesightPath).src_saved_png.peek().size());
+  assert(testNumber((size_t) 0, factory.cve(firesightPath).src_saved_png.peek().size()));
   assert(factory.cve(firesightPath).src_save_fire.isFresh());
   /*GET*/ SmartPointer<char> save_fire(factory.cve(firesightPath).src_save_fire.get());
   assert(testString("save.fire GET", "{}",save_fire));
@@ -483,8 +492,7 @@ int testCve() {
   assert(testProcess(1));
   save_fire = factory.cve(firesightPath).src_save_fire.peek();
   assert(testString("save.fire processLoop ", "{\"bytes\":72944}", save_fire));
-  cout << "saved.png:" << factory.cve(firesightPath).src_saved_png.peek().size() << "B" << endl;
-  assert(72944 == factory.cve(firesightPath).src_saved_png.peek().size());
+  assert(testNumber((size_t) 72944, factory.cve(firesightPath).src_saved_png.peek().size()));
 
   /////////// process.fire test
   assert(testNumber((size_t)0, factory.cameras[0].src_output_jpg.peek().size()));

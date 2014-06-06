@@ -231,7 +231,6 @@ int CVE::process(DataFactory *pFactory) {
     Mat image = _isColor ?
       pFactory->cameras[0].src_camera_mat_bgr.get() :
       pFactory->cameras[0].src_camera_mat_gray.get();
-    string savedPath = buildVarPath(path, FIREREST_SAVED_PNG);
     ArgMap argMap;
     json_t *pProperties = NULL;
     struct stat propertiesStat;   
@@ -253,6 +252,9 @@ int CVE::process(DataFactory *pFactory) {
 	throw "could not load properties";
       }
     }
+    string savedPath(fuse_root);
+    savedPath += name;
+    savedPath += FIREREST_SAVED_PNG;
     argMap["saved"] = savedPath.c_str();
 
     LOGTRACE1("cve_process(%s) process begin", path);

@@ -15,6 +15,8 @@
 
 using namespace std;
 
+const char * fuse_root  = "/dev/firefuse";
+
 static string firerest_write_file(const char * path, const char *text) {
   string errMsg;
   FILE * pFile = fopen(path, "w");

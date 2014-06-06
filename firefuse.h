@@ -24,6 +24,7 @@ typedef struct {
   long reserved;
 } FuseDataBuffer;
 
+extern const char * fuse_root;
 extern FuseDataBuffer headcam_image;     // perpetually changing image
 extern FuseDataBuffer headcam_image_fstat;  // image at time of most recent fstat()
 

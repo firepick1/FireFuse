@@ -48,9 +48,8 @@ static void * firefuse_init(struct fuse_conn_info *conn)
 
   firelog_init(FIRELOG_FILE, FIRELOG_INFO);
   //firelog_init(FIRELOG_FILE, FIRELOG_TRACE);
-  LOGINFO3("FireFUSE %d.%d.%d", FireFUSE_VERSION_MAJOR, FireFUSE_VERSION_MINOR, FireFUSE_VERSION_PATCH);
+  LOGINFO4("FireFUSE %d.%d.%d fuse_root:%s", FireFUSE_VERSION_MAJOR, FireFUSE_VERSION_MINOR, FireFUSE_VERSION_PATCH, fuse_root);
   LOGINFO2("PID%d UID%d", (int) getpid(), (int)getuid());
-
 
   LOGINFO1("Loading FireREST configuration: %s", CONFIG_JSON);
   FILE *fConfig = fopen(CONFIG_JSON, "r");
@@ -411,10 +410,10 @@ static struct fuse_operations firefuse_oper = {
   .read    = firefuse_read,
   .truncate  = firefuse_truncate,
   .write    = firefuse_write,
-};
+}
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
+  fuse_root = argv[argv.length-1];
   return fuse_main(argc, argv, &firefuse_oper, NULL);
 }
 
