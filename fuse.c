@@ -410,7 +410,7 @@ static struct fuse_operations firefuse_oper = {
   .read    = firefuse_read,
   .truncate  = firefuse_truncate,
   .write    = firefuse_write,
-}
+};
 
 int main(int argc, char *argv[]) {
   fuse_root = argv[argv.length-1];
