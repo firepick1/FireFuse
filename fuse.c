@@ -413,7 +413,7 @@ static struct fuse_operations firefuse_oper = {
 };
 
 int main(int argc, char *argv[]) {
-  fuse_root = argv[argv.length-1];
+  fuse_root = argv[argc-1];
   return fuse_main(argc, argv, &firefuse_oper, NULL);
 }
 
