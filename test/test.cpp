@@ -526,14 +526,14 @@ int testCve() {
   testFile("save.fire", "/cv/1/gray/cve/calc-offset/save.fire", save_fire_contents);
   assert(factory.cve(firesightPath).src_save_fire.isFresh()); // Verify async never triggered
   assert(factory.cameras[0].src_output_jpg.isFresh()); 
-  assert(testNumber((size_t)41441, factory.cameras[0].src_output_jpg.peek().size()));  
+  assert(testNumber((size_t)43052, factory.cameras[0].src_output_jpg.peek().size()));  
 
   /////////// process.fire test
   assert(testString("process.fire BEFORE", "{}",factory.cve(firesightPath).src_process_fire.peek()));
   assert(factory.cve(firesightPath).src_process_fire.isFresh());
-  assert(testNumber((size_t)41441, factory.cameras[0].src_output_jpg.peek().size()));
+  assert(testNumber((size_t)43052, factory.cameras[0].src_output_jpg.peek().size()));
   /*GET*/ SmartPointer<char> process_fire(factory.cve(firesightPath).src_process_fire.get());
-  assert(testNumber((size_t)41441, factory.cameras[0].src_output_jpg.peek().size()));
+  assert(testNumber((size_t)43052, factory.cameras[0].src_output_jpg.peek().size()));
   assert(testString("process.fire GET", "{}",factory.cve(firesightPath).src_process_fire.peek()));
   assert(!factory.cve(firesightPath).src_process_fire.isFresh());
   /*ASYNC*/assert(testProcess(3)); // process + camera + mat_gray
