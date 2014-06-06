@@ -392,18 +392,46 @@ int testCamera() {
   return 0;
 }
 
-const char *config_json = \
-"{ \"FireREST\":{\"title\":\"Raspberry Pi FireFUSE\",\"provider\":\"FireFUSE\", \"version\":{\"major\":0, \"minor\":6, \"patch\":0}},\n" \
-  "\"cv\":{\n" \
-    "\"cve_map\":{\n" \
-      "\"one\":{ \"firesight\": [ {\"op\":\"putText\", \"text\":\"one\"} ], \"properties\": { \"caps\":\"ONE\" } },\n" \
-      "\"two\":{ \"firesight\": [ {\"op\":\"putText\", \"text\":\"two\"} ], \"properties\": { \"caps\":\"TWO\" } }\n" \
-    "},\n" \
-    "\"camera_map\":{\n" \
-      "\"1\":{ \"profile_map\":{ \"gray\":{ \"cve_names\":[ \"one\", \"two\" ] }, \"bgr\":{ \"cve_names\":[ \"one\", \"two\" ] }}}\n" \
+int testConfig() {
+  cout << "testConfig() --------------------------" << endl;
+  int processed;
+  factory.clear();
+  factory.processInit();
+  const char *config_json = \
+  "{ \"FireREST\":{\"title\":\"Raspberry Pi FireFUSE\",\"provider\":\"FireFUSE\", \"version\":{\"major\":0, \"minor\":6, \"patch\":0}},\n" \
+    "\"cv\":{\n" \
+      "\"cve_map\":{\n" \
+	"\"one\":{ \"firesight\": [ {\"op\":\"putText\", \"text\":\"one\"} ], \"properties\": { \"caps\":\"ONE\" } },\n" \
+	"\"two\":{ \"firesight\": [ {\"op\":\"putText\", \"text\":\"two\"} ], \"properties\": { \"caps\":\"TWO\" } }\n" \
+      "},\n" \
+      "\"camera_map\":{\n" \
+	"\"1\":{ \"profile_map\":{ \"gray\":{ \"cve_names\":[ \"one\", \"two\" ] }, \"bgr\":{ \"cve_names\":[ \"one\", \"two\" ] }}}\n" \
+      "}\n" \
     "}\n" \
-  "}\n" \
-"}\n"; 
+  "}\n"; 
+
+
+  /////////// config test
+  firerest_config(config_json);
+  vector<string> cveNames = factory.getCveNames();
+  cout << "cveNames.size(): " << cveNames.size() << endl;
+  assert(4 == cveNames.size());
+  cout << "cveNames[0]: " << cveNames[0] << endl;
+  cout << "cveNames[1]: " << cveNames[1] << endl;
+  cout << "cveNames[2]: " << cveNames[2] << endl;
+  cout << "cveNames[3]: " << cveNames[3] << endl;
+  assert(0==strcmp("/cv/1/bgr/cve/one", cveNames[0].c_str()));
+  assert(0==strcmp("/cv/1/bgr/cve/two", cveNames[1].c_str()));
+  assert(0==strcmp("/cv/1/gray/cve/one", cveNames[2].c_str()));
+  assert(0==strcmp("/cv/1/gray/cve/two", cveNames[3].c_str()));
+  SmartPointer<char> one_json(factory.cve("/cv/1/gray/cve/one").src_firesight_json.get());
+  cout << one_json.data() << " " << one_json.size() << "B" << endl;
+  assert(32 == one_json.size());
+
+  cout << "testConfig() PASS" << endl;
+  cout << endl;
+  return 0;
+}
 
 int testCve() {
   cout << "testCve() --------------------------" << endl;
@@ -451,27 +479,9 @@ int testCve() {
   assert(1 == processed);
   save_fire = factory.cve(firesightPath).src_save_fire.peek();
   cout << "save_fire:" << save_fire << endl;
-  assert(0 == strncmp("{\"status\":", save_fire.data(), 9));
+  assert(0 == strncmp("{\"status\":{\"result\":\"OK\"", save_fire.data(), 24));
   cout << "saved.png:" << factory.cve(firesightPath).src_saved_png.peek().size() << "B" << endl;
   assert(72944 == factory.cve(firesightPath).src_saved_png.peek().size());
-
-  /////////// config test
-  factory.clear();
-  firerest_config(config_json);
-  cveNames = factory.getCveNames();
-  cout << "cveNames.size(): " << cveNames.size() << endl;
-  assert(4 == cveNames.size());
-  cout << "cveNames[0]: " << cveNames[0] << endl;
-  cout << "cveNames[1]: " << cveNames[1] << endl;
-  cout << "cveNames[2]: " << cveNames[2] << endl;
-  cout << "cveNames[3]: " << cveNames[3] << endl;
-  assert(0==strcmp("/cv/1/bgr/cve/one", cveNames[0].c_str()));
-  assert(0==strcmp("/cv/1/bgr/cve/two", cveNames[1].c_str()));
-  assert(0==strcmp("/cv/1/gray/cve/one", cveNames[2].c_str()));
-  assert(0==strcmp("/cv/1/gray/cve/two", cveNames[3].c_str()));
-  SmartPointer<char> one_json(factory.cve("/cv/1/gray/cve/one").src_firesight_json.get());
-  cout << one_json.data() << " " << one_json.size() << "B" << endl;
-  assert(32 == one_json.size());
 
   cout << "testCve() PASS" << endl;
   cout << endl;
@@ -482,6 +492,7 @@ int main(int argc, char *argv[]) {
   firelog_level(FIRELOG_TRACE);
   try {
     if (
+      testConfig()==0 &&
       testCamera()==0 &&
       testSmartPointer()==0 && 
       testSmartPointer_CopyData()==0 && 

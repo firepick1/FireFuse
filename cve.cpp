@@ -448,9 +448,9 @@ int CVE::save(DataFactory *pFactory) {
 
   char jsonBuf[255];
   if (errMsg.empty()) {
-    snprintf(jsonBuf, sizeof(jsonBuf), "{\"status\":{\"time\":\"%.1f\",\"result\":\"OK\"}}\n", cve_seconds());
+    snprintf(jsonBuf, sizeof(jsonBuf), "{\"status\":{\"result\":\"OK\",\"time\":\"%.1f\"}}\n", cve_seconds());
   } else {
-    snprintf(jsonBuf, sizeof(jsonBuf), "{\"status\":{\"time\":\"%.1f\",\"result\":\"ENOENT\",\"message\":\"%s\"}}\n", 
+    snprintf(jsonBuf, sizeof(jsonBuf), "{\"status\":{\"result\":\"ENOENT\",\"time\":\"%.1f\",\"message\":\"%s\"}}\n", 
       cve_seconds(), errMsg.c_str());
   }
   SmartPointer<char> json(jsonBuf, strlen(jsonBuf)+1);
