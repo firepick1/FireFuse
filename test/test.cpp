@@ -436,6 +436,13 @@ int testConfig() {
   return 0;
 }
 
+void assertString(const char*expected, SmartPointer<char> actual) {
+  string actualValue(actual.data(), actual.data() + actual.size());
+  cout << "expected:" << expected << "actual:" << actualValue << endl;
+  assert(strlen(expected) == actualValue.size());
+  assert(0==strcmp(expected, actualValue.c_str()));
+}
+
 int testCve() {
   cout << "testCve() --------------------------" << endl;
   int processed;
@@ -470,12 +477,12 @@ int testCve() {
   assert(factory.cameras[0].src_camera_mat_gray.isFresh());
   assert(factory.cameras[0].src_camera_mat_bgr.isFresh());
   assert(factory.cve(firesightPath).src_save_fire.isFresh());
-  assert(0==strcmp("{}",factory.cve(firesightPath).src_save_fire.peek().data()));
+  assertString("{}",factory.cve(firesightPath).src_save_fire.peek());
   cout << "saved.png:" << factory.cve(firesightPath).src_saved_png.peek().size() << "B" << endl;
   assert(0 == factory.cve(firesightPath).src_saved_png.peek().size());
   assert(factory.cve(firesightPath).src_save_fire.isFresh());
   /*GET*/ SmartPointer<char> save_fire(factory.cve(firesightPath).src_save_fire.get());
-  assert(0==strcmp("{}",save_fire.data()));
+  assertString("{}",save_fire);
   assert(!factory.cve(firesightPath).src_save_fire.isFresh());
   processed = factory.processLoop();
   cout << "processed:" << processed << endl;

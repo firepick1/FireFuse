@@ -417,7 +417,7 @@ CVE::CVE(string name) {
   const char *firesight = "[{\"op\":\"putText\", \"text\":\"CVE::CVE()\"}]";
   src_firesight_json.post(SmartPointer<char>((char *)firesight, strlen(firesight)+1));
   const char *emptyJson = "{}";
-  src_save_fire.post(SmartPointer<char>((char *)emptyJson, strlen(emptyJson)+1));
+  src_save_fire.post(SmartPointer<char>((char *)emptyJson, strlen(emptyJson)));
   src_process_fire.post(SmartPointer<char>((char *)emptyJson, strlen(emptyJson)+1));
   this->_isColor = strcmp("bgr", camera_profile(name.c_str()).c_str()) == 0;
 }
