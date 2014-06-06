@@ -488,8 +488,7 @@ int testCve() {
   cout << "processed:" << processed << endl;
   assert(1 == processed);
   save_fire = factory.cve(firesightPath).src_save_fire.peek();
-  cout << "save_fire:" << save_fire << endl;
-  assert(0 == strncmp("{\"status\":{\"result\":\"OK\"", save_fire.data(), 24));
+  assertString("{\"bytes\":72944}", save_fire);
   cout << "saved.png:" << factory.cve(firesightPath).src_saved_png.peek().size() << "B" << endl;
   assert(72944 == factory.cve(firesightPath).src_saved_png.peek().size());
 

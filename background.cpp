@@ -231,7 +231,7 @@ int DataFactory::processLoop() {
   int processed = 0;
   processed += cameras[0].update_camera_jpg();
   processed += cameras[0].update_monitor_jpg();
-  processed += update_saved_png();
+  processed += update_saved_png();  
 
   if (processed == 0 && (cve_seconds() - idle_seconds >= idle_period)) {
     idle();

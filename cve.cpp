@@ -312,7 +312,8 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
     } else if (cve_isPathSuffix(path, FIREREST_PROPERTIES_JSON)) {
       fi->fh = (uint64_t) (size_t) new SmartPointer<char>(factory.cve(path).src_properties_json.get());
     } else if (cve_isPathSuffix(path, FIREREST_SAVED_PNG)) {
-      fi->fh = (uint64_t) (size_t) new SmartPointer<char>(factory.cve(path).src_saved_png.get());
+      factory.cve(path).save(&factory); // Fast, infrequent operation can be synchronous
+      fi->fh = (uint64_t) (size_t) new SmartPointer<char>(factory.cve(path).src_saved_png.peek()); // PEEK for SYNC
     } else {
       result = -ENOENT;
     }
@@ -430,21 +431,20 @@ int CVE::save(DataFactory *pFactory) {
   double sStart = cve_seconds();
   string errMsg;
 
-  string savedPath = buildVarPath(name.c_str(), FIREREST_SAVED_PNG);
-  savedPath += "/saved.png";
-  LOGTRACE2("cve_save(%s) saving to %s", savedPath.c_str(), savedPath.c_str());
   Mat image = _isColor ?
     pFactory->cameras[0].src_camera_mat_bgr.get() :
     pFactory->cameras[0].src_camera_mat_gray.get();
+  size_t bytes = 0;
   if (image.rows && image.cols) {
     vector<uchar> pngBuf;
     vector<int> param = vector<int>(2);
     param[0] = CV_IMWRITE_PNG_COMPRESSION;
     param[1] = 3;//default(3)  0-9.
     imencode(".png", image, pngBuf, param);
-    SmartPointer<char> png((char *)pngBuf.data(), pngBuf.size());
+    bytes = pngBuf.size();
+    SmartPointer<char> png((char *)pngBuf.data(), bytes);
     src_saved_png.post(png);
-    LOGTRACE4("CVE::save(%s) %s image saved (%ldB) %0.3fs", name.c_str(), _isColor ? "color" : "gray", pngBuf.size(), cve_seconds() - sStart);
+    LOGTRACE4("CVE::save(%s) %s image saved (%ldB) %0.3fs", name.c_str(), _isColor ? "color" : "gray", bytes, cve_seconds() - sStart);
   } else {
     errMsg = "CVE::save(";
     errMsg.append(name);
@@ -453,10 +453,10 @@ int CVE::save(DataFactory *pFactory) {
 
   char jsonBuf[255];
   if (errMsg.empty()) {
-    snprintf(jsonBuf, sizeof(jsonBuf), "{\"status\":{\"result\":\"OK\",\"time\":\"%.1f\"}}\n", cve_seconds());
+    snprintf(jsonBuf, sizeof(jsonBuf), "{\"bytes\":%ld}", bytes);
   } else {
-    snprintf(jsonBuf, sizeof(jsonBuf), "{\"status\":{\"result\":\"ENOENT\",\"time\":\"%.1f\",\"message\":\"%s\"}}\n", 
-      cve_seconds(), errMsg.c_str());
+    snprintf(jsonBuf, sizeof(jsonBuf), "{\"bytes\":%ld,\"message\":\"%s\"}", 
+      bytes, errMsg.c_str());
   }
   SmartPointer<char> json(jsonBuf, strlen(jsonBuf));
   src_save_fire.post(json);
