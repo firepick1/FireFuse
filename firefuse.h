@@ -70,9 +70,9 @@ enum CVE_Path {
 #define FIREREST_PROPERTIES_JSON "/properties.json"
 #define FIREREST_MONITOR_JPG "/monitor.jpg"
 #define FIREREST_OUTPUT_JPG "/output.jpg"
-#define FIREREST_PROCESS_JSON "/process.fire"
+#define FIREREST_PROCESS_FIRE "/process.fire"
 #define FIREREST_SAVED_PNG "/saved.png"
-#define FIREREST_SAVE_JSON "/save.fire"
+#define FIREREST_SAVE_FIRE "/save.fire"
 
 #define FIREREST_VAR "/var/firefuse"
 

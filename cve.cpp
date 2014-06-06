@@ -116,10 +116,14 @@ int cve_getattr(const char *path, struct stat *stbuf) {
     res = cve_getattr_file(path, stbuf, factory.cameras[0].src_monitor_jpg.peek().size());
   } else if (cve_isPathSuffix(path, FIREREST_SAVED_PNG)) {
     res = cve_getattr_file(path, stbuf, factory.cve(path).src_saved_png.peek().size());
-  } else if (cve_isPathSuffix(path, FIREREST_SAVE_JSON)) {
+  } else if (cve_isPathSuffix(path, FIREREST_SAVE_FIRE)) {
     res = cve_getattr_file(path, stbuf, factory.cve(path).src_save_fire.peek().size());
-  } else if (cve_isPathSuffix(path, FIREREST_PROCESS_JSON)) {
+  } else if (cve_isPathSuffix(path, FIREREST_PROCESS_FIRE)) {
     res = cve_getattr_file(path, stbuf, factory.cve(path).src_process_fire.peek().size());
+  } else if (cve_isPathSuffix(path, FIREREST_PROPERTIES_JSON)) {
+    res = cve_getattr_file(path, stbuf, factory.cve(path).src_properties_json.peek().size());
+  } else if (cve_isPathSuffix(path, FIREREST_FIRESIGHT_JSON)) {
+    res = cve_getattr_file(path, stbuf, factory.cve(path).src_firesight_json.peek().size());
   } else {
     string sVarPath = buildVarPath(path, "", 0);
     const char* pVarPath = sVarPath.c_str();
@@ -293,9 +297,9 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
   int result = 0;
     
   if (verifyOpenR_(path, fi, &result)) {
-    if (cve_isPathSuffix(path, FIREREST_PROCESS_JSON)) {
+    if (cve_isPathSuffix(path, FIREREST_PROCESS_FIRE)) {
       fi->fh = (uint64_t) (size_t) new SmartPointer<char>(factory.cve(path).src_process_fire.get());
-    } else if (cve_isPathSuffix(path, FIREREST_SAVE_JSON)) {
+    } else if (cve_isPathSuffix(path, FIREREST_SAVE_FIRE)) {
       fi->fh = (uint64_t) (size_t) new SmartPointer<char>(factory.cve(path).src_save_fire.get());
     } else if (cve_isPathSuffix(path, FIREREST_CAMERA_JPG)) {
       fi->fh = (uint64_t) (size_t) new SmartPointer<char>(factory.cameras[0].src_camera_jpg.get());
@@ -304,9 +308,9 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
     } else if (cve_isPathSuffix(path, FIREREST_MONITOR_JPG)) {
       fi->fh = (uint64_t) (size_t) new SmartPointer<char>(factory.cameras[0].src_monitor_jpg.get());
     } else if (cve_isPathSuffix(path, FIREREST_FIRESIGHT_JSON)) {
-      result = cve_openVarFile(path, fi);
+      fi->fh = (uint64_t) (size_t) new SmartPointer<char>(factory.cve(path).src_firesight_json.get());
     } else if (cve_isPathSuffix(path, FIREREST_PROPERTIES_JSON)) {
-      result = cve_openVarFile(path, fi);
+      fi->fh = (uint64_t) (size_t) new SmartPointer<char>(factory.cve(path).src_properties_json.get());
     } else if (cve_isPathSuffix(path, FIREREST_SAVED_PNG)) {
       fi->fh = (uint64_t) (size_t) new SmartPointer<char>(factory.cve(path).src_saved_png.get());
     } else {
@@ -342,8 +346,13 @@ int cve_read(const char *path, char *buf, size_t size, off_t offset, struct fuse
 
   if (cve_isPathSuffix(path, FIREREST_CAMERA_JPG) ||
       cve_isPathSuffix(path, FIREREST_MONITOR_JPG) ||
+      cve_isPathSuffix(path, FIREREST_OUTPUT_JPG) ||
       cve_isPathSuffix(path, FIREREST_SAVED_PNG) ||
-      cve_isPathSuffix(path, FIREREST_OUTPUT_JPG)) {
+      cve_isPathSuffix(path, FIREREST_PROCESS_FIRE) ||
+      cve_isPathSuffix(path, FIREREST_SAVE_FIRE) ||
+      cve_isPathSuffix(path, FIREREST_FIRESIGHT_JSON) ||
+      cve_isPathSuffix(path, FIREREST_PROPERTIES_JSON) ||
+      FALSE) {
     SmartPointer<char> *pJpg = (SmartPointer<char> *) fi->fh;
     sizeOut = firefuse_readBuffer(buf, (char *)pJpg->data(), size, offset, pJpg->size());
   } else if (fi->fh) { // data file
@@ -360,8 +369,8 @@ int cve_read(const char *path, char *buf, size_t size, off_t offset, struct fuse
 
 int cve_release(const char *path, struct fuse_file_info *fi) {
   LOGTRACE1("cve_release(%s)", path);
-  if (cve_isPathSuffix(path, FIREREST_PROCESS_JSON)) {
-    //TODO firefuse_freeDataBuffer(path, fi);
+  if (cve_isPathSuffix(path, FIREREST_PROCESS_FIRE)) {
+    if (fi->fh) { free( (SmartPointer<char> *) fi->fh); }
   } else if (cve_isPathSuffix(path, FIREREST_MONITOR_JPG)) {
     if (fi->fh) { free( (SmartPointer<char> *) fi->fh); }
   } else if (cve_isPathSuffix(path, FIREREST_SAVED_PNG)) {
@@ -369,13 +378,13 @@ int cve_release(const char *path, struct fuse_file_info *fi) {
   } else if (cve_isPathSuffix(path, FIREREST_OUTPUT_JPG)) {
     if (fi->fh) { free( (SmartPointer<char> *) fi->fh); }
   } else if (cve_isPathSuffix(path, FIREREST_FIRESIGHT_JSON)) {
-    //TODO firefuse_freeDataBuffer(path, fi);
+    if (fi->fh) { free( (SmartPointer<char> *) fi->fh); }
   } else if (cve_isPathSuffix(path, FIREREST_PROPERTIES_JSON)) {
-    //TODO firefuse_freeDataBuffer(path, fi);
+    if (fi->fh) { free( (SmartPointer<char> *) fi->fh); }
   } else if (cve_isPathSuffix(path, FIREREST_CAMERA_JPG)) {
     if (fi->fh) { free( (SmartPointer<char> *) fi->fh); }
-  } else if (cve_isPathSuffix(path, FIREREST_SAVE_JSON)) {
-    //TODO firefuse_freeDataBuffer(path, fi);
+  } else if (cve_isPathSuffix(path, FIREREST_SAVE_FIRE)) {
+    if (fi->fh) { free( (SmartPointer<char> *) fi->fh); }
   }
   return 0;
 }
