@@ -129,6 +129,22 @@ int CameraNode::update_camera_jpg() {
   return processed;
 }
 
+void CameraNode::setOutput(Mat image) {
+  if (src_output_jpg.isFresh() || image.rows==0 || image.cols==0) {
+    return; // no interest
+  }
+  LOGTRACE2("CameraNode::setOutput(%dx%d)", image.rows, image.cols);
+  output_seconds = cve_seconds();
+  vector<uchar> jpgBuf;
+  vector<int> param = vector<int>(2);
+  param[0] = CV_IMWRITE_PNG_COMPRESSION;
+  param[1] = 95; // 0..100; default 95
+  imencode(".jpg", image, jpgBuf, param);
+  SmartPointer<char> jpg((char *)jpgBuf.data(), jpgBuf.size());
+  src_output_jpg.post(jpg);
+  LOGTRACE1("CameraNode::setOutput(%ldB)", (ulong)jpg.size());
+}
+
 int CameraNode::update_monitor_jpg() {
   if (src_monitor_jpg.isFresh()) {
     return 0;

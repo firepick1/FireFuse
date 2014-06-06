@@ -153,6 +153,7 @@ class CameraNode {
   public: void init();
   public: int update_camera_jpg();
   public: int update_monitor_jpg();
+  public: void setOutput(Mat image);
 
   public: void temp_set_output_seconds() { output_seconds = cve_seconds(); }
 };

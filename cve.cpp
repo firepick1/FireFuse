@@ -27,20 +27,6 @@ using namespace firesight;
 
 typedef enum{UI_STILL, UI_VIDEO} UIMode;
 
-class CveCam {
-  private:
-    Mat output_image;
-
-  public:
-    CveCam() { }
-
-    void setOutput(Mat value) {
-       output_image = value;
-       factory.cameras[0].temp_set_output_seconds();
-    }
-
-} cveCam[1];
-
 // Return canonical CVE path  (e.g., "/cv/1/gray/calc-offset")
 string cve_path(const char *pPath) {
   assert(pPath);
@@ -130,6 +116,10 @@ int cve_getattr(const char *path, struct stat *stbuf) {
     res = cve_getattr_file(path, stbuf, factory.cameras[0].src_monitor_jpg.peek().size());
   } else if (cve_isPathSuffix(path, FIREREST_SAVED_PNG)) {
     res = cve_getattr_file(path, stbuf, factory.cve(path).src_saved_png.peek().size());
+  } else if (cve_isPathSuffix(path, FIREREST_SAVE_JSON)) {
+    res = cve_getattr_file(path, stbuf, factory.cve(path).src_save_fire.peek().size());
+  } else if (cve_isPathSuffix(path, FIREREST_PROCESS_JSON)) {
+    res = cve_getattr_file(path, stbuf, factory.cve(path).src_process_fire.peek().size());
   } else {
     string sVarPath = buildVarPath(path, "", 0);
     const char* pVarPath = sVarPath.c_str();
@@ -143,15 +133,9 @@ int cve_getattr(const char *path, struct stat *stbuf) {
       if (stbuf->st_mode & S_IFDIR) {
 	stbuf->st_mode = S_IFDIR | 0755;
       } else {
+	LOGINFO1("cve_getattr(%s) other file", path);
 	stbuf->st_mode = S_IFREG | 0444;
       }
-    }
-    if (cve_isPathSuffix(path, FIREREST_PROCESS_JSON)) {
-      //TODO cveCam[0].sizeCameraJPG(path, &res); // get current picture but ignore size
-      //TODO stbuf->st_size = max_json_len;
-    } else if (cve_isPathSuffix(path, FIREREST_SAVE_JSON)) {
-      //TODO cveCam[0].sizeCameraJPG(path, &res); // get current picture but ignore size
-      //TODO stbuf->st_size = max_json_len;
     }
   }
 
@@ -289,7 +273,7 @@ int CVE::process(DataFactory *pFactory) {
     int modelLen = pModelStr ? strlen(pModelStr) : 0;
     jsonResult = SmartPointer<char>(pModelStr, 0);
     json_decref(pModel);
-    cveCam[0].setOutput(image);
+    pFactory->cameras[0].setOutput(image);
     double sElapsed = cve_seconds() - sStart;
     LOGDEBUG3("cve_process(%s) -> JSON %dB %0.3fs", path, pJSON->length, sElapsed);
   } catch (char * ex) {
