@@ -24,6 +24,7 @@ typedef struct {
   long reserved;
 } FuseDataBuffer;
 
+extern const char * fuse_root;
 extern FuseDataBuffer headcam_image;     // perpetually changing image
 extern FuseDataBuffer headcam_image_fstat;  // image at time of most recent fstat()
 
@@ -70,9 +71,9 @@ enum CVE_Path {
 #define FIREREST_PROPERTIES_JSON "/properties.json"
 #define FIREREST_MONITOR_JPG "/monitor.jpg"
 #define FIREREST_OUTPUT_JPG "/output.jpg"
-#define FIREREST_PROCESS_JSON "/process.fire"
+#define FIREREST_PROCESS_FIRE "/process.fire"
 #define FIREREST_SAVED_PNG "/saved.png"
-#define FIREREST_SAVE_JSON "/save.fire"
+#define FIREREST_SAVE_FIRE "/save.fire"
 
 #define FIREREST_VAR "/var/firefuse"
 
@@ -114,25 +115,75 @@ const char * firestep_json();
 } // __cplusplus
 #include "LIFOCache.hpp"
 
-class FUSE_Cache {
-  // Most recent
-  public: LIFOCache<SmartPointer<uchar> > src_camera_jpg;
-  public: LIFOCache<SmartPointer<uchar> > src_monitor_jpg;
-  public: LIFOCache<SmartPointer<uchar> > src_output_jpg;
+double 	cve_seconds();
+void 	cve_process(const char *path, int *pResult);
+string 	cve_path(const char *pPath);
+class DataFactory;
 
-  // CVE
-  public: LIFOCache<SmartPointer<uchar> > src_saved_png;
-  public: LIFOCache<SmartPointer<uchar> > src_save_fire;
-  public: LIFOCache<SmartPointer<uchar> > src_process_fire;
-  public: LIFOCache<SmartPointer<uchar> > src_properties_json;
-  public: LIFOCache<SmartPointer<uchar> > snk_properties_json;
+typedef class CVE {
+  private: string name;
+  private: bool _isColor;
+  public: LIFOCache<SmartPointer<char> > src_saved_png;
+  public: LIFOCache<SmartPointer<char> > src_save_fire;
+  public: LIFOCache<SmartPointer<char> > src_process_fire;
+  public: LIFOCache<SmartPointer<char> > src_firesight_json;
+  public: LIFOCache<SmartPointer<char> > src_properties_json;
+  public: LIFOCache<SmartPointer<char> > snk_properties_json;
+  public: inline string getName() { return name; }
+  public: CVE(string name);
+  public: ~CVE();
+  public: int save(DataFactory *pFactory);
+  public: int process(DataFactory *pFactory);
+  public: inline bool isColor() { return _isColor; }
+} CVE, *CVEPtr;
+
+class CameraNode {
+  private: double output_seconds; // time of last FireSight pipeline completion
+  private: double monitor_duration; // number of seconds to show last output
+
+  // Common data
+  public: LIFOCache<SmartPointer<char> > src_camera_jpg;
+  public: LIFOCache<Mat> src_camera_mat_gray;
+  public: LIFOCache<Mat> src_camera_mat_bgr;
+  public: LIFOCache<SmartPointer<char> > src_monitor_jpg;
+  public: LIFOCache<SmartPointer<char> > src_output_jpg;
+
+  // For DataFactory use
+  public: CameraNode();
+  public: ~CameraNode();
+  public: void init();
+  public: int async_update_camera_jpg();
+  public: int async_update_monitor_jpg();
+  public: void setOutput(Mat image);
+
+  public: void temp_set_output_seconds() { output_seconds = cve_seconds(); }
 };
 
-extern double output_seconds;
-extern double monitor_seconds;
-extern double cve_seconds();
+class DataFactory {
+  private: double idle_period; // minimum seconds between idle() execution
+  private: std::map<string, CVEPtr> cveMap;
+  private: double idle_seconds; // time of last idle() execution
+  private: int async_save_fire();
+  private: int async_process_fire();
 
-extern FUSE_Cache fusecache;
+  public: CameraNode cameras[1];
+
+  public: DataFactory();
+  public: ~DataFactory();
+  public: CVE& cve(string path);
+  public: vector<string> getCveNames();
+  public: void clear();
+  public: void process(FuseDataBuffer *pJPG);
+  public: inline void setIdlePeriod(double value) { idle_period = value; }
+  public: inline double getIdlePeriod() { return idle_period; }
+
+  // TESTING ONLY
+  public: void processInit();
+  public: int processLoop();
+  public: void idle();
+};
+
+extern DataFactory factory; // DataFactory singleton background worker
 
 #endif
 //////////////////////////////////// FIREFUSE_H ////////////////////////////////////////////////////////

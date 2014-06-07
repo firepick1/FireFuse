@@ -18,12 +18,9 @@ using namespace cv;
 using namespace firesight;
 
 #define STATUS_BUFFER_SIZE 1024
-
 static char status_buffer[STATUS_BUFFER_SIZE];
-extern double monitor_seconds;
-extern double output_seconds;
 
-FUSE_Cache fusecache;
+DataFactory factory;
 
 const void* firepick_holes(FuseDataBuffer *pJPG) {
   Mat jpg(1, pJPG->length, CV_8UC1, pJPG->pData);
@@ -60,53 +57,219 @@ const char* firepick_status() {
   return status_buffer;
 }
 
-void update_camera_jpg() {
-  if (!fusecache.src_camera_jpg.isFresh()) {
-    SmartPointer<uchar> jpg((uchar *)buffer.pData, buffer.length);
-    LOGTRACE2("update_camera_jpg() src_camera_jpg.post(%ldB) %0lx", jpg.size(), jpg.data());
-    fusecache.src_camera_jpg.post(jpg);
-  }
-}
-
-void update_monitor_jpg() {
-  if (!fusecache.src_monitor_jpg.isFresh()) {
-    if (cve_seconds() - output_seconds < monitor_seconds) {
-      fusecache.src_monitor_jpg.post(fusecache.src_output_jpg.get());
-    } else {
-      fusecache.src_monitor_jpg.post(fusecache.src_camera_jpg.get());
-    }
-  }
-}
-
 int background_worker(FuseDataBuffer *pJPG) {
-  int status = firepicam_create(0, NULL);
+  factory.process(pJPG);
+  return 0;
+}
 
-  LOGINFO1("background_worker start -> %d", status);
+/////////////////////////// CameraNode ///////////////////////////////////
+
+CameraNode::CameraNode() {
   output_seconds = 0;
-  monitor_seconds = 3;
+  monitor_duration = 3;
+}
 
-  for (;;) {
+CameraNode::~CameraNode() {
+  firepicam_destroy(0);
+}
+
+void CameraNode::init() {
+  int status = firepicam_create(0, NULL);
+  if (status != 0) {
+    LOGERROR1("DataFactory::process() could not initialize camera -> %d", status);
+    throw "Could not initialize camera";
+  }
+  LOGINFO1("CameraNode::init() -> %d", status);
+}
+
+int CameraNode::async_update_camera_jpg() {
+  int processed = 0;
+  if (!src_camera_jpg.isFresh() || !src_camera_mat_bgr.isFresh() || !src_camera_mat_gray.isFresh()) {
+    processed++;
+    LOGTRACE("async_update_camera_jpg()");
+    src_camera_jpg.get(); // make room for post
+    
     JPG_Buffer buffer;
     buffer.pData = NULL;
     buffer.length = 0;
-    
-    status = firepicam_acquireImage(&buffer);
+    int status = firepicam_acquireImage(&buffer);
     if (status != 0) {
-      LOGERROR1("firepicam_acquireImage() => %d", status);
+      LOGERROR1("async_update_camera_jpg() firepicam_acquireImage() => %d", status);
+      throw "could not acquire image";
+    } 
+    assert(buffer.pData);
+    assert(buffer.length);
+
+    SmartPointer<char> jpg((char *)buffer.pData, buffer.length);
+    src_camera_jpg.post(jpg);
+    if (src_camera_mat_bgr.isFresh() && src_camera_mat_gray.isFresh()) {
+      // proactively update all decoded images to eliminate post-idle refresh lag
+      src_camera_mat_bgr.get();
+      src_camera_mat_gray.get();
     } else {
-      if (fusecache.src_camera_jpg.isFresh()) {
-        SmartPointer<uchar> discard = fusecache.src_camera_jpg.get();
-	LOGTRACE2("background_worker() src_camera_jpg.get() -> %ldB@%0lx discarded", discard.size(), discard.data());
-      }
-      update_camera_jpg();
-      update_monitor_jpg();
+      // To eliminate unnecessary conversion we will only update active Mat
     }
-    pJPG->pData = buffer.pData;
-    pJPG->length = buffer.length;
+    LOGDEBUG3("async_update_camera_jpg() src_camera_jpg.post(%ldB) %0lx [0]:%0x", (ulong) jpg.size(), (ulong) jpg.data(), (int) *jpg.data());
+
+    std::vector<uchar> vJPG((uchar *)jpg.data(), (uchar *)jpg.data() + jpg.size());
+    if (!src_camera_mat_bgr.isFresh()) {
+      processed++;
+      Mat image = imdecode(vJPG, CV_LOAD_IMAGE_COLOR); 
+      src_camera_mat_bgr.post(image);
+      LOGTRACE2("async_update_camera_jpg() src_camera_mat_bgr.post(%dx%d)", image.rows, image.cols);
+    }
+    if (!src_camera_mat_gray.isFresh()) {
+      processed++;
+      Mat image = imdecode(vJPG, CV_LOAD_IMAGE_GRAYSCALE); 
+      src_camera_mat_gray.post(image);
+      LOGTRACE2("async_update_camera_jpg() src_camera_mat_gray.post(%dx%d)", image.rows, image.cols);
+    }
   }
 
-  LOGINFO1("background_worker exit -> %d", status);
-  firepicam_destroy(status);
+  return processed;
 }
 
+void CameraNode::setOutput(Mat image) {
+  if (image.rows==0 || image.cols==0) {
+    output_seconds = 0;
+    return; // no interest
+  }
+  LOGTRACE2("CameraNode::setOutput(%dx%d)", image.rows, image.cols);
+  output_seconds = cve_seconds();
+  vector<uchar> jpgBuf;
+  vector<int> param = vector<int>(2);
+  param[0] = CV_IMWRITE_PNG_COMPRESSION;
+  param[1] = 95; // 0..100; default 95
+  imencode(".jpg", image, jpgBuf, param);
+  SmartPointer<char> jpg((char *)jpgBuf.data(), jpgBuf.size());
+  src_output_jpg.post(jpg);
+  LOGTRACE1("CameraNode::setOutput(%ldB)", (ulong)jpg.size());
+}
+
+int CameraNode::async_update_monitor_jpg() {
+  if (src_monitor_jpg.isFresh()) {
+    return 0;
+  }
+  LOGTRACE("async_update_monitor_jpg()");
+
+  const char *fmt;
+  SmartPointer<char> jpg;
+  if (cve_seconds() - output_seconds < monitor_duration) {
+    jpg = src_output_jpg.get();
+    fmt = "async_update_monitor_jpg() src_output_jpg.get(%ldB) %0lx [0]:%0lx";
+  } else {
+    jpg = src_camera_jpg.get();
+    fmt = "async_update_monitor_jpg() src_camera_jpg.get(%ldB) %0lx [0]:%0lx";
+  }
+  src_monitor_jpg.post(jpg);
+
+  LOGDEBUG3(fmt, jpg.size(), jpg.data(), (int) *jpg.data());
+  return 1;
+}
+
+/////////////////////////// DataFactory ///////////////////////////////////
+
+DataFactory::DataFactory() {
+  idle_seconds = cve_seconds();
+  idle_period = 15;
+}
+
+DataFactory::~DataFactory() {
+}
+
+void DataFactory::clear() {
+  for (std::map<string,CVEPtr>::iterator it=cveMap.begin(); it!=cveMap.end(); ++it){
+    delete it->second;
+  }
+  cveMap.clear();
+}
+
+vector<string> DataFactory::getCveNames() {
+  vector<string> result;
+
+  for (std::map<string,CVEPtr>::iterator it=cveMap.begin(); it!=cveMap.end(); ++it){
+    result.push_back(it->first);
+  }
+
+  return result;
+}
+
+CVE& DataFactory::cve(string path) {
+  string cvePath = cve_path(path.c_str());
+  CVEPtr pCve = cveMap[cvePath]; 
+  if (!pCve) {
+    pCve = new CVE(cvePath);
+    cveMap[cvePath] = pCve;
+  }
+  return *pCve;
+}
+
+void DataFactory::idle() {
+  LOGTRACE("DataFactory::idle()");
+  idle_seconds = cve_seconds();
+  SmartPointer<char> discard = cameras[0].src_monitor_jpg.get();
+  idle_seconds = cve_seconds();
+  LOGINFO2("DataFactory::idle() src_monitor_jpg.get() -> %ldB@%0lx discarded", (ulong) discard.size(), (ulong) discard.data());
+}
+
+void DataFactory::processInit() {
+  cameras[0].init();
+}
+
+int DataFactory::async_process_fire() {
+  int processed = 0;
+  for (std::map<string,CVEPtr>::iterator it=cveMap.begin(); it!=cveMap.end(); ++it){
+    CVEPtr pCve = it->second;
+    if (!pCve->src_process_fire.isFresh()) {
+      processed++;
+      LOGTRACE1("DataFactory::async_process_fire(%s)", it->first.c_str());
+      pCve->process(this);
+    }
+  }
+  return processed;
+}
+
+int DataFactory::async_save_fire() {
+  int processed = 0;
+  for (std::map<string,CVEPtr>::iterator it=cveMap.begin(); it!=cveMap.end(); ++it){
+    CVEPtr pCve = it->second;
+    if (!pCve->src_save_fire.isFresh()) {
+      processed++;
+      LOGTRACE1("DataFactory::async_save_fire(%s)", it->first.c_str());
+      pCve->save(this);
+    }
+  }
+  return processed;
+}
+
+int DataFactory::processLoop() {
+  int processed = 0;
+  processed += cameras[0].async_update_camera_jpg();
+  processed += cameras[0].async_update_monitor_jpg();
+  processed += async_save_fire();  
+  processed += async_process_fire();  
+
+  if (processed == 0 && (cve_seconds() - idle_seconds >= idle_period)) {
+    idle();
+  } 
+  return processed;
+}
+
+void DataFactory::process(FuseDataBuffer *pJPG) {
+  try {
+    processInit();
+
+    for (;;) {
+      processLoop();
+    }
+
+    LOGINFO("DataFactory::process() exiting");
+  } catch (const char * ex) {
+    LOGERROR1("DataFactory::process() FATAL EXCEPTION: %s", ex);
+  } catch (string ex) {
+    LOGERROR1("DataFactory::process() FATAL EXCEPTION: %s", ex.c_str());
+  } catch (...) {
+    LOGERROR("DataFactory::process() FATAL UNKNOWN EXCEPTION");
+  }
+}
 

@@ -47,9 +47,9 @@ static void * firefuse_init(struct fuse_conn_info *conn)
   int rc = 0;
 
   firelog_init(FIRELOG_FILE, FIRELOG_INFO);
-  LOGINFO3("FireFUSE %d.%d.%d", FireFUSE_VERSION_MAJOR, FireFUSE_VERSION_MINOR, FireFUSE_VERSION_PATCH);
+  //firelog_init(FIRELOG_FILE, FIRELOG_TRACE);
+  LOGINFO4("FireFUSE %d.%d.%d fuse_root:%s", FireFUSE_VERSION_MAJOR, FireFUSE_VERSION_MINOR, FireFUSE_VERSION_PATCH, fuse_root);
   LOGINFO2("PID%d UID%d", (int) getpid(), (int)getuid());
-
 
   LOGINFO1("Loading FireREST configuration: %s", CONFIG_JSON);
   FILE *fConfig = fopen(CONFIG_JSON, "r");
@@ -182,31 +182,6 @@ static int firefuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
   }
 
   return 0;
-}
-
-FuseDataBuffer* firefuse_allocDataBuffer(const char *path, int *pResult, const char *pData, size_t length) {
-  *pResult = 0;
-  FuseDataBuffer *pBuffer = calloc(sizeof(FuseDataBuffer) + length, 1);
-  if (pBuffer) {
-    pBuffer->length = length;
-    pBuffer->pData = (void *) &pBuffer->reserved; 
-    if (pData) {
-      memcpy(pBuffer->pData, pData, length);
-      LOGTRACE2("firefuse_allocDataBuffer(%s) MEMORY-ALLOC initialized %ldB", path, length);
-    } else {
-      LOGTRACE2("firefuse_allocDataBuffer(%s) MEMORY-ALLOC uninitialized %ldB", path, length);
-    }
-  } else {
-    *pResult = -ENOMEM;
-    LOGERROR2("firefuse_allocDataBuffer(%s) Could not allocate memory: %ldB", path, length);
-  }
-
-  return pBuffer;
-}
-
-FuseDataBuffer* firefuse_allocImage(const char *path, int *pResult) {
-  int length = headcam_image_fstat.length;
-  return firefuse_allocDataBuffer(path, pResult, headcam_image_fstat.pData, length);
 }
 
 static int firefuse_open(const char *path, struct fuse_file_info *fi) {
@@ -412,8 +387,8 @@ static struct fuse_operations firefuse_oper = {
   .write    = firefuse_write,
 };
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
+  fuse_root = argv[argc-1];
   return fuse_main(argc, argv, &firefuse_oper, NULL);
 }
 
