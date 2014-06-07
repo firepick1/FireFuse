@@ -148,7 +148,9 @@ static string firerest_config_camera(json_t *pCamera, const char *pCameraName, j
 	  errMsg += pCveNameStr;
 	  return errMsg;
 	}
-
+	string propertiesPath(cvePath);
+	propertiesPath += "properties.json";
+	errMsg = firerest_write_file(propertiesPath.c_str(), pPropertiesJson);
 	SmartPointer<char> props(pPropertiesJson, strlen(pPropertiesJson));
 	factory.cve(cvePath).src_properties_json.post(props);
 	free(pPropertiesJson);
