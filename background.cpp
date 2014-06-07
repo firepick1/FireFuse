@@ -261,6 +261,7 @@ void DataFactory::process() {
 
     for (;;) {
       processLoop();
+      sched_yield();
     }
 
     LOGINFO("DataFactory::process() exiting");
