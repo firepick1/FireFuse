@@ -57,8 +57,8 @@ const char* firepick_status() {
   return status_buffer;
 }
 
-int background_worker(FuseDataBuffer *pJPG) {
-  factory.process(pJPG);
+int background_worker() {
+  factory.process();
   return 0;
 }
 
@@ -255,7 +255,7 @@ int DataFactory::processLoop() {
   return processed;
 }
 
-void DataFactory::process(FuseDataBuffer *pJPG) {
+void DataFactory::process() {
   try {
     processInit();
 

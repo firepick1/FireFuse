@@ -33,7 +33,7 @@ extern FuseDataBuffer* firefuse_allocDataBuffer(const char *path, int *pResult, 
 extern void firefuse_freeDataBuffer(const char *path, struct fuse_file_info *fi);
 extern const char* firepick_status();
 extern const void* firepick_holes(FuseDataBuffer *pJPG);
-extern int background_worker(FuseDataBuffer *pJPG);
+extern int background_worker();
 
 static inline int firefuse_readBuffer(char *pDst, const char *pSrc, size_t size, off_t offset, size_t len) {
   size_t sizeOut = size;
@@ -173,7 +173,7 @@ class DataFactory {
   public: CVE& cve(string path);
   public: vector<string> getCveNames();
   public: void clear();
-  public: void process(FuseDataBuffer *pJPG);
+  public: void process();
   public: inline void setIdlePeriod(double value) { idle_period = value; }
   public: inline double getIdlePeriod() { return idle_period; }
 

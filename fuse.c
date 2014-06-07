@@ -33,7 +33,7 @@ pthread_t tidCamera;
 
 static void * firefuse_cameraThread(void *arg) {
   LOGINFO("firefuse_cameraThread start");
-  background_worker(&headcam_image);
+  background_worker();
   return NULL;
 }
 
@@ -42,8 +42,7 @@ static char *pConfigJson = NULL;
 
 #define CONFIG_JSON "/var/firefuse/config.json"
 
-static void * firefuse_init(struct fuse_conn_info *conn)
-{
+static void * firefuse_init(struct fuse_conn_info *conn) {
   int rc = 0;
 
   firelog_init(FIRELOG_FILE, FIRELOG_INFO);
