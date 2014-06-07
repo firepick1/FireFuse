@@ -4,9 +4,12 @@ if [ ! -e target ]; then
   mkdir target
 fi
 
+echo clearing target
+rm -f target/*.jpg target/*.json target/*.ls target/*.png
+
 echo
 echo "====> TESTING FIREFUSE FILE STRUCTURE"
-find /dev/firefuse -exec ls --block-size=1 -sFd {} \; |& tee target/firefuse.ls
+find /dev/firefuse -exec ls -Fd {} \; |& tee target/firefuse.ls
 diff test/firefuse.ls target/firefuse.ls
 if [ $? -ne 0 ]; then
   echo "ERROR: firefuse file structure mismatch"
@@ -30,6 +33,7 @@ fi
 
 echo
 echo "====> TESTING FIREFUSE save.fire"
+cat /dev/firefuse/cv/1/gray/cve/calc-offset/save.fire
 cp -f /dev/firefuse/cv/1/gray/cve/calc-offset/saved.png target
 if [ $? -ne 0 ]; then
   echo "ERROR: /dev/firefuse/cv/1/gray/cve/calc-offset/saved.png not found"
@@ -46,62 +50,88 @@ if [ $? -eq 0 ]; then
   exit -1
 fi
 
+echo "waiting for monitor,jpg to clear..."
+sleep 6
+
 echo
 echo "====> TESTING FIREFUSE process.fire"
-cp -f /dev/firefuse/cv/1/monitor.jpg target
+cp -f /dev/firefuse/cv/1/monitor.jpg /dev/null
 if [ $? -ne 0 ]; then
   echo "ERROR: /dev/firefuse/cv/1/monitor.jpg not found"
   exit -1
 fi
-cp -f /dev/firefuse/cv/1/output.jpg target
+cp -f /dev/firefuse/cv/1/output.jpg /dev/null
 if [ $? -ne 0 ]; then
   echo "ERROR: /dev/firefuse/cv/1/output.jpg not found"
   exit -1
 fi
-cat /dev/firefuse/cv/1/gray/cve/calc-offset/process.fire |& tee target/process.json
+cat /dev/firefuse/cv/1/gray/cve/calc-offset/process.fire |& tee target/process1.fire
+sleep 2
+
+cp -f /dev/firefuse/cv/1/monitor.jpg /dev/null
+cp -f /dev/firefuse/cv/1/output.jpg /dev/null
+cp -f /dev/firefuse/cv/1/monitor.jpg target/monitor0.jpg; 
+cp -f /dev/firefuse/cv/1/output.jpg target/output0.jpg; 
+cat /dev/firefuse/cv/1/gray/cve/calc-offset/process.fire |& tee target/process2.fire
 if [ $? -ne 0 ]; then
   echo "ERROR: process.fire failed"
   exit -1
 fi
+echo saving monitor.jpg and output.jpg
+cp -f /dev/firefuse/cv/1/monitor.jpg target/monitor1.jpg; 
+cp -f /dev/firefuse/cv/1/output.jpg target/output1.jpg; 
+sleep 1
+echo saving monitor.jpg and output.jpg
+cp -f /dev/firefuse/cv/1/monitor.jpg target/monitor2.jpg; 
+cp -f /dev/firefuse/cv/1/output.jpg target/output2.jpg; 
+sleep 1
+echo saving monitor.jpg and output.jpg
+cp -f /dev/firefuse/cv/1/monitor.jpg target/monitor3.jpg; 
+cp -f /dev/firefuse/cv/1/output.jpg target/output3.jpg; 
+sleep 1
+echo saving monitor.jpg and output.jpg
+cp -f /dev/firefuse/cv/1/monitor.jpg target/monitor4.jpg; 
+cp -f /dev/firefuse/cv/1/output.jpg target/output4.jpg; 
+sleep 1
+echo saving monitor.jpg and output.jpg
+cp -f /dev/firefuse/cv/1/monitor.jpg target/monitor5.jpg; 
+cp -f /dev/firefuse/cv/1/output.jpg target/output5.jpg; 
+ls -l target
 echo
 echo verifying output.jpg 
-cmp /dev/firefuse/cv/1/output.jpg target/output.jpg
+cmp target/output0.jpg target/output2.jpg
 if [ $? -eq 0 ]; then
   echo "ERROR: process.fire did not generate new output.jpg"
   exit -1
 fi
 echo verifying monitor.jpg ...
-cp -f /dev/firefuse/cv/1/monitor.jpg target/monitor1.jpg; 
-cp -f /dev/firefuse/cv/1/monitor.jpg target/monitor2.jpg;
-sleep 5
-cp -f /dev/firefuse/cv/1/monitor.jpg target/monitor3.jpg;
-cmp target/monitor1.jpg target/monitor.jpg
+cmp target/monitor2.jpg target/monitor0.jpg
 if [ $? -eq 0 ]; then
   echo "ERROR: process.fire did not generate new monitor.jpg"
   exit -1
 fi
-cmp target/monitor1.jpg target/monitor2.jpg
+cmp target/monitor2.jpg target/monitor3.jpg
 if [ $? -ne 0 ]; then
   echo "ERROR: expected unchanging monitor.jpg before monitor_seconds"
   exit -1
 fi
-cmp target/monitor2.jpg target/monitor3.jpg
+cmp target/monitor3.jpg target/monitor5.jpg
 if [ $? -eq 0 ]; then
   echo "ERROR: expected changing monitor.jpg after monitor_seconds"
   exit -1
 fi
-cmp target/monitor1.jpg /dev/firefuse/cv/1/output.jpg
+cmp target/monitor2.jpg target/output2.jpg
 if [ $? -ne 0 ]; then
   echo "ERROR: expected initial monitor.jpg to match output.jpg"
   exit -1
 fi
 echo verifying process.fire 
-grep error target/process.fire
+grep error target/process2.fire
 if [ $? -eq 0 ]; then
   echo "ERROR: process.fire reported error"
   exit -1
 fi
-grep '"model":{"channels":{"0":{' target/process.fire
+grep '"model":{"channels":{"0":{' target/process2.fire
 if [ $? -ne 0 ]; then
   echo "ERROR: process.fire is not JSON"
   exit -1

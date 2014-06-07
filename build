@@ -160,6 +160,8 @@ if [ $? -ne 0 ]; then
     rmdir /dev/firefuse
     if [ $? -ne 0 ]; then
       echo "FAILED: fusermount -uq /dev/firefuse"
+      echo "If you are running NodeJS FireREST web server, kill it"
+      ps -ef | grep firerest.js | grep -v -e "grep firerest"
       exit -1
     fi
   fi

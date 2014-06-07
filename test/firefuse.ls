@@ -1,40 +1,40 @@
-0 /dev/firefuse/
-0 /dev/firefuse/status
-0 /dev/firefuse/config.json
-0 /dev/firefuse/holes
-0 /dev/firefuse/firelog
-0 /dev/firefuse/echo
-0 /dev/firefuse/firestep
-4096 /dev/firefuse/cv/
-4096 /dev/firefuse/cv/1/
-0 /dev/firefuse/cv/1/camera.jpg
-4096 /dev/firefuse/cv/1/gray/
-4096 /dev/firefuse/cv/1/gray/cve/
-4096 /dev/firefuse/cv/1/gray/cve/locate-part/
-0 /dev/firefuse/cv/1/gray/cve/locate-part/save.fire
-0 /dev/firefuse/cv/1/gray/cve/locate-part/process.fire
-0 /dev/firefuse/cv/1/gray/cve/locate-part/saved.png
-4096 /dev/firefuse/cv/1/gray/cve/locate-part/firesight.json
-4096 /dev/firefuse/cv/1/gray/cve/locate-part/properties.json
-4096 /dev/firefuse/cv/1/gray/cve/calc-offset/
-0 /dev/firefuse/cv/1/gray/cve/calc-offset/save.fire
-0 /dev/firefuse/cv/1/gray/cve/calc-offset/process.fire
-0 /dev/firefuse/cv/1/gray/cve/calc-offset/saved.png
-4096 /dev/firefuse/cv/1/gray/cve/calc-offset/firesight.json
-4096 /dev/firefuse/cv/1/gray/cve/calc-offset/properties.json
-0 /dev/firefuse/cv/1/output.jpg
-0 /dev/firefuse/cv/1/monitor.jpg
-4096 /dev/firefuse/cv/1/bgr/
-4096 /dev/firefuse/cv/1/bgr/cve/
-4096 /dev/firefuse/cv/1/bgr/cve/locate-part/
-0 /dev/firefuse/cv/1/bgr/cve/locate-part/save.fire
-0 /dev/firefuse/cv/1/bgr/cve/locate-part/process.fire
-0 /dev/firefuse/cv/1/bgr/cve/locate-part/saved.png
-4096 /dev/firefuse/cv/1/bgr/cve/locate-part/firesight.json
-4096 /dev/firefuse/cv/1/bgr/cve/locate-part/properties.json
-4096 /dev/firefuse/cv/1/bgr/cve/calc-offset/
-0 /dev/firefuse/cv/1/bgr/cve/calc-offset/save.fire
-0 /dev/firefuse/cv/1/bgr/cve/calc-offset/process.fire
-0 /dev/firefuse/cv/1/bgr/cve/calc-offset/saved.png
-4096 /dev/firefuse/cv/1/bgr/cve/calc-offset/firesight.json
-4096 /dev/firefuse/cv/1/bgr/cve/calc-offset/properties.json
+/dev/firefuse/
+/dev/firefuse/status
+/dev/firefuse/config.json
+/dev/firefuse/holes
+/dev/firefuse/firelog
+/dev/firefuse/echo
+/dev/firefuse/firestep
+/dev/firefuse/cv/
+/dev/firefuse/cv/1/
+/dev/firefuse/cv/1/camera.jpg
+/dev/firefuse/cv/1/gray/
+/dev/firefuse/cv/1/gray/cve/
+/dev/firefuse/cv/1/gray/cve/locate-part/
+/dev/firefuse/cv/1/gray/cve/locate-part/properties.json
+/dev/firefuse/cv/1/gray/cve/locate-part/save.fire
+/dev/firefuse/cv/1/gray/cve/locate-part/saved.png
+/dev/firefuse/cv/1/gray/cve/locate-part/firesight.json
+/dev/firefuse/cv/1/gray/cve/locate-part/process.fire
+/dev/firefuse/cv/1/gray/cve/calc-offset/
+/dev/firefuse/cv/1/gray/cve/calc-offset/properties.json
+/dev/firefuse/cv/1/gray/cve/calc-offset/save.fire
+/dev/firefuse/cv/1/gray/cve/calc-offset/saved.png
+/dev/firefuse/cv/1/gray/cve/calc-offset/firesight.json
+/dev/firefuse/cv/1/gray/cve/calc-offset/process.fire
+/dev/firefuse/cv/1/output.jpg
+/dev/firefuse/cv/1/monitor.jpg
+/dev/firefuse/cv/1/bgr/
+/dev/firefuse/cv/1/bgr/cve/
+/dev/firefuse/cv/1/bgr/cve/locate-part/
+/dev/firefuse/cv/1/bgr/cve/locate-part/properties.json
+/dev/firefuse/cv/1/bgr/cve/locate-part/save.fire
+/dev/firefuse/cv/1/bgr/cve/locate-part/saved.png
+/dev/firefuse/cv/1/bgr/cve/locate-part/firesight.json
+/dev/firefuse/cv/1/bgr/cve/locate-part/process.fire
+/dev/firefuse/cv/1/bgr/cve/calc-offset/
+/dev/firefuse/cv/1/bgr/cve/calc-offset/properties.json
+/dev/firefuse/cv/1/bgr/cve/calc-offset/save.fire
+/dev/firefuse/cv/1/bgr/cve/calc-offset/saved.png
+/dev/firefuse/cv/1/bgr/cve/calc-offset/firesight.json
+/dev/firefuse/cv/1/bgr/cve/calc-offset/process.fire
