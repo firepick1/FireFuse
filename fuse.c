@@ -184,31 +184,6 @@ static int firefuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
   return 0;
 }
 
-FuseDataBuffer* firefuse_allocDataBuffer(const char *path, int *pResult, const char *pData, size_t length) {
-  *pResult = 0;
-  FuseDataBuffer *pBuffer = calloc(sizeof(FuseDataBuffer) + length, 1);
-  if (pBuffer) {
-    pBuffer->length = length;
-    pBuffer->pData = (void *) &pBuffer->reserved; 
-    if (pData) {
-      memcpy(pBuffer->pData, pData, length);
-      LOGTRACE2("firefuse_allocDataBuffer(%s) MEMORY-ALLOC initialized %ldB", path, length);
-    } else {
-      LOGTRACE2("firefuse_allocDataBuffer(%s) MEMORY-ALLOC uninitialized %ldB", path, length);
-    }
-  } else {
-    *pResult = -ENOMEM;
-    LOGERROR2("firefuse_allocDataBuffer(%s) Could not allocate memory: %ldB", path, length);
-  }
-
-  return pBuffer;
-}
-
-FuseDataBuffer* firefuse_allocImage(const char *path, int *pResult) {
-  int length = headcam_image_fstat.length;
-  return firefuse_allocDataBuffer(path, pResult, headcam_image_fstat.pData, length);
-}
-
 static int firefuse_open(const char *path, struct fuse_file_info *fi) {
   if (cve_isPathPrefix(path, FIREREST_CV)) {
     return cve_open(path, fi);
