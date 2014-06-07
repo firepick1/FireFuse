@@ -447,8 +447,8 @@ int CVE::save(DataFactory *pFactory) {
     bytes = pngBuf.size();
     SmartPointer<char> png((char *)pngBuf.data(), bytes);
     src_saved_png.post(png);
-    putText(image, "Saved", Point(5, image.rows-6), FONT_HERSHEY_SIMPLEX, 2, Scalar(255,255,255), 3);
-    putText(image, "Saved", Point(6, image.rows-7), FONT_HERSHEY_SIMPLEX, 2, Scalar(0,0,0), 1);
+    putText(image, "Saved", Point(7, image.rows-6), FONT_HERSHEY_SIMPLEX, 2, Scalar(0,0,0), 3);
+    putText(image, "Saved", Point(5, image.rows-8), FONT_HERSHEY_SIMPLEX, 2, Scalar(255,255,255), 3);
     pFactory->cameras[0].setOutput(image);
     LOGTRACE4("CVE::save(%s) %s image saved (%ldB) %0.3fs", name.c_str(), _isColor ? "color" : "gray", bytes, cve_seconds() - sStart);
   } else {
