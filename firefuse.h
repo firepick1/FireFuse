@@ -84,6 +84,7 @@ int cve_getattr(const char *path, struct stat *stbuf);
 int cve_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi);
 int cve_open(const char *path, struct fuse_file_info *fi);
 int cve_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi);
+int cve_write(const char *path, const char *buf, size_t bufsize, off_t offset, struct fuse_file_info *fi);
 int cve_release(const char *path, struct fuse_file_info *fi);
 int cve_truncate(const char *path, off_t size);
 
@@ -128,7 +129,6 @@ typedef class CVE {
   public: LIFOCache<SmartPointer<char> > src_process_fire;
   public: LIFOCache<SmartPointer<char> > src_firesight_json;
   public: LIFOCache<SmartPointer<char> > src_properties_json;
-  public: LIFOCache<SmartPointer<char> > snk_properties_json;
   public: inline string getName() { return name; }
   public: CVE(string name);
   public: ~CVE();

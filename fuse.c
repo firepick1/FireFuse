@@ -307,7 +307,9 @@ static int firefuse_write(const char *path, const char *buf, size_t bufsize, off
     LOGERROR1("firefuse_write %s -> null buffer", path);
     return EINVAL;
   }
-  if (strcmp(path, ECHO_PATH) == 0) {
+  if (cve_isPathPrefix(path, FIREREST_CV)) {
+    return cve_write(path, buf, bufsize, offset, fuse_file_info *fi);
+  } else if (strcmp(path, ECHO_PATH) == 0) {
     if (bufsize > MAX_ECHO) {
       sprintf(echoBuf, "firefuse_write %s -> string too long (%d > %d bytes)", path, bufsize, MAX_ECHO);
       LOGERROR1("%s", echoBuf);

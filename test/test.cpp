@@ -60,13 +60,14 @@ template <class T> bool testNumber(T expected, T actual) {
   return true;
 }
 
-bool testFile(const char * title, const char * path, SmartPointer<char> &contents) {
+bool testFile(const char * title, const char * path, SmartPointer<char> &contents, const char *pWriteData = NULL) {
+  int perm = pWriteData ? 0666 : 0444;
   struct fuse_file_info file_info;
   struct stat file_stat;
   int rc;
 
   rc = cve_getattr(path, &file_stat);
-  LOGINFO3("TEST %s st_size:%ld contents.size():%ld", title, file_stat.st_size, contents.size());
+  LOGINFO4("TEST %s st_size:%ld perm:%o contents.size():%ld", title, file_stat.st_size, file_stat.st_mode & 0777, contents.size());
   assert(rc == 0);
   assert(file_stat.st_uid == getuid());
   assert(file_stat.st_gid == getgid());
@@ -74,13 +75,36 @@ bool testFile(const char * title, const char * path, SmartPointer<char> &content
   assert(file_stat.st_atime == file_stat.st_ctime);
   assert(file_stat.st_atime);
   assert(file_stat.st_nlink == 1);
-  assert(file_stat.st_mode == (S_IFREG | 0444));
+  assert(file_stat.st_mode == (S_IFREG | perm));
   assert(file_stat.st_size == contents.size());
   rc = cve_open(path, &file_info);
   assert(rc == 0);
-  // TODO verify contents
+
+  if (pWriteData) {
+    char buf[101];
+    // TEST WRITE
+    size_t len = strlen(pWriteData);
+    assert(len < 100);	// test limitation
+    rc = cve_write(path, pWriteData, len, 0, &file_info);
+    assert(rc == len);
+    rc = cve_release(path, &file_info);
+    assert(rc == 0);
+
+    // VERIFY WRITE
+    rc = cve_open(path, &file_info);
+    assert(rc == 0);
+    memset(buf, 0, 101);
+    rc = cve_getattr(path, &file_stat);
+    assert(rc == 0);
+    assert(file_stat.st_size == len);
+    rc = cve_read(path, buf, len, 0, &file_info);
+    assert(rc == len);
+    assert(0 == strcmp(buf, pWriteData));
+  }
+
   rc = cve_release(path, &file_info);
   assert(rc == 0);
+
 
   return true;
 }
@@ -420,6 +444,7 @@ bool testString(const char * name, const char*expected, const char*actualValue) 
     LOGTRACE3("TEST %s expected:\"%s\" actual:\"%s\"", name, expected, actualValue);
     return false;
   }
+  LOGTRACE2("TEST %s ok:\"%s\"", name, actualValue);
   return true;
 }
 
@@ -455,22 +480,22 @@ int testConfig() {
   /////////// config test
   firerest_config(config_json);
   vector<string> cveNames = factory.getCveNames();
-  cout << "cveNames.size(): " << cveNames.size() << endl;
   assert(4 == cveNames.size());
-  cout << "cveNames[0]: " << cveNames[0] << endl;
-  cout << "cveNames[1]: " << cveNames[1] << endl;
-  cout << "cveNames[2]: " << cveNames[2] << endl;
-  cout << "cveNames[3]: " << cveNames[3] << endl;
+  for (int i = 0; i < 4; i++) {
+    LOGINFO2("TEST config_json cveNames[%d] = %s", i, cveNames[i].c_str());
+  }
   assert(0==strcmp("/cv/1/bgr/cve/one", cveNames[0].c_str()));
   assert(0==strcmp("/cv/1/bgr/cve/two", cveNames[1].c_str()));
   assert(0==strcmp("/cv/1/gray/cve/one", cveNames[2].c_str()));
   assert(0==strcmp("/cv/1/gray/cve/two", cveNames[3].c_str()));
   SmartPointer<char> one_json(factory.cve("/cv/1/gray/cve/one").src_firesight_json.get());
-  cout << one_json.data() << " " << one_json.size() << "B" << endl;
   assert(testString("firesight.json GET","[{\"op\":\"putText\",\"text\":\"one\"}]", one_json));
-  SmartPointer<char> two_properties(factory.cve("/cv/1/bgr/cve/two").src_properties_json.get());
-  cout << two_properties.data() << " " << two_properties.size() << "B" << endl;
-  assert(0==strcmp("{\"caps\":\"TWO\"}", two_properties.data()));
+
+  //////////////// properties test
+  const char * twoPath = "/cv/1/bgr/cve/two/properties.json";
+  SmartPointer<char> two_properties(factory.cve(twoPath).src_properties_json.get());
+  assert(testString("properties.json GET","{\"caps\":\"TWO\"}", two_properties));
+  testFile("properties.json", twoPath, two_properties, "{\"caps\":\"TUTU\"}");
 
   cout << "testConfig() PASS" << endl;
   cout << endl;
@@ -483,6 +508,15 @@ int testCve() {
   factory.clear();
   factory.processInit();
 
+  //////////// cve_path
+  const char *expectedPath = "/cv/1/gray/cve/two";
+  string sResult = cve_path("abc/cv/1/gray/cve/two/properties.json");
+  LOGINFO1("TEST cve_path(abc/cv/1/gray/cve/two/properties.json) -> %s", sResult.c_str());
+  assert(0 == strcmp(expectedPath, sResult.c_str()));
+  sResult = cve_path(expectedPath);
+  LOGINFO1("TEST cve_path(/cv/1/gray/cve/two) -> %s", sResult.c_str());
+  assert(0 == strcmp(expectedPath, sResult.c_str()));
+  
   //////////// cveNames
   vector<string> cveNames = factory.getCveNames();
   assert(0 == cveNames.size());

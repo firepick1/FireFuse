@@ -94,13 +94,13 @@ static string buildVarPath(const char * path, const char *fName, int parent=1) {
   return string(buf);
 }
 
-int cve_getattr_file(const char *path, struct stat *stbuf, size_t length) {
+int cve_getattr_file(const char *path, struct stat *stbuf, size_t length, int perm=0444) {
   memset(stbuf, 0, sizeof(struct stat));
   stbuf->st_uid = getuid();
   stbuf->st_gid = getgid();
   stbuf->st_atime = stbuf->st_mtime = stbuf->st_ctime = time(NULL);
   stbuf->st_nlink = 1;
-  stbuf->st_mode = S_IFREG | 0444;
+  stbuf->st_mode = S_IFREG | perm;
   stbuf->st_size = length;
   return 0;
 }
@@ -121,7 +121,7 @@ int cve_getattr(const char *path, struct stat *stbuf) {
   } else if (cve_isPathSuffix(path, FIREREST_PROCESS_FIRE)) {
     res = cve_getattr_file(path, stbuf, factory.cve(path).src_process_fire.peek().size());
   } else if (cve_isPathSuffix(path, FIREREST_PROPERTIES_JSON)) {
-    res = cve_getattr_file(path, stbuf, factory.cve(path).src_properties_json.peek().size());
+    res = cve_getattr_file(path, stbuf, factory.cve(path).src_properties_json.peek().size(), 0666);
   } else if (cve_isPathSuffix(path, FIREREST_FIRESIGHT_JSON)) {
     res = cve_getattr_file(path, stbuf, factory.cve(path).src_firesight_json.peek().size());
   } else {
@@ -369,6 +369,21 @@ int cve_read(const char *path, char *buf, size_t size, off_t offset, struct fuse
 
   LOGTRACE3("cve_read(%s, %ldB) -> %ldB", path, size, sizeOut);
   return sizeOut;
+}
+
+int cve_write(const char *path, const char *buf, size_t bufsize, off_t offset, struct fuse_file_info *fi) {
+  assert(offset == 0);
+  assert(buf != NULL);
+  assert(bufsize >= 0);
+  SmartPointer<char> data((char *) buf, bufsize);
+  if (cve_isPathSuffix(path, FIREREST_PROPERTIES_JSON)) {
+    factory.cve(path).src_properties_json.post(data);
+  } else {
+    LOGERROR2("cve_write(%s,%ldB) ENOENT", path, bufsize);
+    return -ENOENT;
+  }
+
+  return bufsize;
 }
 
 int cve_release(const char *path, struct fuse_file_info *fi) {
