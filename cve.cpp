@@ -299,7 +299,11 @@ int CVE::process(DataFactory *pFactory) {
 int cve_open(const char *path, struct fuse_file_info *fi) {
   int result = 0;
     
-  if (verifyOpenR_(path, fi, &result)) {
+  if (cve_isPathSuffix(path, FIREREST_PROPERTIES_JSON)) {
+    if (verifyOpenRW(path, fi, &result)) {
+      fi->fh = (uint64_t) (size_t) new SmartPointer<char>(factory.cve(path).src_properties_json.get());
+    }
+  } else if (verifyOpenR_(path, fi, &result)) {
     if (cve_isPathSuffix(path, FIREREST_PROCESS_FIRE)) {
       fi->fh = (uint64_t) (size_t) new SmartPointer<char>(factory.cve(path).src_process_fire.get());
     } else if (cve_isPathSuffix(path, FIREREST_SAVE_FIRE)) {
@@ -313,8 +317,6 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
       fi->fh = (uint64_t) (size_t) new SmartPointer<char>(factory.cameras[0].src_monitor_jpg.get());
     } else if (cve_isPathSuffix(path, FIREREST_FIRESIGHT_JSON)) {
       fi->fh = (uint64_t) (size_t) new SmartPointer<char>(factory.cve(path).src_firesight_json.get());
-    } else if (cve_isPathSuffix(path, FIREREST_PROPERTIES_JSON)) {
-      fi->fh = (uint64_t) (size_t) new SmartPointer<char>(factory.cve(path).src_properties_json.get());
     } else if (cve_isPathSuffix(path, FIREREST_SAVED_PNG)) {
       fi->fh = (uint64_t) (size_t) new SmartPointer<char>(factory.cve(path).src_saved_png.get());
     } else {

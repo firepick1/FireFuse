@@ -91,17 +91,38 @@ int cve_truncate(const char *path, off_t size);
 void firerest_config(const char *pJson);
 
 inline bool verifyOpenR_(const char *path, struct fuse_file_info *fi, int *pResult) {
-  if ((fi->flags & 3) != O_RDONLY) {
-    LOGERROR1("verifyOpenR_(%s) EACCESS", path);
-    (*pResult) = -EACCES;
+  switch (fi->flags & 3) {
+    case O_RDONLY:
+      LOGTRACE1("verifyOpenR_(%s) O_RDONLY", path);
+      break;
+    case O_WRONLY:
+    case O_RDWR:
+    default:
+      LOGERROR2("verifyOpenR_(%s) EACCESS %o", path, fi->flags);
+      (*pResult) = -EACCES;
+      break;
   }
   return (*pResult) == 0;
 }
 
 inline bool verifyOpenRW(const char *path, struct fuse_file_info *fi, int *pResult) {
   if ((fi->flags & O_DIRECTORY)) {
-    LOGERROR1("verifyOpenRW(%s) EACCESS", path);
+    LOGERROR2("verifyOpenRW(%s) EACCESS %o", path, fi->flags);
     (*pResult) = -EACCES;
+  } else {
+    switch (fi->flags & 3) {
+      case O_RDONLY:
+	LOGTRACE1("verifyOpenRW(%s) O_RDONLY", path);
+	break;
+      case O_WRONLY:
+	LOGTRACE1("verifyOpenRW(%s) O_WRONLY", path);
+	break;
+      case O_RDWR: // Simultaneous read/write not allowed
+      default:
+	LOGERROR2("verifyOpenRW(%s) EACCESS %o", path, fi->flags);
+	(*pResult) = -EACCES;
+	break;
+    }
   }
   return (*pResult) == 0;
 }
