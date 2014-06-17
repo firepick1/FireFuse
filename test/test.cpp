@@ -60,6 +60,24 @@ template <class T> bool testNumber(T expected, T actual) {
   return true;
 }
 
+bool testString(const char * name, const char*expected, const char*actualValue) {
+  if (strcmp(expected, actualValue)) {
+    LOGTRACE3("TEST %s expected:\"%s\" actual:\"%s\"", name, expected, actualValue);
+    return false;
+  }
+  LOGTRACE2("TEST %s ok:\"%s\"", name, actualValue);
+  return true;
+}
+
+bool testString(const char * name, const char*expected, SmartPointer<char> actual) {
+  string actualValue(actual.data(), actual.data() + actual.size());
+  if (strlen(expected) != actualValue.size() || strncmp(expected, actualValue.c_str(), strlen(expected))) {
+    LOGTRACE3("TEST %s expected:\"%s\" actual:\"%s\"", name, expected, actualValue.c_str());
+    return false;
+  }
+  return true;
+}
+
 bool testFile(const char * title, const char * path, SmartPointer<char> &contents, const char *pWriteData = NULL) {
   int perm = pWriteData ? 0666 : 0444;
   struct fuse_file_info file_info;
@@ -225,6 +243,33 @@ int testSmartPointer_CopyData( ){
 
 typedef SmartPointer<char> CharPtr;
 
+LIFOCache<int> bgCache;
+
+static void * lifo_thread(void *arg) {
+  LOGTRACE("lifo_thread() START");
+  while (bgCache.isFresh()) { sched_yield(); }
+  LOGTRACE("lifo_thread() post 100");
+  bgCache.post(100);
+
+  while (bgCache.isFresh()) { sched_yield(); }
+  LOGTRACE("lifo_thread() post 200");
+  bgCache.post(200);
+
+  while (bgCache.isFresh()) { sched_yield(); }
+  LOGTRACE("lifo_thread() post 300");
+  bgCache.post(300);
+
+  while (bgCache.isFresh()) { sched_yield(); }
+  LOGTRACE("lifo_thread() post 400");
+  bgCache.post(400);
+ 
+  while (bgCache.isFresh()) { sched_yield(); }
+  LOGTRACE("lifo_thread() post 500");
+  bgCache.post(500);
+ 
+  return NULL;
+}
+
 int testLIFOCache() {
   cout << "testLIFOCache() ------------------------" << endl;
   {
@@ -323,6 +368,27 @@ int testLIFOCache() {
     assert('o' != *one);
     assert('t' != *two);
   }
+
+  LOGTRACE("TEST phtread_create()");
+  pthread_t tidLIFO;
+  int rc = pthread_create(&tidLIFO, NULL, &lifo_thread, NULL);
+  int firstValue = bgCache.get_sync();
+  LOGTRACE1("TEST get_sync() => %d", firstValue);
+  assert(firstValue == 100);
+
+  int secondValue = bgCache.get_sync(100);
+  LOGTRACE1("TEST get_sync(100) => %d", secondValue);
+  assert(secondValue > firstValue);
+
+  int bgValue;
+  do {
+    int oldValue = bgValue;
+    bgValue = bgCache.get();
+    assert(bgValue >= secondValue);
+    if (bgValue != oldValue) {
+      LOGTRACE1("TEST get() => %d", bgValue);
+    }
+  } while (bgValue < 500);
 
   cout << endl;
   cout << "testLIFOCache() PASS" << endl;
@@ -442,24 +508,6 @@ int testCamera() {
   return 0;
 }
 
-bool testString(const char * name, const char*expected, const char*actualValue) {
-  if (strcmp(expected, actualValue)) {
-    LOGTRACE3("TEST %s expected:\"%s\" actual:\"%s\"", name, expected, actualValue);
-    return false;
-  }
-  LOGTRACE2("TEST %s ok:\"%s\"", name, actualValue);
-  return true;
-}
-
-bool testString(const char * name, const char*expected, SmartPointer<char> actual) {
-  string actualValue(actual.data(), actual.data() + actual.size());
-  if (strlen(expected) != actualValue.size() || strncmp(expected, actualValue.c_str(), strlen(expected))) {
-    LOGTRACE3("TEST %s expected:\"%s\" actual:\"%s\"", name, expected, actualValue.c_str());
-    return false;
-  }
-  return true;
-}
-
 int testConfig() {
   cout << "testConfig() --------------------------" << endl;
   factory.clear();
@@ -479,7 +527,6 @@ int testConfig() {
       "}\n" \
     "}\n" \
   "}\n"; 
-
 
   assert(testString("TEST fuse_root", "/dev/firefuse", fuse_root));
 

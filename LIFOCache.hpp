@@ -85,16 +85,22 @@ template <class T> class LIFOCache {
     syncCount++;					//
     pthread_mutex_unlock(&readerMutex);			//
     /////////////// CRITICAL SECTION END /////////////////
-    struct timespect ts;
+    struct timespec ts;
     int rc;
     if (msTimeout==0 || clock_gettime(CLOCK_REALTIME, &ts) == -1) {
       rc = sem_wait(&getSem);
+      if (rc) {
+        throw "get_sync() sem_wait failed";
+      }
     } else {
-      long long int ns = ts.tv_ns;
-      ns += msTimeout;
-      ts.tv_ns = ns % 1000000000l;
+      long long int ns = ts.tv_nsec;
+      ns += msTimeout * 1000000l;
+      ts.tv_nsec = ns % 1000000000l;
       ts.tv_sec += ns / 1000000000l;
       rc = sem_timedwait(&getSem, &ts);
+      if (rc) {
+        throw "get_sync() TIMEOUT EXCEEDED";
+      }
     }
 
     T result = get();
@@ -102,6 +108,7 @@ template <class T> class LIFOCache {
   }
 
   public: void post(T value) {
+    bool postGetSem = FALSE;
     /////////////// CRITICAL SECTION BEGIN ///////////////
     pthread_mutex_lock(&readerMutex);			//
     int valueIndex = writeCount - readCount + 1;	//
@@ -112,13 +119,19 @@ template <class T> class LIFOCache {
     writeCount++;					//
     if (syncCount > 0) {				//
       syncCount--;					//
-      sem_post(&getSem);				//
+      postGetSem = TRUE;				//
     }							//
     pthread_mutex_unlock(&readerMutex);			//
     /////////////// CRITICAL SECTION END /////////////////
+    if (postGetSem) {
+      sem_post(&getSem);				
+    }
   }
 
   public: bool isFresh() { return writeCount && writeCount != readCount; }
+
+  public: long getWriteCount() { return writeCount; }
+  public: long getReadCount() { return readCount; }
 };
 
 template <class T> class SmartPointer {
