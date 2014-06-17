@@ -56,6 +56,18 @@ string cve_path(const char *pPath) {
   return string(pCv, pSlash-pCv);
 }
 
+bool isCvePath(const char *pPath) {
+  if (!pPath) {
+    return FALSE;
+  } else if (strncmp("/cv", pPath, 3) == 0) {
+    return TRUE;
+  } else if (strncmp("/sync/cv", pPath, 3) == 0) {
+    return TRUE;
+  }
+
+  return FALSE;
+}
+
 static string camera_profile(const char * path) {
   string pathstr(path);
   string result;
@@ -418,10 +430,6 @@ double cve_seconds() {
   int64 ticks = getTickCount();
   double ticksPerSecond = getTickFrequency();
   double seconds = ticks/ticksPerSecond;
-}
-
-bool cve_isPathPrefix(const char *path, const char * prefix) {
-  return strncmp(path, prefix, strlen(prefix)) == 0;
 }
 
 bool cve_isPathSuffix(const char *value, const char * suffix) {

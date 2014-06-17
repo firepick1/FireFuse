@@ -79,7 +79,7 @@ enum CVE_Path {
 
 #define FIREREST_VAR "/var/firefuse"
 
-bool cve_isPathPrefix(const char *value, const char * prefix) ;
+bool isCvePath(const char *pPath);
 bool cve_isPathSuffix(const char *path, const char *suffix);
 int cve_save(FuseDataBuffer *pBuffer, const char *path);
 int cve_getattr(const char *path, struct stat *stbuf);
