@@ -19,6 +19,11 @@ char *cameraBuffer;
 int firepicam_create(int argc, const char **argv) {
   cameraTime = 0;
   cameraBuffer = NULL;
+  cout << "firepicam_create() ";
+  for (int i = 0; i < argc; i++) {
+    cout << argv[i] << " ";
+  }
+  cout << endl;
   return 0;
 }
 

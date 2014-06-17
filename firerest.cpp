@@ -17,6 +17,9 @@ using namespace std;
 
 const char * fuse_root  = "/dev/firefuse";
 
+int cameraWidth = 800;
+int cameraHeight = 200;
+
 static string firerest_write_file(const char * path, const char *text) {
   string errMsg;
   FILE * pFile = fopen(path, "w");
@@ -62,6 +65,16 @@ static string firerest_config_camera(json_t *pCamera, const char *pCameraName, j
   monitorPath += "/monitor.jpg";
   errMsg = firerest_write_file(monitorPath.c_str(), "");
   if (!errMsg.empty()) { return errMsg; }
+
+  json_t *pWidth = json_object_get(pCamera, "width");
+  if (json_is_integer(pWidth)) {
+    cameraWidth = json_integer_value(pWidth);
+  }
+
+  json_t *pHeight = json_object_get(pCamera, "height");
+  if (json_is_integer(pHeight)) {
+    cameraHeight = json_integer_value(pHeight);
+  }
 
   json_t *pProfileMap = json_object_get(pCamera, "profile_map");
   if (pProfileMap == 0) {

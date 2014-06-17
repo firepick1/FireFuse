@@ -74,12 +74,23 @@ CameraNode::~CameraNode() {
 }
 
 void CameraNode::init() {
-  int status = firepicam_create(0, NULL);
+  char widthBuf[20];
+  char heightBuf[20];
+  snprintf(widthBuf, sizeof(widthBuf), "%d", cameraWidth);
+  snprintf(heightBuf, sizeof(heightBuf), "%d", cameraHeight);
+  const char *argv[] = {
+    "CameraNode",
+    "-w", 
+    widthBuf,
+    "-h",
+    heightBuf
+  };
+  int status = firepicam_create(5, argv);
   if (status != 0) {
     LOGERROR1("DataFactory::process() could not initialize camera -> %d", status);
     throw "Could not initialize camera";
   }
-  LOGINFO1("CameraNode::init() -> %d", status);
+  LOGINFO3("CameraNode::init() %dx%d -> %d", cameraWidth, cameraHeight, status);
 }
 
 int CameraNode::async_update_camera_jpg() {

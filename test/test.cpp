@@ -77,6 +77,8 @@ bool testFile(const char * title, const char * path, SmartPointer<char> &content
   assert(file_stat.st_nlink == 1);
   assert(file_stat.st_mode == (S_IFREG | perm));
   assert(file_stat.st_size == contents.size());
+  memset(&file_info, 0, sizeof(fuse_file_info));
+  file_info.flags = O_RDONLY;
   rc = cve_open(path, &file_info);
   assert(rc == 0);
 
@@ -91,6 +93,7 @@ bool testFile(const char * title, const char * path, SmartPointer<char> &content
     assert(rc == 0);
 
     // VERIFY WRITE
+    file_info.flags = O_WRONLY;
     rc = cve_open(path, &file_info);
     assert(rc == 0);
     memset(buf, 0, 101);
@@ -469,7 +472,10 @@ int testConfig() {
 	"\"two\":{ \"firesight\": [ {\"op\":\"putText\", \"text\":\"two\"} ], \"properties\": { \"caps\":\"TWO\" } }\n" \
       "},\n" \
       "\"camera_map\":{\n" \
-	"\"1\":{ \"profile_map\":{ \"gray\":{ \"cve_names\":[ \"one\", \"two\" ] }, \"bgr\":{ \"cve_names\":[ \"one\", \"two\" ] }}}\n" \
+	"\"1\":{ \
+	  \"width\":400,\
+	  \"height\":400,\
+	  \"profile_map\":{ \"gray\":{ \"cve_names\":[ \"one\", \"two\" ] }, \"bgr\":{ \"cve_names\":[ \"one\", \"two\" ] }}}\n" \
       "}\n" \
     "}\n" \
   "}\n"; 
@@ -490,6 +496,8 @@ int testConfig() {
   assert(0==strcmp("/cv/1/gray/cve/two", cveNames[3].c_str()));
   SmartPointer<char> one_json(factory.cve("/cv/1/gray/cve/one").src_firesight_json.get());
   assert(testString("firesight.json GET","[{\"op\":\"putText\",\"text\":\"one\"}]", one_json));
+  assert(400 == cameraWidth);
+  assert(400 == cameraHeight);
 
   //////////////// properties test
   const char * twoPath = "/cv/1/bgr/cve/two/properties.json";

@@ -231,7 +231,7 @@ static int firefuse_open(const char *path, struct fuse_file_info *fi) {
 void firefuse_freeDataBuffer(const char *path, struct fuse_file_info *fi) {
   if (fi->fh) {
     FuseDataBuffer *pBuffer = (FuseDataBuffer *)(size_t) fi->fh;
-    LOGTRACE2("firefuse_freeDataBuffer(%s) MEMORY-FREE: %ldB", path, pBuffer->length);
+    LOGTRACE2("firefuse_freeDataBuffer(%s) MEMORY-FREE: %ldB", path, (long) pBuffer->length);
     free(pBuffer);
     fi->fh = 0;
   }
@@ -311,7 +311,7 @@ static int firefuse_write(const char *path, const char *buf, size_t bufsize, off
     return cve_write(path, buf, bufsize, offset, fi);
   } else if (strcmp(path, ECHO_PATH) == 0) {
     if (bufsize > MAX_ECHO) {
-      sprintf(echoBuf, "firefuse_write %s -> string too long (%d > %d bytes)", path, bufsize, MAX_ECHO);
+      sprintf(echoBuf, "firefuse_write %s -> string too long (%ld > %d bytes)", path, bufsize, MAX_ECHO);
       LOGERROR1("%s", echoBuf);
       return EINVAL;
     }

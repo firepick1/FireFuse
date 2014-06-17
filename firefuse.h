@@ -27,6 +27,8 @@ typedef struct {
 extern const char * fuse_root;
 extern FuseDataBuffer headcam_image;     // perpetually changing image
 extern FuseDataBuffer headcam_image_fstat;  // image at time of most recent fstat()
+extern int cameraWidth; // config.json provided camera width
+extern int cameraHeight; // config.json provided camera height
 
 extern FuseDataBuffer* firefuse_allocImage(const char *path, int *pResult);
 extern FuseDataBuffer* firefuse_allocDataBuffer(const char *path, int *pResult, const char *pData, size_t length);
@@ -107,7 +109,7 @@ inline bool verifyOpenR_(const char *path, struct fuse_file_info *fi, int *pResu
 
 inline bool verifyOpenRW(const char *path, struct fuse_file_info *fi, int *pResult) {
   if ((fi->flags & O_DIRECTORY)) {
-    LOGERROR2("verifyOpenRW(%s) EACCESS %o", path, fi->flags);
+    LOGERROR2("verifyOpenRW(%s) DIRECTORY EACCESS %o", path, fi->flags);
     (*pResult) = -EACCES;
   } else {
     switch (fi->flags & 3) {
@@ -118,8 +120,11 @@ inline bool verifyOpenRW(const char *path, struct fuse_file_info *fi, int *pResu
 	LOGTRACE1("verifyOpenRW(%s) O_WRONLY", path);
 	break;
       case O_RDWR: // Simultaneous read/write not allowed
-      default:
 	LOGERROR2("verifyOpenRW(%s) EACCESS %o", path, fi->flags);
+	(*pResult) = -EACCES;
+	break;
+      default:
+	LOGERROR2("verifyOpenRW(%s) UNKNOWN EACCESS %o", path, fi->flags);
 	(*pResult) = -EACCES;
 	break;
     }
