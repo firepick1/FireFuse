@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <memory>
 #include <sched.h>
+#include <semaphore.h>
 #include <FireLog.h>
 
 using namespace std;
@@ -25,15 +26,19 @@ using namespace std;
 template <class T> class LIFOCache {
   private: volatile long readCount;
   private: volatile long writeCount;
-  private: T emptyValue;
+  private: volatile long syncCount;
   private: T values[2];
   private: pthread_mutex_t readerMutex;
+  private: sem_t getSem;
 
   public: LIFOCache() { 
     this->readCount = 0;
     this->writeCount = 0;
-    int rc = pthread_mutex_init(&readerMutex, NULL);
-    assert(rc == 0);
+    this->syncCount = 0;
+    int rc_readerMutex = pthread_mutex_init(&readerMutex, NULL);
+    assert(rc_readerMutex == 0);
+    int rc_getSem = sem_init(&getSem, 0, 0);
+    assert(rc_getSem == 0);
   }
 
   public: ~LIFOCache() { 
@@ -57,6 +62,7 @@ template <class T> class LIFOCache {
     return result;
   }
 
+  // Cached get
   public: T get() {
     /////////////// CRITICAL SECTION BEGIN ///////////////
     pthread_mutex_lock(&readerMutex);			//
@@ -72,6 +78,28 @@ template <class T> class LIFOCache {
     return result;
   }
 
+  public: T get_sync(int msTimeout=0) {
+    /////////////// CRITICAL SECTION BEGIN ///////////////
+    pthread_mutex_lock(&readerMutex);			//
+    syncCount++;					//
+    pthread_mutex_unlock(&readerMutex);			//
+    /////////////// CRITICAL SECTION END /////////////////
+    struct timespect ts;
+    int rc;
+    if (msTimeout==0 || clock_gettime(CLOCK_REALTIME, &ts) == -1) {
+      rc = sem_wait(&getSem);
+    } else {
+      long long int ns = ts.tv_ns;
+      ns += msTimeout;
+      ts.tv_ns = ns % 1000000000l;
+      ts.tv_sec += ns / 1000000000l;
+      rc = sem_timedwait(&getSem, &ts);
+    }
+
+    T result = get();
+    return result;
+  }
+
   public: void post(T value) {
     /////////////// CRITICAL SECTION BEGIN ///////////////
     pthread_mutex_lock(&readerMutex);			//
@@ -81,6 +109,10 @@ template <class T> class LIFOCache {
     }							//
     values[valueIndex] = value;				//
     writeCount++;					//
+    if (syncCount > 0) {				//
+      syncCount--;					//
+      sem_post(&getSem);				//
+    }							//
     pthread_mutex_unlock(&readerMutex);			//
     /////////////// CRITICAL SECTION END /////////////////
   }
