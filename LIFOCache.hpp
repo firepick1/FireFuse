@@ -81,6 +81,7 @@ template <class T> class LIFOCache {
   public: T get_sync(int msTimeout=0) {
     /////////////// CRITICAL SECTION BEGIN ///////////////
     pthread_mutex_lock(&readerMutex);			//
+    readCount = writeCount;				//
     syncCount++;					//
     pthread_mutex_unlock(&readerMutex);			//
     /////////////// CRITICAL SECTION END /////////////////
