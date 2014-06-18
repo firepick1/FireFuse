@@ -35,10 +35,11 @@ static string firerest_write_file(const char * path, const char *text) {
   return errMsg;
 }
 
-static string firerest_config_camera(json_t *pCamera, const char *pCameraName, json_t *pCveMap) {
+static string firerest_config_camera(const char*varPath, json_t *pCamera, const char *pCameraName, json_t *pCveMap, json_t *p_fs_cv) {
   string errMsg;
   LOGINFO1("firerest_config_camera() processing camera: %s", pCameraName);
-  string cameraPath = "/var/firefuse/cv/";
+  string cameraPath(varPath);
+  cameraPath += "cv/";
   cameraPath += pCameraName;
   DIR * cameraDir = opendir(cameraPath.c_str());
   if (cameraDir) {
@@ -46,6 +47,8 @@ static string firerest_config_camera(json_t *pCamera, const char *pCameraName, j
     closedir(cameraDir);
     //TODO return errMsg;
   }
+  json_t *p_fs_camera = json_object();
+  json_object_set(p_fs_cv, pCameraName, p_fs_camera);
   int rc = !cameraDir && mkdir(cameraPath.c_str(), 0755);
   if (rc) {
     LOGWARN1("firerest_config_camera(%s) directory not created", cameraPath.c_str());
@@ -76,6 +79,10 @@ static string firerest_config_camera(json_t *pCamera, const char *pCameraName, j
     cameraHeight = json_integer_value(pHeight);
   }
 
+  json_object_set(p_fs_camera, "camera.jpg", json_integer(0444));
+  json_object_set(p_fs_camera, "output.jpg", json_integer(0444));
+  json_object_set(p_fs_camera, "monitor.jpg", json_integer(0444));
+
   json_t *pProfileMap = json_object_get(pCamera, "profile_map");
   if (pProfileMap == 0) {
     errMsg = "firerest_config_camera() missing camera configuration: profile_map";
@@ -84,6 +91,8 @@ static string firerest_config_camera(json_t *pCamera, const char *pCameraName, j
   const char *pProfileName;
   json_t * pProfile;
   json_object_foreach(pProfileMap, pProfileName, pProfile) {
+    json_t *p_fs_profile = json_object();
+    json_object_set(p_fs_camera, pProfileName, p_fs_profile);
     string profilePath(cameraPath);
     profilePath += "/";
     profilePath += pProfileName;
@@ -92,6 +101,8 @@ static string firerest_config_camera(json_t *pCamera, const char *pCameraName, j
       LOGWARN1("firerest_config_camera(%s) directory not created", profilePath.c_str());
     }
 
+    json_t *p_fs_cve = json_object();
+    json_object_set(p_fs_profile, "cve", p_fs_cve);
     profilePath += "/cve/";
     rc = mkdir(profilePath.c_str(), 0755);
     if (rc) {
@@ -170,16 +181,24 @@ static string firerest_config_camera(json_t *pCamera, const char *pCameraName, j
       }
 
       if (!errMsg.empty()) { return errMsg; }
+
+      json_t *p_fs_cvename = json_object();
+      json_object_set(p_fs_cve, pCveNameStr, p_fs_cvename);
+      json_object_set(p_fs_cvename, "firesight.json", pFireSight);
+      json_object_set(p_fs_cvename, "save.fire", json_integer(0444));
+      json_object_set(p_fs_cvename, "process.fire", json_integer(0444));
+      json_object_set(p_fs_cvename, "saved.png", json_integer(0444));
+      json_object_set(p_fs_cvename, "properties.json", pProperties);
     }
   }
 
   return errMsg;
 }
 
-static string firerest_config_cv(json_t *pConfig) {
+static string firerest_config_cv(const char* varPath, json_t *pConfig, json_t *p_fs_root) {
   string errMsg;
 
-  LOGINFO("firerest_config_cv() processing configuration: cv");
+  LOGINFO1("firerest_config_cv(%s) processing configuration: cv", varPath);
   json_t *pCv = json_object_get(pConfig, "cv");
   if (pCv == 0) {
     errMsg = "firerest_config_cv() missing configuration: cv";
@@ -206,18 +225,27 @@ static string firerest_config_cv(json_t *pConfig) {
       errMsg = "firerest_config_cv() missing cv configuration: camera_map";
     }
   }
+  json_t *p_fs_cv = NULL;
+  if (errMsg.empty()) {
+    string cvdir(varPath);
+    cvdir += "cv/";
+    p_fs_cv = json_object();
+    json_object_set(p_fs_root, "cv", p_fs_cv);
+    int rc = mkdir(cvdir.c_str(), 0755);
+    if (rc) {
+      LOGWARN1("firerest_config_cv(%s) directory not created", cvdir.c_str());
+    }
+  }
   if (errMsg.empty()) {
     const char *pCameraName;
     json_t *pCamera;
     json_object_foreach(pCameraMap, pCameraName, pCamera) {
-      errMsg = firerest_config_camera(pCamera, pCameraName, pCveMap);
+      errMsg = firerest_config_camera(varPath, pCamera, pCameraName, pCveMap, p_fs_cv);
       if (!errMsg.empty()) {
         break;
       }
     }
   }
-
-  json_decref(pConfig);
 
   if (!errMsg.empty()) {
     LOGERROR1("%s", errMsg.c_str());
@@ -226,6 +254,8 @@ static string firerest_config_cv(json_t *pConfig) {
 }
 
 void firerest_config(const char *pJson) {
+  json_t *p_firerest = json_object();
+
   json_error_t jerr;
   json_t *pConfig = json_loads(pJson, 0, &jerr);
   string errMsg;
@@ -234,7 +264,17 @@ void firerest_config(const char *pJson) {
     throw jerr;
   }
 
-  errMsg = firerest_config_cv(pConfig);
+  errMsg = firerest_config_cv("/var/firefuse/", pConfig, p_firerest);
+  if (errMsg.empty()) {
+    json_t *p_sync = json_object();
+    json_object_set(p_firerest, "sync", p_sync);
+    errMsg = firerest_config_cv("/var/firefuse/sync/", pConfig, p_sync);
+  }
+
+  char *p_firerest_json = json_dumps(p_firerest, JSON_INDENT(2)|JSON_PRESERVE_ORDER);
+  cout << p_firerest_json << endl;
+  free (p_firerest_json);
+  json_decref(p_firerest);
 
   json_decref(pConfig);
   if (!errMsg.empty()) {
