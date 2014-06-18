@@ -143,6 +143,27 @@ const char * firestep_json();
 //////////////////////////////////// C++ DECLARATIONS ////////////////////////////////////////////////////////
 } // __cplusplus
 #include "LIFOCache.hpp"
+#include <vector>
+#include <map>
+#include <string.h>
+
+class JSONFileSystem {
+  private: std::map<string, json_t *> dirMap;
+  private: std::map<string, json_t *> fileMap;
+  private: json_t *resolve_file(var char *path);
+  private: int dirPerms;
+
+  public: JSONFileSystem();
+  public: ~JSONFileSystem();
+
+  public: static vector<string> splitPath(const char *path);
+  public: json_t *get(const char *path);
+  public: void create_file(const char *path, int perm);
+  public: inline void create_file(string path, int perm) { create_file(path_cstr(), perm); }
+  public: bool isFile(const char *path);
+  public: bool isDirectory(const char *path);
+  public: int perms(const char *path);
+}
 
 double 	cve_seconds();
 void 	cve_process(const char *path, int *pResult);

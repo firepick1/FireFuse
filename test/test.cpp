@@ -636,10 +636,45 @@ int testCve() {
   return 0;
 }
 
+int testFireREST() {
+  cout << "testFireREST() --------------------" << endl;
+
+  vector<strings> segments = FireREST.splitPath("");
+  assert(segments.size() == 0);
+
+  segments = FireREST.splitPath("/");
+  assert(segments.size() == 1);
+  assert(testString("splitPath(/)", "/", segments[0]);
+
+  segments = FireREST.splitPath("/one");
+  assert(segments.size() == 2);
+  assert(testString("splitPath(/one)", "/", segments[0]);
+  assert(testString("splitPath(/one)", "one", segments[1]);
+  
+  segments = FireREST.splitPath("/one/two/");
+  assert(segments.size() == 3);
+  assert(testString("splitPath(/one/two/)", "/", segments[0]);
+  assert(testString("splitPath(/one/two/)", "one", segments[1]);
+  assert(testString("splitPath(/one/two/)", "two", segments[2]);
+ 
+  segments = FireREST.splitPath("/one/two/three.json");
+  assert(segments.size() == 4);
+  assert(testString("splitPath(/one/two/three.json)", "/", segments[0]);
+  assert(testString("splitPath(/one/two/three.json)", "one", segments[1]);
+  assert(testString("splitPath(/one/two/three.json)", "two", segments[2]);
+  assert(testString("splitPath(/one/two/three.json)", "three.json", segments[2]);
+
+  cout << "testFireREST() PASS" << endl;
+  cout << endl;
+
+  return 0;
+}
+
 int testSuite() {
   firelog_level(FIRELOG_TRACE);
   try {
     if (
+      testFireREST() == 0 &&
       testConfig()==0 &&
       testCamera()==0 &&
       testSmartPointer()==0 && 
