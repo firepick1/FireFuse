@@ -24,8 +24,7 @@ int cameraHeight = 200;
 /////////////////////////////// JSONFileSystem /////////////////////////////
 
 JSONFileSystem::JSONFileSystem() {
-  dirMap["/"] = json_object();
-  dirPerms = 0755;
+  clear();
 }
 
 JSONFileSystem::~JSONFileSystem() { 
@@ -34,6 +33,13 @@ JSONFileSystem::~JSONFileSystem() {
     json_decref(root);
   }
 }
+
+void JSONFileSystem::clear() {
+  dirMap.clear();
+  fileMap.clear();
+  dirMap["/"] = json_object();
+}
+
 
 json_t * JSONFileSystem::get(const char *path) { 
   json_t * result = dirMap[path];
@@ -54,7 +60,7 @@ bool JSONFileSystem::isDirectory(const char *path) {
 int JSONFileSystem::perms(const char *path) {
   json_t * obj = dirMap[path];
   if (obj != NULL) {
-    return dirPerms;
+    return 0755; // rwxr_xr_x
   }
   obj = fileMap[path];
   json_t * perms = json_object_get(obj, "perms");

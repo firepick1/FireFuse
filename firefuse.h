@@ -147,24 +147,6 @@ const char * firestep_json();
 #include <map>
 #include <string.h>
 
-class JSONFileSystem {
-  private: std::map<string, json_t *> dirMap;
-  private: std::map<string, json_t *> fileMap;
-  private: json_t *resolve_file(var char *path);
-  private: int dirPerms;
-
-  public: JSONFileSystem();
-  public: ~JSONFileSystem();
-
-  public: static vector<string> splitPath(const char *path);
-  public: json_t *get(const char *path);
-  public: void create_file(const char *path, int perm);
-  public: inline void create_file(string path, int perm) { create_file(path_cstr(), perm); }
-  public: bool isFile(const char *path);
-  public: bool isDirectory(const char *path);
-  public: int perms(const char *path);
-}
-
 double 	cve_seconds();
 void 	cve_process(const char *path, int *pResult);
 string 	cve_path(const char *pPath);
@@ -233,6 +215,37 @@ class DataFactory {
 };
 
 extern DataFactory factory; // DataFactory singleton background worker
+
+class JSONFileSystem {
+  private: std::map<string, json_t *> dirMap;
+  private: std::map<string, json_t *> fileMap;
+  private: json_t *resolve_file(var char *path);
+
+  public: JSONFileSystem();
+  public: ~JSONFileSystem();
+
+  public: static vector<string> splitPath(const char *path);
+  public: void clear();
+  public: json_t *get(const char *path);
+  public: void create_file(const char *path, int perm);
+  public: inline void create_file(string path, int perm) { create_file(path_cstr(), perm); }
+  public: bool isFile(const char *path);
+  public: bool isDirectory(const char *path);
+  public: int perms(const char *path);
+}
+
+class FireREST {
+  private: JSONFileSystem files;
+
+  public: FireREST();
+  public: ~FireREST();
+
+  public: void configure(const char *pJson);
+  public: int perms(const char *path) { return files.perms(path); }
+  public: bool isFile(const char *path) { return files.isFile(path); }
+  private: string config_camera(const char* cv_path, json_t *pCamera, const char *pCameraName, json_t *pCveMap);
+  private: string config_cv(const char* root_path, json_t *pConfig);
+}
 
 #endif
 //////////////////////////////////// FIREFUSE_H ////////////////////////////////////////////////////////
