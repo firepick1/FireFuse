@@ -40,6 +40,8 @@ static void * firefuse_cameraThread(void *arg) {
 /////////////////////// FIREFUSE CALLBACKS //////////////////////
 static char *pConfigJson = NULL;
 
+json_t *p_firerest = NULL;
+
 #define CONFIG_JSON "/var/firefuse/config.json"
 
 static void * firefuse_init(struct fuse_conn_info *conn) {
@@ -67,7 +69,7 @@ static void * firefuse_init(struct fuse_conn_info *conn) {
   }
   pConfigJson[length] = 0;
   fclose(fConfig);
-  firerest_config(pConfigJson);
+  p_firerest = firerest_config(pConfigJson);
 
   memset(echoBuf, 0, sizeof(echoBuf));
 
@@ -83,8 +85,10 @@ static void * firefuse_init(struct fuse_conn_info *conn) {
   return NULL; /* init */
 }
 
-static void firefuse_destroy(void * initData)
-{
+static void firefuse_destroy(void * initData) {
+  if (p_firerest) {
+    json_decref(p_firerest);
+  }
   if (logFile) {
     LOGINFO("firefuse_destroy()");
     firelog_destroy();

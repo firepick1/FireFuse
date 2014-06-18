@@ -636,7 +636,7 @@ int testCve() {
   return 0;
 }
 
-int main(int argc, char *argv[]) {
+int testSuite() {
   firelog_level(FIRELOG_TRACE);
   try {
     if (
@@ -662,4 +662,8 @@ int main(int argc, char *argv[]) {
     cout << "UNKNOWN EXCEPTION"<< endl;
   }
   return -1;
+}
+
+int main(int argc, char *argv[]) {
+  return testSuite();
 }

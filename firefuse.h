@@ -79,6 +79,8 @@ enum CVE_Path {
 
 #define FIREREST_VAR "/var/firefuse"
 
+extern json_t *p_firerest;
+
 bool isCvePath(const char *pPath);
 bool cve_isPathSuffix(const char *path, const char *suffix);
 int cve_save(FuseDataBuffer *pBuffer, const char *path);
@@ -90,7 +92,7 @@ int cve_write(const char *path, const char *buf, size_t bufsize, off_t offset, s
 int cve_release(const char *path, struct fuse_file_info *fi);
 int cve_truncate(const char *path, off_t size);
 
-void firerest_config(const char *pJson);
+json_t * firerest_config(const char *pJson);
 
 inline bool verifyOpenR_(const char *path, struct fuse_file_info *fi, int *pResult) {
   switch (fi->flags & 3) {
