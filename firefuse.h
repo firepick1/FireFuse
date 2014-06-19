@@ -81,7 +81,6 @@ enum CVE_Path {
 
 extern json_t *p_firerest;
 
-bool isCvePath(const char *pPath);
 bool cve_isPathSuffix(const char *path, const char *suffix);
 int cve_save(FuseDataBuffer *pBuffer, const char *path);
 int cve_getattr(const char *path, struct stat *stbuf);
@@ -229,6 +228,7 @@ class JSONFileSystem {
   public: json_t *get(const char *path);
   public: void create_file(const char *path, int perm);
   public: inline void create_file(string path, int perm) { create_file(path_cstr(), perm); }
+  public: vector<string> fileNames(const char *path);
   public: bool isFile(const char *path);
   public: bool isDirectory(const char *path);
   public: int perms(const char *path);
@@ -242,10 +242,14 @@ class FireREST {
 
   public: void configure(const char *pJson);
   public: int perms(const char *path) { return files.perms(path); }
-  public: bool isFile(const char *path) { return files.isFile(path); }
+  public: bool isDirectory(const char *path) { return files.isDirectory(path); }
+  public: bool isSync(const char *path);
+  public: vector<string> fileNames(const char *path) { return files.fileNames(path);
   private: string config_camera(const char* cv_path, json_t *pCamera, const char *pCameraName, json_t *pCveMap);
   private: string config_cv(const char* root_path, json_t *pConfig);
 }
+
+extern FireREST firerest;
 
 #endif
 //////////////////////////////////// FIREFUSE_H ////////////////////////////////////////////////////////

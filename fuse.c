@@ -99,7 +99,7 @@ static void firefuse_destroy(void * initData) {
 }
 
 static int firefuse_getattr(const char *path, struct stat *stbuf) {
-  if (isCvePath(path)) {
+  if (cve_path(path)) {
     return cve_getattr(path, stbuf);
   }
 
@@ -160,7 +160,7 @@ static int firefuse_getattr(const char *path, struct stat *stbuf) {
 static int firefuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
        off_t offset, struct fuse_file_info *fi)
 {
-  if (isCvePath(path)) {
+  if (cve_path(path)) {
     return cve_readdir(path, buf, filler, offset, fi);
   }
 
@@ -188,7 +188,7 @@ static int firefuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 }
 
 static int firefuse_open(const char *path, struct fuse_file_info *fi) {
-  if (isCvePath(path)) {
+  if (cve_path(path)) {
     return cve_open(path, fi);
   }
 
@@ -242,7 +242,7 @@ void firefuse_freeDataBuffer(const char *path, struct fuse_file_info *fi) {
 }
 
 static int firefuse_release(const char *path, struct fuse_file_info *fi) {
-  if (isCvePath(path)) {
+  if (cve_path(path)) {
     return cve_release(path, fi);
   }
 
@@ -264,7 +264,7 @@ static int firefuse_release(const char *path, struct fuse_file_info *fi) {
 }
 
 static int firefuse_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
-  if (isCvePath(path)) {
+  if (cve_path(path)) {
     int res = cve_read(path, buf, size, offset, fi);
     if (res > 0) {
       bytes_read += res;
@@ -311,7 +311,7 @@ static int firefuse_write(const char *path, const char *buf, size_t bufsize, off
     LOGERROR1("firefuse_write %s -> null buffer", path);
     return EINVAL;
   }
-  if (isCvePath(path)) {
+  if (cve_path(path)) {
     return cve_write(path, buf, bufsize, offset, fi);
   } else if (strcmp(path, ECHO_PATH) == 0) {
     if (bufsize > MAX_ECHO) {
@@ -359,7 +359,7 @@ static int firefuse_write(const char *path, const char *buf, size_t bufsize, off
 
 static int firefuse_truncate(const char *path, off_t size)
 {
-  if (isCvePath(path)) {
+  if (cve_path(path)) {
     return cve_truncate(path, size);
   }
 

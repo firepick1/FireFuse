@@ -27,11 +27,18 @@ using namespace firesight;
 
 typedef enum{UI_STILL, UI_VIDEO} UIMode;
 
-// Return canonical CVE path  (e.g., "/cv/1/gray/calc-offset")
+/**
+ * Return canonical CVE path. E.g.:
+ *   /dev/firefuse/sync/cv/1/gray/calc-offset/save.fire => /cv/1/gray/calc-offset
+ *
+ * Return NULL if path is not a canonical CVE path
+ */
 string cve_path(const char *pPath) {
-  assert(pPath);
+  if (pPath == NULL) {
+    return NULL;
+  }
   const char *pSlash = pPath;
-  const char *pCv = pPath;
+  const char *pCv = NULL;
   const char *pCve = NULL;
   for (const char *s=pPath; *s; s++) {
     if (*s == '/') {
@@ -47,25 +54,13 @@ string cve_path(const char *pPath) {
       }
     }
   }
-  if (!pCve) {
-    return "invalid-cve-path";
+  if (!pCve || !pCv) {
+    return NULL;
   }
   if (pSlash <= pCve) {
     return string(pCv);
   }
   return string(pCv, pSlash-pCv);
-}
-
-bool isCvePath(const char *pPath) {
-  if (!pPath) {
-    return FALSE;
-  } else if (strncmp("/cv", pPath, 3) == 0) {
-    return TRUE;
-  } else if (strncmp("/sync/cv", pPath, 3) == 0) {
-    return TRUE;
-  }
-
-  return FALSE;
 }
 
 static string camera_profile(const char * path) {
@@ -87,23 +82,6 @@ static string camera_profile(const char * path) {
   LOGTRACE2("camera_profile(%s) -> %s", path, result.c_str());
 
   return result;
-}
-
-static string buildVarPath(const char * path, const char *fName, int parent=1) {
-  char buf[255];
-  int n = snprintf(buf, sizeof(buf), "%s%s", FIREREST_VAR, path);
-  if (n <= 0 || n == sizeof(buf) || n + strlen(fName) >= sizeof(buf)) {
-    LOGERROR1("buildVarPath(%s) buffer overflow", path);
-    return "buildVarPathERROR";
-  }
-  char *s = buf+n;
-  while (s-- > buf) {
-    if (*s == '/' && parent-- == 1) {
-      sprintf(s, "%s", fName);
-    }
-  }
-
-  return string(buf);
 }
 
 int cve_getattr_file(const char *path, struct stat *stbuf, size_t length, int perm=0444) {
@@ -136,23 +114,18 @@ int cve_getattr(const char *path, struct stat *stbuf) {
     res = cve_getattr_file(path, stbuf, factory.cve(path).src_properties_json.peek().size(), 0666);
   } else if (cve_isPathSuffix(path, FIREREST_FIRESIGHT_JSON)) {
     res = cve_getattr_file(path, stbuf, factory.cve(path).src_firesight_json.peek().size());
+  } else if (firerest.isDirectory(path)) {
+    memset(stbuf, 0, sizeof(struct stat));
+    stbuf->st_uid = getuid();
+    stbuf->st_gid = getgid();
+    stbuf->st_atime = stbuf->st_mtime = stbuf->st_ctime = time(NULL);
+    stbuf->st_nlink = 2;
+    stbuf->st_mode = S_IFDIR | firerest.perms(path);
+    stbuf->st_size = 4096;
+    res = 0;
   } else {
-    string sVarPath = buildVarPath(path, "", 0);
-    const char* pVarPath = sVarPath.c_str();
-    struct stat filestatus;
-    res = stat( pVarPath, &filestatus );
-    if (res) {
-      LOGERROR3("cve_getattr(%s) stat(%s) -> %d", path, pVarPath, res);
-    }
-    if (res == 0) {
-      (*stbuf) = filestatus;
-      if (stbuf->st_mode & S_IFDIR) {
-	stbuf->st_mode = S_IFDIR | 0755;
-      } else {
-	LOGINFO1("cve_getattr(%s) other file", path);
-	stbuf->st_mode = S_IFREG | 0444;
-      }
-    }
+    LOGERROR1("cve_getattr(%s) ENOENT", path);
+    res = -ENOENT;
   }
 
   if (res == 0) {
@@ -167,23 +140,18 @@ int cve_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offse
 
   LOGTRACE1("cve_readdir(%s)", path);
 
-  string sVarPath = buildVarPath(path, "", 0);
-  const char* pVarPath = sVarPath.c_str();
-
   filler(buf, ".", NULL, 0);
   filler(buf, "..", NULL, 0);
-  DIR *dirp = opendir(pVarPath);
-  if (!dirp) {
-    LOGERROR2("cve_readdir(%s) opendir(%s) failed", path, pVarPath);
+  if (!firerest.isDirectory(path)) {
+    LOGERROR1("cve_readdir(%s) not a directory", path);
     return -ENOENT;
   }
 
-  struct dirent * dp;
-  while ((dp = readdir(dirp)) != NULL) {
-    LOGTRACE2("cve_readdir(%s) readdir:%s", path, dp->d_name);
-    filler(buf, dp->d_name, NULL, 0);
+  vector<string> names = firerest.fileNames(path);
+  for (int iFile = 0; iFile < names.size(); iFile++) {
+    LOGTRACE2("cve_readdir(%s) readdir:%s", path, names[iFile]);
+    filler(buf, names[iFile], NULL, 0);
   }
-  (void)closedir(dirp);
 
   return 0;
 }

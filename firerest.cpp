@@ -20,6 +20,7 @@ const char * fuse_root  = "/dev/firefuse";
 int cameraWidth = 800;
 int cameraHeight = 200;
 
+FireREST firerest;
 
 /////////////////////////////// JSONFileSystem /////////////////////////////
 
@@ -71,7 +72,21 @@ int JSONFileSystem::perms(const char *path) {
   return json_integer_value(perms);
 }
 
-vector<string> JSONFileSystem::splitPath(cnst char *path) {
+vector<string> JSONFileSystem::files(const char *path) {
+  vector<string> result;
+  json_t *dir = dirMap[path];
+  if (dir) {
+    const char pName;
+    json_t * pFile;
+    json_object_foreach(dir, pName, pFile) {
+      result.push_back(pName);
+    }
+  }
+
+  return result;
+}
+
+vector<string> JSONFileSystem::splitPath(const char *path) {
   assert(path);
   assert(*path == '/');
 
@@ -272,6 +287,14 @@ string FireREST::config_cv(const char* varPath, json_t *pConfig) {
   return errMsg;
 }
 
+bool FireREST::isSync(const char *pJson) {
+  char *pSlash = pJson;
+  while (pSlash && strncmp("/sync/", pSlash, 6)) {
+    pSlash = strchr(pSlash+1);
+  }
+  return pSlash ? true : false;
+}
+
 void FireREST::configure(const char *pJson) {
   string errMsg;
 
@@ -299,4 +322,5 @@ void FireREST::configure(const char *pJson) {
 }
 
 void firerest_config(const char *pJson) {
+  firerest.configure(pJson);
 }
