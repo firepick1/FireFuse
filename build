@@ -193,7 +193,6 @@ if [ -e /var/firefuse/cv ]; then
   rm -rf /var/firefuse/cv
   rm -rf /var/firefuse/sync/cv
 fi
-mkdir -p /var/firefuse/sync
 echo initializing /var/firefuse
 if [ -e /var/firefuse/config.json ]; then
   mv -f /var/firefuse/config.json /var/firefuse/config.json.bak
