@@ -211,12 +211,11 @@ vector<string> BackgroundWorker::getCveNames() {
 
 CVE& BackgroundWorker::cve(string path) {
   string cvePath = cve_path(path.c_str());
-  if (cvePath.empty) {
-    LOGERROR1("BackgroundWorker::cve(%s) invalid CVE path", path);
+  if (cvePath.empty()) {
+    LOGERROR1("BackgroundWorker::cve(%s) invalid CVE path", path.c_str());
   }
   CVEPtr pCve = cveMap[cvePath]; 
   if (!pCve) {
-    if (!cvePath || !*cvePath)
     pCve = new CVE(cvePath);
     cveMap[cvePath] = pCve;
   }
