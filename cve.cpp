@@ -200,7 +200,7 @@ static SmartPointer<char> buildErrorMessage(const char* fmt, const char *path, c
   return SmartPointer<char>((char *)errMsg.c_str(), errMsg.size()+1);
 }
 
-int CVE::process(DataFactory *pFactory) {
+int CVE::process(BackgroundWorker *pFactory) {
   int result = 0;
 
   double sStart = cve_seconds();
@@ -427,7 +427,7 @@ CVE::~CVE() {
 }
 
 
-int CVE::save(DataFactory *pFactory) {
+int CVE::save(BackgroundWorker *pFactory) {
   double sStart = cve_seconds();
   string errMsg;
 
