@@ -551,6 +551,10 @@ int testConfig() {
   SmartPointer<char> two_properties(factory.cve(twoPath).src_properties_json.get());
   assert(testString("properties.json GET","{\"caps\":\"TWO\"}", two_properties));
   testFile("properties.json", twoPath, two_properties, "{\"caps\":\"TUTU\"}");
+  string syncTwo("/sync");
+  syncTwo += twoPath;
+  LOGTRACE2("twoPath:%lx syncTwo:%lx", (ulong) &factory.cve(twoPath), (ulong) &factory.cve(syncTwo.c_str()));
+  assert(&factory.cve(twoPath) == &factory.cve(syncTwo.c_str()));
 
   cout << "testConfig() PASS" << endl;
   cout << endl;
@@ -663,6 +667,57 @@ int testFireREST() {
   assert(testString("splitPath(/one/two/three.json)", "one", segments[1].c_str()));
   assert(testString("splitPath(/one/two/three.json)", "two", segments[2].c_str()));
   assert(testString("splitPath(/one/two/three.json)", "three.json", segments[3].c_str()));
+
+  JSONFileSystem jfs;
+  char * json = json_dumps(jfs.get("/"), JSON_COMPACT|JSON_PRESERVE_ORDER);
+  assert(testString("jfs.get(/)", "{}", json));
+  free(json);
+
+  jfs.create_file("/a/b/c", 123);
+  json = json_dumps(jfs.get("/"), JSON_COMPACT|JSON_PRESERVE_ORDER);
+  assert(testString("jfs.get(/)", "{\"a\":{\"b\":{\"c\":{\"perms\":123}}}}", json));
+  free(json);
+  assert(123 == jfs.perms("/a/b/c"));
+  LOGTRACE1("jsf.perms(/a/b) %o", jfs.perms("/a/b"));
+  LOGTRACE1("jsf.perms(/a/b/) %o", jfs.perms("/a/b/"));
+  assert(0755 == jfs.perms("/a/b/"));
+  assert(0755 == jfs.perms("/a/b"));
+  assert(jfs.isDirectory("/a/b"));
+  assert(!jfs.isFile("/a/b"));
+  assert(jfs.isDirectory("/a/b/"));
+  assert(!jfs.isFile("/a/b/"));
+  assert(!jfs.isDirectory("/a/b/c"));
+  assert(jfs.isFile("/a/b/c"));
+
+  jfs.create_file("/a/b2/c", 234);
+  json = json_dumps(jfs.get("/"), JSON_COMPACT|JSON_PRESERVE_ORDER);
+  assert(testString("jfs.get(/)", "{\"a\":{\"b\":{\"c\":{\"perms\":123}},\"b2\":{\"c\":{\"perms\":234}}}}", json));
+  free(json);
+
+  vector<string> bnames = jfs.fileNames("/a/");
+  assert(2 == bnames.size());
+  if (0 == strcmp("b", bnames[0].c_str())) {
+    assert(testString("filenames(/a/)", "b2", bnames[1].c_str()));
+  } else {
+    assert(testString("filenames(/a/)", "b2", bnames[0].c_str()));
+    assert(testString("filenames(/a/)", "b", bnames[1].c_str()));
+  }
+
+  jfs.clear();
+  json = json_dumps(jfs.get("/"), JSON_COMPACT|JSON_PRESERVE_ORDER);
+  assert(testString("jfs.get(/)", "{}", json));
+  free(json);
+  assert(!jfs.isDirectory("/a/b/"));
+  assert(!jfs.isFile("/a/b/"));
+  assert(!jfs.isDirectory("/a/b"));
+  assert(!jfs.isFile("/a/b"));
+  assert(!jfs.isDirectory("/a/b/c"));
+  assert(!jfs.isFile("/a/b/c"));
+
+  FireREST fr;
+  assert(fr.isSync("/sync/cv/1/camera.jpg"));
+  assert(!fr.isSync("/cv/1/camera.jpg"));
+  assert(!fr.isSync("/a/b/c"));
 
   cout << "testFireREST() PASS" << endl;
   cout << endl;

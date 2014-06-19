@@ -127,7 +127,8 @@ json_t * JSONFileSystem::resolve_file(const char *path) {
   vector<string> segments = splitPath(path);
   string parentPath(segments[0]);
   json_t *parent = dirMap[parentPath];
-  for (int i = 1; i < segments.size()-1; i++) {
+  int iLast = segments.size()-1;
+  for (int i = 1; i < iLast; i++) {
     if (i > 1) {
       parentPath += "/";
     }
@@ -136,10 +137,12 @@ json_t * JSONFileSystem::resolve_file(const char *path) {
     if (parent_kid == NULL) {
       parent_kid = json_object();
       dirMap[parentPath] = parent_kid;
+      dirMap[parentPath+"/"] = parent_kid;
       json_object_set(parent, segments[i].c_str(), parent_kid);
     }
     parent = parent_kid;
   }
+  json_object_set(parent, segments[iLast].c_str(), result);
 
   return result;
 }
