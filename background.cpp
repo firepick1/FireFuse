@@ -87,7 +87,7 @@ void CameraNode::init() {
   };
   int status = firepicam_create(5, argv);
   if (status != 0) {
-    LOGERROR1("BackgroundWorker::process() could not initialize camera -> %d", status);
+    LOGERROR1("CameraNode::init() could not initialize camera firepicam_create() -> %d", status);
     throw "Could not initialize camera";
   }
   LOGINFO3("CameraNode::init() %dx%d -> %d", cameraWidth, cameraHeight, status);
@@ -97,8 +97,8 @@ int CameraNode::async_update_camera_jpg() {
   int processed = 0;
   if (!src_camera_jpg.isFresh() || !src_camera_mat_bgr.isFresh() || !src_camera_mat_gray.isFresh()) {
     processed |= 01;
-    LOGTRACE("async_update_camera_jpg()");
-    src_camera_jpg.get(); // make room for post
+    LOGTRACE("async_update_camera_jpg() acquiring image");
+    src_camera_jpg.get(); // discard current
     
     JPG_Buffer buffer;
     buffer.pData = NULL;
@@ -115,8 +115,8 @@ int CameraNode::async_update_camera_jpg() {
     src_camera_jpg.post(jpg);
     if (src_camera_mat_bgr.isFresh() && src_camera_mat_gray.isFresh()) {
       // proactively update all decoded images to eliminate post-idle refresh lag
-      src_camera_mat_bgr.get();
-      src_camera_mat_gray.get();
+      src_camera_mat_bgr.get(); // discard current
+      src_camera_mat_gray.get(); // discard current
     } else {
       // To eliminate unnecessary conversion we will only update active Mat
     }
@@ -270,6 +270,7 @@ int BackgroundWorker::processLoop() {
 
   if (idle_period && processed == 0 && (cve_seconds() - idle_seconds >= idle_period)) {
     idle();
+    processed |= 0400000;
   } 
   return processed;
 }

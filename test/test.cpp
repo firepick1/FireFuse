@@ -463,7 +463,7 @@ int testCamera() {
   cout << "idle: " << worker.getIdlePeriod() << endl;
   assert(0.1d == worker.getIdlePeriod());
   usleep(100000);
-  assert(testProcess(0));
+  assert(testProcess(0400000));
   assert(worker.cameras[0].src_camera_jpg.isFresh());
   assert(worker.cameras[0].src_camera_mat_gray.isFresh());
   assert(worker.cameras[0].src_camera_mat_bgr.isFresh());
