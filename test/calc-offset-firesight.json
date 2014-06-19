@@ -1,0 +1,1 @@
+[{"op":"calcOffset","name":"model","minval":"{{threshold}}","roi":"{{roi}}","xtol":"{{xtol}}","ytol":"{{ytol}}","channels":[],"template":"{{saved}}"},{"op":"drawRects","model":"model","color":"{{rectColor}}"}]

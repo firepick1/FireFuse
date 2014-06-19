@@ -9,7 +9,7 @@ rm -f target/*.jpg target/*.json target/*.ls target/*.png
 
 echo
 echo "====> TESTING FIREFUSE FILE STRUCTURE"
-find /dev/firefuse -exec ls -Fd {} \; |& tee target/firefuse.ls
+find /dev/firefuse -exec ls -Fd {} \; 2>&1 | tee target/firefuse.ls
 diff test/firefuse.ls target/firefuse.ls
 if [ $? -ne 0 ]; then
   echo "ERROR: firefuse file structure mismatch"
@@ -17,22 +17,33 @@ if [ $? -ne 0 ]; then
 fi
 
 echo
-echo "====> TESTING FIREFUSE VAR FILE CONTENT"
+echo "====> TESTING FIREFUSE FILE CONTENT"
 cat /dev/firefuse/cv/1/gray/cve/calc-offset/firesight.json
-diff /var/firefuse/cv/1/gray/cve/calc-offset/firesight.json /dev/firefuse/cv/1/gray/cve/calc-offset/firesight.json 
+diff test/calc-offset-firesight.json /dev/firefuse/cv/1/gray/cve/calc-offset/firesight.json 
 if [ $? -ne 0 ]; then
   echo "ERROR: firesight.json comparison failed"
   exit -1
 fi
+diff test/calc-offset-firesight.json /dev/firefuse/sync/cv/1/gray/cve/calc-offset/firesight.json 
+if [ $? -ne 0 ]; then
+  echo "ERROR: sync..firesight.json comparison failed"
+  exit -1
+fi
 cat /dev/firefuse/cv/1/gray/cve/calc-offset/properties.json
-diff /var/firefuse/cv/1/gray/cve/calc-offset/properties.json /dev/firefuse/cv/1/gray/cve/calc-offset/properties.json 
+diff test/calc-offset-properties.json /dev/firefuse/cv/1/gray/cve/calc-offset/properties.json 
 if [ $? -ne 0 ]; then
   echo "ERROR: properties.json comparison failed"
+  exit -1
+fi
+diff test/calc-offset-properties.json /dev/firefuse/sync/cv/1/gray/cve/calc-offset/properties.json 
+if [ $? -ne 0 ]; then
+  echo "ERROR: sync..properties.json comparison failed"
   exit -1
 fi
 
 echo
 echo "====> TESTING FIREFUSE save.fire"
+cp /dev/firefuse/cv/1/gray/cve/calc-offset/saved.png target/saved-before.png
 cat /dev/firefuse/cv/1/gray/cve/calc-offset/save.fire
 cp -f /dev/firefuse/cv/1/gray/cve/calc-offset/saved.png target
 if [ $? -ne 0 ]; then
@@ -44,7 +55,7 @@ if [ $? -ne 0 ]; then
   echo "ERROR: save.fire failed"
   exit -1
 fi
-cmp /var/firefuse/cv/1/gray/cve/calc-offset/saved.png target/saved.png
+cmp target/saved-before.png target/saved.png
 if [ $? -eq 0 ]; then
   echo "ERROR: save.fire did not create new saved.png"
   exit -1
@@ -65,14 +76,14 @@ if [ $? -ne 0 ]; then
   echo "ERROR: /dev/firefuse/cv/1/output.jpg not found"
   exit -1
 fi
-cat /dev/firefuse/cv/1/gray/cve/calc-offset/process.fire |& tee target/process1.fire
+cat /dev/firefuse/cv/1/gray/cve/calc-offset/process.fire 2>&1 | tee target/process1.fire
 sleep 2
 
 cp -f /dev/firefuse/cv/1/monitor.jpg /dev/null
 cp -f /dev/firefuse/cv/1/output.jpg /dev/null
 cp -f /dev/firefuse/cv/1/monitor.jpg target/monitor0.jpg; 
 cp -f /dev/firefuse/cv/1/output.jpg target/output0.jpg; 
-cat /dev/firefuse/cv/1/gray/cve/calc-offset/process.fire |& tee target/process2.fire
+cat /dev/firefuse/cv/1/gray/cve/calc-offset/process.fire 2>&1 | tee target/process2.fire
 if [ $? -ne 0 ]; then
   echo "ERROR: process.fire failed"
   exit -1
