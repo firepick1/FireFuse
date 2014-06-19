@@ -295,21 +295,20 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
       fi->fh = (uint64_t) (size_t) new SmartPointer<char>(worker.cve(path).src_properties_json.get());
     }
   } else if (verifyOpenR_(path, fi, &result)) {
-    CVE &cve = worker.cve(path);
     CameraNode &camera = worker.cameras[0];
     if (cve_isPathSuffix(path, FIREREST_PROCESS_FIRE)) {
       if (FireREST::isSync(path)) {
 	camera.src_camera_jpg.get_sync();
-	fi->fh = (uint64_t) (size_t) new SmartPointer<char>(cve.src_process_fire.get_sync());
+	fi->fh = (uint64_t) (size_t) new SmartPointer<char>(worker.cve(path).src_process_fire.get_sync());
       } else {
-	fi->fh = (uint64_t) (size_t) new SmartPointer<char>(cve.src_process_fire.get());
+	fi->fh = (uint64_t) (size_t) new SmartPointer<char>(worker.cve(path).src_process_fire.get());
       }
     } else if (cve_isPathSuffix(path, FIREREST_SAVE_FIRE)) {
       if (FireREST::isSync(path)) {
 	camera.src_camera_jpg.get_sync();
       }
-      cve.save(&worker); // Fast, infrequent operation can be synchronous
-      fi->fh = (uint64_t) (size_t) new SmartPointer<char>(cve.src_save_fire.peek()); // PEEK for SYNC
+      worker.cve(path).save(&worker); // Fast, infrequent operation can be synchronous
+      fi->fh = (uint64_t) (size_t) new SmartPointer<char>(worker.cve(path).src_save_fire.peek()); // PEEK for SYNC
     } else if (cve_isPathSuffix(path, FIREREST_CAMERA_JPG)) {
       if (FireREST::isSync(path)) {
 	fi->fh = (uint64_t) (size_t) new SmartPointer<char>(camera.src_camera_jpg.get_sync());
@@ -326,9 +325,9 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
 	fi->fh = (uint64_t) (size_t) new SmartPointer<char>(camera.src_monitor_jpg.get());
       }
     } else if (cve_isPathSuffix(path, FIREREST_FIRESIGHT_JSON)) {
-      fi->fh = (uint64_t) (size_t) new SmartPointer<char>(cve.src_firesight_json.get());
+      fi->fh = (uint64_t) (size_t) new SmartPointer<char>(worker.cve(path).src_firesight_json.get());
     } else if (cve_isPathSuffix(path, FIREREST_SAVED_PNG)) {
-      fi->fh = (uint64_t) (size_t) new SmartPointer<char>(cve.src_saved_png.get());
+      fi->fh = (uint64_t) (size_t) new SmartPointer<char>(worker.cve(path).src_saved_png.get());
     } else {
       result = -ENOENT;
     }
