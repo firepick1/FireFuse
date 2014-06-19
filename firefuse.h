@@ -18,6 +18,12 @@ extern "C" {
 #define CONFIG_PATH "/config.json"
 #define ECHO_PATH "/echo"
 
+#ifndef bool
+#define bool int
+#define TRUE 1
+#define FALSE 0
+#endif
+
 typedef struct {
   char *pData;
   int length;
@@ -36,6 +42,7 @@ extern void firefuse_freeDataBuffer(const char *path, struct fuse_file_info *fi)
 extern const char* firepick_status();
 extern const void* firepick_holes(FuseDataBuffer *pJPG);
 extern int background_worker();
+extern bool is_cve_path(const char * path);
 
 static inline int firefuse_readBuffer(char *pDst, const char *pSrc, size_t size, off_t offset, size_t len) {
   size_t sizeOut = size;
@@ -50,12 +57,6 @@ static inline int firefuse_readBuffer(char *pDst, const char *pSrc, size_t size,
 
   return sizeOut;
 }
-
-#ifndef bool
-#define bool int
-#define TRUE 1
-#define FALSE 0
-#endif
 
 enum CVE_Path {
     CVEPATH_CAMERA_SAVE=1,
@@ -78,8 +79,6 @@ enum CVE_Path {
 #define FIREREST_SAVE_FIRE "/save.fire"
 
 #define FIREREST_VAR "/var/firefuse"
-
-extern json_t *p_firerest;
 
 bool cve_isPathSuffix(const char *path, const char *suffix);
 int cve_save(FuseDataBuffer *pBuffer, const char *path);
@@ -149,7 +148,7 @@ const char * firestep_json();
 double 	cve_seconds();
 void 	cve_process(const char *path, int *pResult);
 string 	cve_path(const char *pPath);
-class DataFactory;
+class BackgroundWorker;
 
 typedef class CVE {
   private: string name;
@@ -162,8 +161,8 @@ typedef class CVE {
   public: inline string getName() { return name; }
   public: CVE(string name);
   public: ~CVE();
-  public: int save(DataFactory *pFactory);
-  public: int process(DataFactory *pFactory);
+  public: int save(BackgroundWorker *pFactory);
+  public: int process(BackgroundWorker *pFactory);
   public: inline bool isColor() { return _isColor; }
 } CVE, *CVEPtr;
 
@@ -178,7 +177,7 @@ class CameraNode {
   public: LIFOCache<SmartPointer<char> > src_monitor_jpg;
   public: LIFOCache<SmartPointer<char> > src_output_jpg;
 
-  // For DataFactory use
+  // For BackgroundWorker use
   public: CameraNode();
   public: ~CameraNode();
   public: void init();
@@ -189,7 +188,7 @@ class CameraNode {
   public: void temp_set_output_seconds() { output_seconds = cve_seconds(); }
 };
 
-class DataFactory {
+class BackgroundWorker {
   private: double idle_period; // minimum seconds between idle() execution
   private: std::map<string, CVEPtr> cveMap;
   private: double idle_seconds; // time of last idle() execution
@@ -198,8 +197,8 @@ class DataFactory {
 
   public: CameraNode cameras[1];
 
-  public: DataFactory();
-  public: ~DataFactory();
+  public: BackgroundWorker();
+  public: ~BackgroundWorker();
   public: CVE& cve(string path);
   public: vector<string> getCveNames();
   public: void clear();
@@ -213,7 +212,7 @@ class DataFactory {
   public: void idle();
 };
 
-extern DataFactory factory; // DataFactory singleton background worker
+extern BackgroundWorker factory; // BackgroundWorker singleton background worker
 
 class JSONFileSystem {
   private: std::map<string, json_t *> dirMap;

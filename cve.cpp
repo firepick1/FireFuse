@@ -31,11 +31,11 @@ typedef enum{UI_STILL, UI_VIDEO} UIMode;
  * Return canonical CVE path. E.g.:
  *   /dev/firefuse/sync/cv/1/gray/calc-offset/save.fire => /cv/1/gray/calc-offset
  *
- * Return NULL if path is not a canonical CVE path
+ * Return empty string if path is not a canonical CVE path
  */
 string cve_path(const char *pPath) {
   if (pPath == NULL) {
-    return NULL;
+    return string();
   }
   const char *pSlash = pPath;
   const char *pCv = NULL;
@@ -55,12 +55,16 @@ string cve_path(const char *pPath) {
     }
   }
   if (!pCve || !pCv) {
-    return NULL;
+    return string();
   }
   if (pSlash <= pCve) {
     return string(pCv);
   }
   return string(pCv, pSlash-pCv);
+}
+
+bool is_cve_path(const char *path) {
+  return cve_path(path).empty() ? FALSE : TRUE;
 }
 
 static string camera_profile(const char * path) {

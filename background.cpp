@@ -20,7 +20,7 @@ using namespace firesight;
 #define STATUS_BUFFER_SIZE 1024
 static char status_buffer[STATUS_BUFFER_SIZE];
 
-DataFactory factory;
+BackgroundWorker factory;
 
 const void* firepick_holes(FuseDataBuffer *pJPG) {
   Mat jpg(1, pJPG->length, CV_8UC1, pJPG->pData);
@@ -87,7 +87,7 @@ void CameraNode::init() {
   };
   int status = firepicam_create(5, argv);
   if (status != 0) {
-    LOGERROR1("DataFactory::process() could not initialize camera -> %d", status);
+    LOGERROR1("BackgroundWorker::process() could not initialize camera -> %d", status);
     throw "Could not initialize camera";
   }
   LOGINFO3("CameraNode::init() %dx%d -> %d", cameraWidth, cameraHeight, status);
@@ -178,24 +178,24 @@ int CameraNode::async_update_monitor_jpg() {
   return 1;
 }
 
-/////////////////////////// DataFactory ///////////////////////////////////
+/////////////////////////// BackgroundWorker ///////////////////////////////////
 
-DataFactory::DataFactory() {
+BackgroundWorker::BackgroundWorker() {
   idle_seconds = cve_seconds();
   idle_period = 15;
 }
 
-DataFactory::~DataFactory() {
+BackgroundWorker::~BackgroundWorker() {
 }
 
-void DataFactory::clear() {
+void BackgroundWorker::clear() {
   for (std::map<string,CVEPtr>::iterator it=cveMap.begin(); it!=cveMap.end(); ++it){
     delete it->second;
   }
   cveMap.clear();
 }
 
-vector<string> DataFactory::getCveNames() {
+vector<string> BackgroundWorker::getCveNames() {
   vector<string> result;
 
   for (std::map<string,CVEPtr>::iterator it=cveMap.begin(); it!=cveMap.end(); ++it){
@@ -205,7 +205,7 @@ vector<string> DataFactory::getCveNames() {
   return result;
 }
 
-CVE& DataFactory::cve(string path) {
+CVE& BackgroundWorker::cve(string path) {
   string cvePath = cve_path(path.c_str());
   CVEPtr pCve = cveMap[cvePath]; 
   if (!pCve) {
@@ -215,45 +215,45 @@ CVE& DataFactory::cve(string path) {
   return *pCve;
 }
 
-void DataFactory::idle() {
-  LOGTRACE("DataFactory::idle()");
+void BackgroundWorker::idle() {
+  LOGTRACE("BackgroundWorker::idle()");
   idle_seconds = cve_seconds();
   SmartPointer<char> discard = cameras[0].src_monitor_jpg.get();
   idle_seconds = cve_seconds();
-  LOGINFO2("DataFactory::idle() src_monitor_jpg.get() -> %ldB@%0lx discarded", (ulong) discard.size(), (ulong) discard.data());
+  LOGINFO2("BackgroundWorker::idle() src_monitor_jpg.get() -> %ldB@%0lx discarded", (ulong) discard.size(), (ulong) discard.data());
 }
 
-void DataFactory::processInit() {
+void BackgroundWorker::processInit() {
   cameras[0].init();
 }
 
-int DataFactory::async_process_fire() {
+int BackgroundWorker::async_process_fire() {
   int processed = 0;
   for (std::map<string,CVEPtr>::iterator it=cveMap.begin(); it!=cveMap.end(); ++it){
     CVEPtr pCve = it->second;
     if (!pCve->src_process_fire.isFresh()) {
       processed++;
-      LOGTRACE1("DataFactory::async_process_fire(%s)", it->first.c_str());
+      LOGTRACE1("BackgroundWorker::async_process_fire(%s)", it->first.c_str());
       pCve->process(this);
     }
   }
   return processed;
 }
 
-int DataFactory::async_save_fire() {
+int BackgroundWorker::async_save_fire() {
   int processed = 0;
   for (std::map<string,CVEPtr>::iterator it=cveMap.begin(); it!=cveMap.end(); ++it){
     CVEPtr pCve = it->second;
     if (!pCve->src_save_fire.isFresh()) {
       processed++;
-      LOGTRACE1("DataFactory::async_save_fire(%s)", it->first.c_str());
+      LOGTRACE1("BackgroundWorker::async_save_fire(%s)", it->first.c_str());
       pCve->save(this);
     }
   }
   return processed;
 }
 
-int DataFactory::processLoop() {
+int BackgroundWorker::processLoop() {
   int processed = 0;
   processed += cameras[0].async_update_camera_jpg();
   processed += cameras[0].async_update_monitor_jpg();
@@ -266,7 +266,7 @@ int DataFactory::processLoop() {
   return processed;
 }
 
-void DataFactory::process() {
+void BackgroundWorker::process() {
   try {
     processInit();
 
@@ -275,13 +275,13 @@ void DataFactory::process() {
       sched_yield();
     }
 
-    LOGINFO("DataFactory::process() exiting");
+    LOGINFO("BackgroundWorker::process() exiting");
   } catch (const char * ex) {
-    LOGERROR1("DataFactory::process() FATAL EXCEPTION: %s", ex);
+    LOGERROR1("BackgroundWorker::process() FATAL EXCEPTION: %s", ex);
   } catch (string ex) {
-    LOGERROR1("DataFactory::process() FATAL EXCEPTION: %s", ex.c_str());
+    LOGERROR1("BackgroundWorker::process() FATAL EXCEPTION: %s", ex.c_str());
   } catch (...) {
-    LOGERROR("DataFactory::process() FATAL UNKNOWN EXCEPTION");
+    LOGERROR("BackgroundWorker::process() FATAL UNKNOWN EXCEPTION");
   }
 }
 
