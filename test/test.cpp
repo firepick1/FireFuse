@@ -557,6 +557,19 @@ int testConfig() {
   LOGTRACE2("twoPath:%lx syncTwo:%lx", (ulong) &worker.cve(twoPath), (ulong) &worker.cve(syncTwo.c_str()));
   assert(&worker.cve(twoPath) == &worker.cve(syncTwo.c_str()));
 
+  assert(!firerest.isFile("/"));
+  assert(firerest.isDirectory("/"));
+  assert(!firerest.isFile("/cv"));
+  assert(firerest.isDirectory("/cv"));
+  assert(!firerest.isFile("/cv/1"));
+  assert(firerest.isDirectory("/cv/1"));
+  assert(firerest.isFile("/cv/1/bgr/cve/one/firesight.json"));
+  assert(!firerest.isDirectory("/cv/1/bgr/cve/one/firesight.json"));
+  assert(firerest.isFile("/cv/1/monitor.jpg"));
+  assert(!firerest.isDirectory("/cv/1/monitor.jpg"));
+  assert(!firerest.isFile("/cv/1/bgr/cve/one"));
+  assert(firerest.isDirectory("/cv/1/bgr/cve/one"));
+
   cout << "testConfig() PASS" << endl;
   cout << endl;
   return 0;
@@ -686,6 +699,10 @@ int testFireREST() {
   LOGTRACE1("jsf.perms(/a/b/) %o", jfs.perms("/a/b/"));
   assert(0755 == jfs.perms("/a/b/"));
   assert(0755 == jfs.perms("/a/b"));
+  assert(jfs.isDirectory("/"));
+  assert(!jfs.isFile("/"));
+  assert(jfs.isDirectory("/a"));
+  assert(!jfs.isFile("/a"));
   assert(jfs.isDirectory("/a/b"));
   assert(!jfs.isFile("/a/b"));
   assert(jfs.isDirectory("/a/b/"));

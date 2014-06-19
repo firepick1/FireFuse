@@ -235,6 +235,9 @@ class JSONFileSystem {
 
 typedef class FireREST {
   private: JSONFileSystem files;
+  private: string config_camera(const char* cv_path, json_t *pCamera, const char *pCameraName, json_t *pCveMap);
+  private: string config_cv(const char* root_path, json_t *pConfig);
+  private: void create_file(string path, int perm);
 
   public: FireREST();
   public: ~FireREST();
@@ -242,10 +245,9 @@ typedef class FireREST {
   public: void configure(const char *pJson);
   public: int perms(const char *path) { return files.perms(path); }
   public: bool isDirectory(const char *path) { return files.isDirectory(path); }
+  public: bool isFile(const char *path) { return files.isFile(path); }
   public: bool isSync(const char *path);
   public: vector<string> fileNames(const char *path) { return files.fileNames(path); }
-  private: string config_camera(const char* cv_path, json_t *pCamera, const char *pCameraName, json_t *pCveMap);
-  private: string config_cv(const char* root_path, json_t *pConfig);
 } FireREST;
 
 extern FireREST firerest;
