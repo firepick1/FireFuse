@@ -64,9 +64,9 @@ string cve_path(const char *pPath) {
 }
 
 bool is_cv_path(const char *path) {
-  for (const char *s=pPath; s && *s; s++) {
+  for (const char *s=path; s && *s; s++) {
     if (*s == '/') {
-      if (strncmp("/cv/", s, 4) == 0) {
+      if (strncmp("/cv", s, 3) == 0) {
 	return TRUE;
       }
     }
