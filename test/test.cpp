@@ -471,6 +471,7 @@ int testCamera() {
   assert(!factory.cameras[0].src_output_jpg.isFresh());
   jpg = factory.cameras[0].src_camera_jpg.peek();
   assert_headcam(jpg, 1);
+  factory.setIdlePeriod(10.0d);
 
   assert(testProcess(0200000));
   assert(!factory.cameras[0].src_camera_jpg.isFresh());
