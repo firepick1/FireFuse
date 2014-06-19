@@ -42,7 +42,7 @@ extern void firefuse_freeDataBuffer(const char *path, struct fuse_file_info *fi)
 extern const char* firepick_status();
 extern const void* firepick_holes(FuseDataBuffer *pJPG);
 extern int background_worker();
-extern bool is_cve_path(const char * path);
+extern bool is_cv_path(const char * path);
 
 static inline int firefuse_readBuffer(char *pDst, const char *pSrc, size_t size, off_t offset, size_t len) {
   size_t sizeOut = size;

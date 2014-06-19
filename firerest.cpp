@@ -187,7 +187,7 @@ string FireREST::config_camera(const char*cv_path, json_t *pCamera, const char *
   if (json_is_integer(pHeight)) {
     cameraHeight = json_integer_value(pHeight);
   }
-  LOGINFO1("FireREST::config_camera() processing camera: %s", cameraPath.c_str());
+  LOGINFO1("FireREST::config_camera(%s)", cameraPath.c_str());
 
   create_file(cameraPath + "/camera.jpg", 0444);
   create_file(cameraPath + "/output.jpg", 0444);
@@ -291,7 +291,7 @@ string FireREST::config_cv(const char* varPath, json_t *pConfig) {
 
   string cvPath(varPath);
   cvPath += "cv";
-  LOGINFO1("FireREST::config_cv(%s)\n", cvPath.c_str());
+  LOGINFO1("FireREST::config_cv(%s)", cvPath.c_str());
 
   const char *pCameraName;
   json_t *pCamera;

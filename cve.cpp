@@ -63,8 +63,15 @@ string cve_path(const char *pPath) {
   return string(pCv, pSlash-pCv);
 }
 
-bool is_cve_path(const char *path) {
-  return cve_path(path).empty() ? FALSE : TRUE;
+bool is_cv_path(const char *path) {
+  for (const char *s=pPath; s && *s; s++) {
+    if (*s == '/') {
+      if (strncmp("/cv/", s, 4) == 0) {
+	return TRUE;
+      }
+    }
+  }
+  return FALSE;
 }
 
 static string camera_profile(const char * path) {
