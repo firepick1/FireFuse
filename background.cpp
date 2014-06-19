@@ -96,7 +96,7 @@ void CameraNode::init() {
 int CameraNode::async_update_camera_jpg() {
   int processed = 0;
   if (!src_camera_jpg.isFresh() || !src_camera_mat_bgr.isFresh() || !src_camera_mat_gray.isFresh()) {
-    processed++;
+    processed |= 01;
     LOGTRACE("async_update_camera_jpg()");
     src_camera_jpg.get(); // make room for post
     
@@ -124,13 +124,13 @@ int CameraNode::async_update_camera_jpg() {
 
     std::vector<uchar> vJPG((uchar *)jpg.data(), (uchar *)jpg.data() + jpg.size());
     if (!src_camera_mat_bgr.isFresh()) {
-      processed++;
+      processed |= 02;
       Mat image = imdecode(vJPG, CV_LOAD_IMAGE_COLOR); 
       src_camera_mat_bgr.post(image);
       LOGTRACE2("async_update_camera_jpg() src_camera_mat_bgr.post(%dx%d)", image.rows, image.cols);
     }
     if (!src_camera_mat_gray.isFresh()) {
-      processed++;
+      processed |= 04;
       Mat image = imdecode(vJPG, CV_LOAD_IMAGE_GRAYSCALE); 
       src_camera_mat_gray.post(image);
       LOGTRACE2("async_update_camera_jpg() src_camera_mat_gray.post(%dx%d)", image.rows, image.cols);
@@ -158,8 +158,9 @@ void CameraNode::setOutput(Mat image) {
 }
 
 int CameraNode::async_update_monitor_jpg() {
+  int processed = 0;
   if (src_monitor_jpg.isFresh()) {
-    return 0;
+    return processed;
   }
   LOGTRACE("async_update_monitor_jpg()");
 
@@ -167,15 +168,18 @@ int CameraNode::async_update_monitor_jpg() {
   SmartPointer<char> jpg;
   if (cve_seconds() - output_seconds < monitor_duration) {
     jpg = src_output_jpg.get();
+    processed |= 0100000;
     fmt = "async_update_monitor_jpg() src_output_jpg.get(%ldB) %0lx [0]:%0lx";
   } else {
     jpg = src_camera_jpg.get();
+    processed |= 0200000;
     fmt = "async_update_monitor_jpg() src_camera_jpg.get(%ldB) %0lx [0]:%0lx";
   }
   src_monitor_jpg.post(jpg);
 
   LOGDEBUG3(fmt, jpg.size(), jpg.data(), (int) *jpg.data());
-  return 1;
+
+  return processed;
 }
 
 /////////////////////////// BackgroundWorker ///////////////////////////////////
@@ -229,10 +233,12 @@ void BackgroundWorker::processInit() {
 
 int BackgroundWorker::async_process_fire() {
   int processed = 0;
+  int mask = 010;
   for (std::map<string,CVEPtr>::iterator it=cveMap.begin(); it!=cveMap.end(); ++it){
     CVEPtr pCve = it->second;
     if (!pCve->src_process_fire.isFresh()) {
-      processed++;
+      processed |= mask;
+      mask <<= 1;
       LOGTRACE1("BackgroundWorker::async_process_fire(%s)", it->first.c_str());
       pCve->process(this);
     }
@@ -242,10 +248,12 @@ int BackgroundWorker::async_process_fire() {
 
 int BackgroundWorker::async_save_fire() {
   int processed = 0;
+  int mask = 0100;
   for (std::map<string,CVEPtr>::iterator it=cveMap.begin(); it!=cveMap.end(); ++it){
     CVEPtr pCve = it->second;
     if (!pCve->src_save_fire.isFresh()) {
-      processed++;
+      processed |= mask;
+      mask <<= 1;
       LOGTRACE1("BackgroundWorker::async_save_fire(%s)", it->first.c_str());
       pCve->save(this);
     }
@@ -255,10 +263,10 @@ int BackgroundWorker::async_save_fire() {
 
 int BackgroundWorker::processLoop() {
   int processed = 0;
-  processed += cameras[0].async_update_camera_jpg();
-  processed += cameras[0].async_update_monitor_jpg();
-  processed += async_save_fire();  
-  processed += async_process_fire();  
+  processed |= cameras[0].async_update_camera_jpg();
+  processed |= cameras[0].async_update_monitor_jpg();
+  processed |= async_save_fire();  
+  processed |= async_process_fire();  
 
   if (processed == 0 && (cve_seconds() - idle_seconds >= idle_period)) {
     idle();

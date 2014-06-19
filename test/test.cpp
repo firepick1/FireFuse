@@ -418,7 +418,7 @@ static void assert_headcam(SmartPointer<char> jpg, int headcam) {
 
 bool testProcess(int expectedProcessed) {
   int actualProcessed = factory.processLoop();
-  LOGTRACE2("TEST factory.processLoop() expected:%d actual:%d", expectedProcessed, actualProcessed);
+  LOGTRACE2("TEST factory.processLoop() expected:%o actual:%o", expectedProcessed, actualProcessed);
   return expectedProcessed == actualProcessed;
 }
 
@@ -432,7 +432,7 @@ int testCamera() {
   assert(!factory.cameras[0].src_monitor_jpg.isFresh());
   assert(!factory.cameras[0].src_output_jpg.isFresh());
 
-  assert(testProcess(4));
+  assert(testProcess(0200007));
   assert(!factory.cameras[0].src_camera_jpg.isFresh());
   assert(factory.cameras[0].src_camera_mat_gray.isFresh());
   assert(factory.cameras[0].src_camera_mat_bgr.isFresh());
@@ -441,7 +441,7 @@ int testCamera() {
   jpg = factory.cameras[0].src_camera_jpg.peek();
   assert_headcam(jpg, 0);
 
-  assert(testProcess(3));
+  assert(testProcess(07));
   assert(factory.cameras[0].src_camera_jpg.isFresh());
   assert(factory.cameras[0].src_camera_mat_gray.isFresh());
   assert(factory.cameras[0].src_camera_mat_bgr.isFresh());
@@ -472,7 +472,7 @@ int testCamera() {
   jpg = factory.cameras[0].src_camera_jpg.peek();
   assert_headcam(jpg, 1);
 
-  assert(testProcess(1));
+  assert(testProcess(0200000));
   assert(!factory.cameras[0].src_camera_jpg.isFresh());
   assert(factory.cameras[0].src_camera_mat_gray.isFresh());
   assert(factory.cameras[0].src_camera_mat_bgr.isFresh());
@@ -481,7 +481,7 @@ int testCamera() {
   jpg = factory.cameras[0].src_camera_jpg.peek();
   assert_headcam(jpg, 1);
 
-  assert(testProcess(3));
+  assert(testProcess(07));
   assert(factory.cameras[0].src_camera_jpg.isFresh());
   assert(factory.cameras[0].src_camera_mat_gray.isFresh()); 
   assert(factory.cameras[0].src_camera_mat_bgr.isFresh()); 
@@ -494,7 +494,7 @@ int testCamera() {
   cout << "grayImage: " << grayImage.rows << "x" << grayImage.cols << endl;
   assert(200 == grayImage.rows);
   assert(800 == grayImage.cols);
-  assert(testProcess(2));
+  assert(testProcess(05));
   assert(factory.cameras[0].src_camera_jpg.isFresh());
   assert(factory.cameras[0].src_camera_mat_gray.isFresh()); 
   assert(factory.cameras[0].src_camera_mat_bgr.isFresh()); // fresh but older than camera_jpg
@@ -610,7 +610,7 @@ int testCve() {
   /*GET*/ SmartPointer<char> save_fire(factory.cve(firesightPath).src_save_fire.get());
   assert(testString("save.fire GET", "{}",save_fire));
   assert(!factory.cve(firesightPath).src_save_fire.isFresh());
-  assert(testProcess(1));
+  assert(testProcess(0100));
   assert(factory.cve(firesightPath).src_save_fire.isFresh());
   save_fire = factory.cve(firesightPath).src_save_fire.peek();
   assert(testString("save.fire processLoop ", "{\"bytes\":72944}", save_fire));
@@ -629,7 +629,7 @@ int testCve() {
   assert(testNumber((size_t)43249, factory.cameras[0].src_output_jpg.peek().size()));
   assert(testString("process.fire GET", "{}",factory.cve(firesightPath).src_process_fire.peek()));
   assert(!factory.cve(firesightPath).src_process_fire.isFresh());
-  /*ASYNC*/assert(testProcess(3)); // process + camera + mat_gray
+  /*ASYNC*/assert(testProcess(015)); // process + camera + mat_gray
   assert(testNumber((size_t) 40734, factory.cameras[0].src_output_jpg.peek().size()));
   assert(factory.cve(firesightPath).src_process_fire.isFresh());
   assert(testString("process.fire processLoop", "{\"s1\":{}}", factory.cve(firesightPath).src_process_fire.peek()));
