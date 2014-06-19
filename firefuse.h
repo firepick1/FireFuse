@@ -212,7 +212,7 @@ class BackgroundWorker {
   public: void idle();
 };
 
-extern BackgroundWorker factory; // BackgroundWorker singleton background worker
+extern BackgroundWorker worker; // BackgroundWorker singleton background worker
 
 class JSONFileSystem {
   private: std::map<string, json_t *> dirMap;

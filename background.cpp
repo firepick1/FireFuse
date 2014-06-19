@@ -20,7 +20,7 @@ using namespace firesight;
 #define STATUS_BUFFER_SIZE 1024
 static char status_buffer[STATUS_BUFFER_SIZE];
 
-BackgroundWorker factory;
+BackgroundWorker worker;
 
 const void* firepick_holes(FuseDataBuffer *pJPG) {
   Mat jpg(1, pJPG->length, CV_8UC1, pJPG->pData);
@@ -58,7 +58,7 @@ const char* firepick_status() {
 }
 
 int background_worker() {
-  factory.process();
+  worker.process();
   return 0;
 }
 

@@ -417,91 +417,91 @@ static void assert_headcam(SmartPointer<char> jpg, int headcam) {
 }
 
 bool testProcess(int expectedProcessed) {
-  int actualProcessed = factory.processLoop();
-  LOGTRACE2("TEST factory.processLoop() expected:%o actual:%o", expectedProcessed, actualProcessed);
+  int actualProcessed = worker.processLoop();
+  LOGTRACE2("TEST worker.processLoop() expected:%o actual:%o", expectedProcessed, actualProcessed);
   return expectedProcessed == actualProcessed;
 }
 
 int testCamera() {
   cout << "testCamera() --------------------------" << endl;
   SmartPointer<char> jpg;
-  factory.processInit();
-  assert(!factory.cameras[0].src_camera_jpg.isFresh());
-  assert(!factory.cameras[0].src_camera_mat_gray.isFresh());
-  assert(!factory.cameras[0].src_camera_mat_bgr.isFresh());
-  assert(!factory.cameras[0].src_monitor_jpg.isFresh());
-  assert(!factory.cameras[0].src_output_jpg.isFresh());
+  worker.processInit();
+  assert(!worker.cameras[0].src_camera_jpg.isFresh());
+  assert(!worker.cameras[0].src_camera_mat_gray.isFresh());
+  assert(!worker.cameras[0].src_camera_mat_bgr.isFresh());
+  assert(!worker.cameras[0].src_monitor_jpg.isFresh());
+  assert(!worker.cameras[0].src_output_jpg.isFresh());
 
   assert(testProcess(0200007));
-  assert(!factory.cameras[0].src_camera_jpg.isFresh());
-  assert(factory.cameras[0].src_camera_mat_gray.isFresh());
-  assert(factory.cameras[0].src_camera_mat_bgr.isFresh());
-  assert(factory.cameras[0].src_monitor_jpg.isFresh());
-  assert(!factory.cameras[0].src_output_jpg.isFresh());
-  jpg = factory.cameras[0].src_camera_jpg.peek();
+  assert(!worker.cameras[0].src_camera_jpg.isFresh());
+  assert(worker.cameras[0].src_camera_mat_gray.isFresh());
+  assert(worker.cameras[0].src_camera_mat_bgr.isFresh());
+  assert(worker.cameras[0].src_monitor_jpg.isFresh());
+  assert(!worker.cameras[0].src_output_jpg.isFresh());
+  jpg = worker.cameras[0].src_camera_jpg.peek();
   assert_headcam(jpg, 0);
 
   assert(testProcess(07));
-  assert(factory.cameras[0].src_camera_jpg.isFresh());
-  assert(factory.cameras[0].src_camera_mat_gray.isFresh());
-  assert(factory.cameras[0].src_camera_mat_bgr.isFresh());
-  assert(factory.cameras[0].src_monitor_jpg.isFresh());
-  assert(!factory.cameras[0].src_output_jpg.isFresh());
-  jpg = factory.cameras[0].src_camera_jpg.peek();
+  assert(worker.cameras[0].src_camera_jpg.isFresh());
+  assert(worker.cameras[0].src_camera_mat_gray.isFresh());
+  assert(worker.cameras[0].src_camera_mat_bgr.isFresh());
+  assert(worker.cameras[0].src_monitor_jpg.isFresh());
+  assert(!worker.cameras[0].src_output_jpg.isFresh());
+  jpg = worker.cameras[0].src_camera_jpg.peek();
   assert_headcam(jpg, 1);
 
   assert(testProcess(0));
-  assert(factory.cameras[0].src_camera_jpg.isFresh());
-  assert(factory.cameras[0].src_camera_mat_gray.isFresh());
-  assert(factory.cameras[0].src_camera_mat_bgr.isFresh());
-  assert(factory.cameras[0].src_monitor_jpg.isFresh());
-  assert(!factory.cameras[0].src_output_jpg.isFresh());
-  jpg = factory.cameras[0].src_camera_jpg.peek();
+  assert(worker.cameras[0].src_camera_jpg.isFresh());
+  assert(worker.cameras[0].src_camera_mat_gray.isFresh());
+  assert(worker.cameras[0].src_camera_mat_bgr.isFresh());
+  assert(worker.cameras[0].src_monitor_jpg.isFresh());
+  assert(!worker.cameras[0].src_output_jpg.isFresh());
+  jpg = worker.cameras[0].src_camera_jpg.peek();
   assert_headcam(jpg, 1);
 
-  factory.setIdlePeriod(0.1d);
-  cout << "idle: " << factory.getIdlePeriod() << endl;
-  assert(0.1d == factory.getIdlePeriod());
+  worker.setIdlePeriod(0.1d);
+  cout << "idle: " << worker.getIdlePeriod() << endl;
+  assert(0.1d == worker.getIdlePeriod());
   usleep(100000);
   assert(testProcess(0));
-  assert(factory.cameras[0].src_camera_jpg.isFresh());
-  assert(factory.cameras[0].src_camera_mat_gray.isFresh());
-  assert(factory.cameras[0].src_camera_mat_bgr.isFresh());
-  assert(!factory.cameras[0].src_monitor_jpg.isFresh());  // consumed by idle()
-  assert(!factory.cameras[0].src_output_jpg.isFresh());
-  jpg = factory.cameras[0].src_camera_jpg.peek();
+  assert(worker.cameras[0].src_camera_jpg.isFresh());
+  assert(worker.cameras[0].src_camera_mat_gray.isFresh());
+  assert(worker.cameras[0].src_camera_mat_bgr.isFresh());
+  assert(!worker.cameras[0].src_monitor_jpg.isFresh());  // consumed by idle()
+  assert(!worker.cameras[0].src_output_jpg.isFresh());
+  jpg = worker.cameras[0].src_camera_jpg.peek();
   assert_headcam(jpg, 1);
-  factory.setIdlePeriod(0);
+  worker.setIdlePeriod(0);
 
   assert(testProcess(0200000));
-  assert(!factory.cameras[0].src_camera_jpg.isFresh());
-  assert(factory.cameras[0].src_camera_mat_gray.isFresh());
-  assert(factory.cameras[0].src_camera_mat_bgr.isFresh());
-  assert(factory.cameras[0].src_monitor_jpg.isFresh());
-  assert(!factory.cameras[0].src_output_jpg.isFresh());
-  jpg = factory.cameras[0].src_camera_jpg.peek();
+  assert(!worker.cameras[0].src_camera_jpg.isFresh());
+  assert(worker.cameras[0].src_camera_mat_gray.isFresh());
+  assert(worker.cameras[0].src_camera_mat_bgr.isFresh());
+  assert(worker.cameras[0].src_monitor_jpg.isFresh());
+  assert(!worker.cameras[0].src_output_jpg.isFresh());
+  jpg = worker.cameras[0].src_camera_jpg.peek();
   assert_headcam(jpg, 1);
 
   assert(testProcess(07));
-  assert(factory.cameras[0].src_camera_jpg.isFresh());
-  assert(factory.cameras[0].src_camera_mat_gray.isFresh()); 
-  assert(factory.cameras[0].src_camera_mat_bgr.isFresh()); 
-  assert(factory.cameras[0].src_monitor_jpg.isFresh());
-  assert(!factory.cameras[0].src_output_jpg.isFresh());
-  jpg = factory.cameras[0].src_camera_jpg.peek();
+  assert(worker.cameras[0].src_camera_jpg.isFresh());
+  assert(worker.cameras[0].src_camera_mat_gray.isFresh()); 
+  assert(worker.cameras[0].src_camera_mat_bgr.isFresh()); 
+  assert(worker.cameras[0].src_monitor_jpg.isFresh());
+  assert(!worker.cameras[0].src_output_jpg.isFresh());
+  jpg = worker.cameras[0].src_camera_jpg.peek();
   assert_headcam(jpg, 0);
 
-  Mat grayImage = factory.cameras[0].src_camera_mat_gray.get();
+  Mat grayImage = worker.cameras[0].src_camera_mat_gray.get();
   cout << "grayImage: " << grayImage.rows << "x" << grayImage.cols << endl;
   assert(200 == grayImage.rows);
   assert(800 == grayImage.cols);
   assert(testProcess(05));
-  assert(factory.cameras[0].src_camera_jpg.isFresh());
-  assert(factory.cameras[0].src_camera_mat_gray.isFresh()); 
-  assert(factory.cameras[0].src_camera_mat_bgr.isFresh()); // fresh but older than camera_jpg
-  assert(factory.cameras[0].src_monitor_jpg.isFresh());
-  assert(!factory.cameras[0].src_output_jpg.isFresh());
-  jpg = factory.cameras[0].src_camera_jpg.peek();
+  assert(worker.cameras[0].src_camera_jpg.isFresh());
+  assert(worker.cameras[0].src_camera_mat_gray.isFresh()); 
+  assert(worker.cameras[0].src_camera_mat_bgr.isFresh()); // fresh but older than camera_jpg
+  assert(worker.cameras[0].src_monitor_jpg.isFresh());
+  assert(!worker.cameras[0].src_output_jpg.isFresh());
+  jpg = worker.cameras[0].src_camera_jpg.peek();
   assert_headcam(jpg, 1);
 
   cout << "testCamera() PASS" << endl;
@@ -511,8 +511,8 @@ int testCamera() {
 
 int testConfig() {
   cout << "testConfig() --------------------------" << endl;
-  factory.clear();
-  factory.processInit();
+  worker.clear();
+  worker.processInit();
   const char *config_json = \
   "{ \"FireREST\":{\"title\":\"Raspberry Pi FireFUSE\",\"provider\":\"FireFUSE\", \"version\":{\"major\":0, \"minor\":6, \"patch\":0}},\n" \
     "\"cv\":{\n" \
@@ -533,7 +533,7 @@ int testConfig() {
 
   /////////// config test
   firerest_config(config_json);
-  vector<string> cveNames = factory.getCveNames();
+  vector<string> cveNames = worker.getCveNames();
   assert(4 == cveNames.size());
   for (int i = 0; i < 4; i++) {
     LOGINFO2("TEST config_json cveNames[%d] = %s", i, cveNames[i].c_str());
@@ -542,20 +542,20 @@ int testConfig() {
   assert(0==strcmp("/cv/1/bgr/cve/two", cveNames[1].c_str()));
   assert(0==strcmp("/cv/1/gray/cve/one", cveNames[2].c_str()));
   assert(0==strcmp("/cv/1/gray/cve/two", cveNames[3].c_str()));
-  SmartPointer<char> one_json(factory.cve("/cv/1/gray/cve/one").src_firesight_json.get());
+  SmartPointer<char> one_json(worker.cve("/cv/1/gray/cve/one").src_firesight_json.get());
   assert(testString("firesight.json GET","[{\"op\":\"putText\",\"text\":\"one\"}]", one_json));
   assert(400 == cameraWidth);
   assert(400 == cameraHeight);
 
   //////////////// properties test
   const char * twoPath = "/cv/1/bgr/cve/two/properties.json";
-  SmartPointer<char> two_properties(factory.cve(twoPath).src_properties_json.get());
+  SmartPointer<char> two_properties(worker.cve(twoPath).src_properties_json.get());
   assert(testString("properties.json GET","{\"caps\":\"TWO\"}", two_properties));
   testFile("properties.json", twoPath, two_properties, "{\"caps\":\"TUTU\"}");
   string syncTwo("/sync");
   syncTwo += twoPath;
-  LOGTRACE2("twoPath:%lx syncTwo:%lx", (ulong) &factory.cve(twoPath), (ulong) &factory.cve(syncTwo.c_str()));
-  assert(&factory.cve(twoPath) == &factory.cve(syncTwo.c_str()));
+  LOGTRACE2("twoPath:%lx syncTwo:%lx", (ulong) &worker.cve(twoPath), (ulong) &worker.cve(syncTwo.c_str()));
+  assert(&worker.cve(twoPath) == &worker.cve(syncTwo.c_str()));
 
   cout << "testConfig() PASS" << endl;
   cout << endl;
@@ -566,8 +566,8 @@ int testCve() {
   char buf[100];
   /////////// process.fire test
   cout << "testCve() --------------------------" << endl;
-  factory.clear();
-  factory.processInit();
+  worker.clear();
+  worker.processInit();
 
   //////////// cve_path
   const char *expectedPath = "/cv/1/gray/cve/two";
@@ -579,11 +579,11 @@ int testCve() {
   assert(0 == strcmp(expectedPath, sResult.c_str()));
   
   //////////// cveNames
-  vector<string> cveNames = factory.getCveNames();
+  vector<string> cveNames = worker.getCveNames();
   assert(0 == cveNames.size());
   string firesightPath = "/cv/1/gray/cve/calc-offset/firesight.json";
-  CVE& cve = factory.cve(firesightPath);
-  cveNames = factory.getCveNames();
+  CVE& cve = worker.cve(firesightPath);
+  cveNames = worker.getCveNames();
   assert(1 == cveNames.size());
   cout << "cveNames[0]: " << cveNames[0] << endl;
   assert(0 == strcmp("/cv/1/gray/cve/calc-offset", cveNames[0].c_str()));
@@ -592,52 +592,52 @@ int testCve() {
   /////////// firesight.json
   cout << firesightPath << " => " << (char *)cve.src_firesight_json.peek().data() << endl;
   const char * firesightJson = "[{\"op\":\"putText\", \"text\":\"CVE::CVE()\"}]";
-  assert(factory.cve(firesightPath).src_firesight_json.isFresh());
-  /* GET */ SmartPointer<char> firesight_json(factory.cve(firesightPath).src_firesight_json.get());
+  assert(worker.cve(firesightPath).src_firesight_json.isFresh());
+  /* GET */ SmartPointer<char> firesight_json(worker.cve(firesightPath).src_firesight_json.get());
   assert(0==strcmp(firesightJson, firesight_json.data()));
-  assert(!factory.cve(firesightPath).src_firesight_json.isFresh());
+  assert(!worker.cve(firesightPath).src_firesight_json.isFresh());
   assert(testProcess(0));
-  assert(!factory.cve(firesightPath).src_firesight_json.isFresh()); // we don't refresh firesight.json in background
-  assert(0==strcmp(firesightJson, factory.cve(firesightPath).src_firesight_json.get().data()));
+  assert(!worker.cve(firesightPath).src_firesight_json.isFresh()); // we don't refresh firesight.json in background
+  assert(0==strcmp(firesightJson, worker.cve(firesightPath).src_firesight_json.get().data()));
 
   /////////// save.fire test
-  assert(factory.cameras[0].src_camera_mat_gray.isFresh());
-  assert(factory.cameras[0].src_camera_mat_bgr.isFresh());
-  assert(factory.cve(firesightPath).src_save_fire.isFresh());
-  assert(!factory.cameras[0].src_output_jpg.isFresh()); 
-  assert(testNumber((size_t)0, factory.cameras[0].src_output_jpg.peek().size()));  
-  assert(testString("save.fire BEFORE", "{}",factory.cve(firesightPath).src_save_fire.peek()));
-  assert(testNumber((size_t) 0, factory.cve(firesightPath).src_saved_png.peek().size()));
-  assert(factory.cve(firesightPath).src_save_fire.isFresh());
-  /*GET*/ SmartPointer<char> save_fire(factory.cve(firesightPath).src_save_fire.get());
+  assert(worker.cameras[0].src_camera_mat_gray.isFresh());
+  assert(worker.cameras[0].src_camera_mat_bgr.isFresh());
+  assert(worker.cve(firesightPath).src_save_fire.isFresh());
+  assert(!worker.cameras[0].src_output_jpg.isFresh()); 
+  assert(testNumber((size_t)0, worker.cameras[0].src_output_jpg.peek().size()));  
+  assert(testString("save.fire BEFORE", "{}",worker.cve(firesightPath).src_save_fire.peek()));
+  assert(testNumber((size_t) 0, worker.cve(firesightPath).src_saved_png.peek().size()));
+  assert(worker.cve(firesightPath).src_save_fire.isFresh());
+  /*GET*/ SmartPointer<char> save_fire(worker.cve(firesightPath).src_save_fire.get());
   assert(testString("save.fire GET", "{}",save_fire));
-  assert(!factory.cve(firesightPath).src_save_fire.isFresh());
+  assert(!worker.cve(firesightPath).src_save_fire.isFresh());
   assert(testProcess(0100));
-  assert(factory.cve(firesightPath).src_save_fire.isFresh());
-  save_fire = factory.cve(firesightPath).src_save_fire.peek();
-  size_t saveSize = factory.cve(firesightPath).src_saved_png.peek().size();
+  assert(worker.cve(firesightPath).src_save_fire.isFresh());
+  save_fire = worker.cve(firesightPath).src_save_fire.peek();
+  size_t saveSize = worker.cve(firesightPath).src_saved_png.peek().size();
   assert(saveSize > 0);
   snprintf(buf, sizeof(buf), "{\"bytes\":%ld}", saveSize);
   assert(testString("save.fire processLoop ", buf, save_fire));
-  SmartPointer<char> save_fire_contents = factory.cve(firesightPath).src_save_fire.peek();
+  SmartPointer<char> save_fire_contents = worker.cve(firesightPath).src_save_fire.peek();
   testFile("save.fire", "/cv/1/gray/cve/calc-offset/save.fire", save_fire_contents);
-  assert(factory.cve(firesightPath).src_save_fire.isFresh()); // Verify async never triggered
-  assert(factory.cameras[0].src_output_jpg.isFresh()); 
-  assert(testNumber((size_t)43249, factory.cameras[0].src_output_jpg.peek().size()));  
+  assert(worker.cve(firesightPath).src_save_fire.isFresh()); // Verify async never triggered
+  assert(worker.cameras[0].src_output_jpg.isFresh()); 
+  assert(testNumber((size_t)43249, worker.cameras[0].src_output_jpg.peek().size()));  
 
   /////////// process.fire test
-  assert(testString("process.fire BEFORE", "{}",factory.cve(firesightPath).src_process_fire.peek()));
-  assert(factory.cve(firesightPath).src_process_fire.isFresh());
-  assert(testNumber((size_t)43249, factory.cameras[0].src_output_jpg.peek().size()));
-  /*GET*/ SmartPointer<char> process_fire(factory.cve(firesightPath).src_process_fire.get());
-  assert(testNumber((size_t)43249, factory.cameras[0].src_output_jpg.peek().size()));
-  assert(testString("process.fire GET", "{}",factory.cve(firesightPath).src_process_fire.peek()));
-  assert(!factory.cve(firesightPath).src_process_fire.isFresh());
+  assert(testString("process.fire BEFORE", "{}",worker.cve(firesightPath).src_process_fire.peek()));
+  assert(worker.cve(firesightPath).src_process_fire.isFresh());
+  assert(testNumber((size_t)43249, worker.cameras[0].src_output_jpg.peek().size()));
+  /*GET*/ SmartPointer<char> process_fire(worker.cve(firesightPath).src_process_fire.get());
+  assert(testNumber((size_t)43249, worker.cameras[0].src_output_jpg.peek().size()));
+  assert(testString("process.fire GET", "{}",worker.cve(firesightPath).src_process_fire.peek()));
+  assert(!worker.cve(firesightPath).src_process_fire.isFresh());
   /*ASYNC*/assert(testProcess(015)); // process + camera + mat_gray
-  assert(testNumber((size_t) 40734, factory.cameras[0].src_output_jpg.peek().size()));
-  assert(factory.cve(firesightPath).src_process_fire.isFresh());
-  assert(testString("process.fire processLoop", "{\"s1\":{}}", factory.cve(firesightPath).src_process_fire.peek()));
-  assert(testNumber((size_t)40734, factory.cameras[0].src_output_jpg.peek().size()));
+  assert(testNumber((size_t) 40734, worker.cameras[0].src_output_jpg.peek().size()));
+  assert(worker.cve(firesightPath).src_process_fire.isFresh());
+  assert(testString("process.fire processLoop", "{\"s1\":{}}", worker.cve(firesightPath).src_process_fire.peek()));
+  assert(testNumber((size_t)40734, worker.cameras[0].src_output_jpg.peek().size()));
 
   cout << "testCve() PASS" << endl;
   cout << endl;
@@ -730,7 +730,7 @@ int testFireREST() {
 }
 
 int testSuite() {
-  factory.setIdlePeriod(0);
+  worker.setIdlePeriod(0);
   firelog_level(FIRELOG_TRACE);
   try {
     if (
