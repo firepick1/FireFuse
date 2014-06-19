@@ -247,7 +247,7 @@ typedef class FireREST {
   public: int perms(const char *path) { return files.perms(path); }
   public: bool isDirectory(const char *path) { return files.isDirectory(path); }
   public: bool isFile(const char *path) { return files.isFile(path); }
-  public: bool isSync(const char *path);
+  public: static bool isSync(const char *path);
   public: vector<string> fileNames(const char *path) { return files.fileNames(path); }
 } FireREST;
 
