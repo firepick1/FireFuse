@@ -268,7 +268,7 @@ int BackgroundWorker::processLoop() {
   processed |= async_save_fire();  
   processed |= async_process_fire();  
 
-  if (processed == 0 && (cve_seconds() - idle_seconds >= idle_period)) {
+  if (idle_period && processed == 0 && (cve_seconds() - idle_seconds >= idle_period)) {
     idle();
   } 
   return processed;

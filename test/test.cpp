@@ -471,7 +471,7 @@ int testCamera() {
   assert(!factory.cameras[0].src_output_jpg.isFresh());
   jpg = factory.cameras[0].src_camera_jpg.peek();
   assert_headcam(jpg, 1);
-  factory.setIdlePeriod(10.0d);
+  factory.setIdlePeriod(0);
 
   assert(testProcess(0200000));
   assert(!factory.cameras[0].src_camera_jpg.isFresh());
@@ -727,6 +727,7 @@ int testFireREST() {
 }
 
 int testSuite() {
+  factory.setIdlePeriod(0);
   firelog_level(FIRELOG_TRACE);
   try {
     if (
