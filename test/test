@@ -9,7 +9,7 @@ rm -f target/*.jpg target/*.json target/*.ls target/*.png
 
 echo
 echo "====> TESTING FIREFUSE FILE STRUCTURE"
-find /dev/firefuse -exec ls -Fd {} \; 2>&1 | tee target/firefuse.ls
+find /dev/firefuse -exec ls -Fd {} \; 2>&1 | sort | tee target/firefuse.ls
 diff test/firefuse.ls target/firefuse.ls
 if [ $? -ne 0 ]; then
   echo "ERROR: firefuse file structure mismatch"
