@@ -91,7 +91,7 @@ int cve_write(const char *path, const char *buf, size_t bufsize, off_t offset, s
 int cve_release(const char *path, struct fuse_file_info *fi);
 int cve_truncate(const char *path, off_t size);
 
-json_t * firerest_config(const char *pJson);
+void firerest_config(const char *pJson);
 
 inline bool verifyOpenR_(const char *path, struct fuse_file_info *fi, int *pResult) {
   switch (fi->flags & 3) {
@@ -218,7 +218,7 @@ extern DataFactory factory; // DataFactory singleton background worker
 class JSONFileSystem {
   private: std::map<string, json_t *> dirMap;
   private: std::map<string, json_t *> fileMap;
-  private: json_t *resolve_file(var char *path);
+  private: json_t *resolve_file(const char *path);
 
   public: JSONFileSystem();
   public: ~JSONFileSystem();
@@ -227,14 +227,14 @@ class JSONFileSystem {
   public: void clear();
   public: json_t *get(const char *path);
   public: void create_file(const char *path, int perm);
-  public: inline void create_file(string path, int perm) { create_file(path_cstr(), perm); }
+  public: inline void create_file(string path, int perm) { create_file(path.c_str(), perm); }
   public: vector<string> fileNames(const char *path);
   public: bool isFile(const char *path);
   public: bool isDirectory(const char *path);
   public: int perms(const char *path);
-}
+};
 
-class FireREST {
+typedef class FireREST {
   private: JSONFileSystem files;
 
   public: FireREST();
@@ -244,10 +244,10 @@ class FireREST {
   public: int perms(const char *path) { return files.perms(path); }
   public: bool isDirectory(const char *path) { return files.isDirectory(path); }
   public: bool isSync(const char *path);
-  public: vector<string> fileNames(const char *path) { return files.fileNames(path);
+  public: vector<string> fileNames(const char *path) { return files.fileNames(path); }
   private: string config_camera(const char* cv_path, json_t *pCamera, const char *pCameraName, json_t *pCveMap);
   private: string config_cv(const char* root_path, json_t *pConfig);
-}
+} FireREST;
 
 extern FireREST firerest;
 

@@ -639,30 +639,30 @@ int testCve() {
 int testFireREST() {
   cout << "testFireREST() --------------------" << endl;
 
-  vector<strings> segments = FireREST.splitPath("");
+  vector<string> segments = JSONFileSystem::splitPath("");
   assert(segments.size() == 0);
 
-  segments = FireREST.splitPath("/");
+  segments = JSONFileSystem::splitPath("/");
   assert(segments.size() == 1);
-  assert(testString("splitPath(/)", "/", segments[0]);
+  assert(testString("splitPath(/)", "/", segments[0].c_str()));
 
-  segments = FireREST.splitPath("/one");
+  segments = JSONFileSystem::splitPath("/one");
   assert(segments.size() == 2);
-  assert(testString("splitPath(/one)", "/", segments[0]);
-  assert(testString("splitPath(/one)", "one", segments[1]);
+  assert(testString("splitPath(/one)", "/", segments[0].c_str()));
+  assert(testString("splitPath(/one)", "one", segments[1].c_str()));
   
-  segments = FireREST.splitPath("/one/two/");
+  segments = JSONFileSystem::splitPath("/one/two/");
   assert(segments.size() == 3);
-  assert(testString("splitPath(/one/two/)", "/", segments[0]);
-  assert(testString("splitPath(/one/two/)", "one", segments[1]);
-  assert(testString("splitPath(/one/two/)", "two", segments[2]);
+  assert(testString("splitPath(/one/two/)", "/", segments[0].c_str()));
+  assert(testString("splitPath(/one/two/)", "one", segments[1].c_str()));
+  assert(testString("splitPath(/one/two/)", "two", segments[2].c_str()));
  
-  segments = FireREST.splitPath("/one/two/three.json");
+  segments = JSONFileSystem::splitPath("/one/two/three.json");
   assert(segments.size() == 4);
-  assert(testString("splitPath(/one/two/three.json)", "/", segments[0]);
-  assert(testString("splitPath(/one/two/three.json)", "one", segments[1]);
-  assert(testString("splitPath(/one/two/three.json)", "two", segments[2]);
-  assert(testString("splitPath(/one/two/three.json)", "three.json", segments[2]);
+  assert(testString("splitPath(/one/two/three.json)", "/", segments[0].c_str()));
+  assert(testString("splitPath(/one/two/three.json)", "one", segments[1].c_str()));
+  assert(testString("splitPath(/one/two/three.json)", "two", segments[2].c_str()));
+  assert(testString("splitPath(/one/two/three.json)", "three.json", segments[3].c_str()));
 
   cout << "testFireREST() PASS" << endl;
   cout << endl;

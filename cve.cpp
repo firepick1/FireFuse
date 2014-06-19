@@ -149,8 +149,8 @@ int cve_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offse
 
   vector<string> names = firerest.fileNames(path);
   for (int iFile = 0; iFile < names.size(); iFile++) {
-    LOGTRACE2("cve_readdir(%s) readdir:%s", path, names[iFile]);
-    filler(buf, names[iFile], NULL, 0);
+    LOGTRACE2("cve_readdir(%s) readdir:%s", path, names[iFile].c_str());
+    filler(buf, names[iFile].c_str(), NULL, 0);
   }
 
   return 0;

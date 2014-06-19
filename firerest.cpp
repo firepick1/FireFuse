@@ -51,11 +51,11 @@ json_t * JSONFileSystem::get(const char *path) {
 }
 
 bool JSONFileSystem::isFile(const char *path) { 
-  return fileMap[path] ? true : false 
+  return fileMap[path] ? true : false;
 }
 
 bool JSONFileSystem::isDirectory(const char *path) { 
-  return dirmap[path] ? true : false 
+  return dirMap[path] ? true : false;
 }
 
 int JSONFileSystem::perms(const char *path) {
@@ -65,18 +65,18 @@ int JSONFileSystem::perms(const char *path) {
   }
   obj = fileMap[path];
   json_t * perms = json_object_get(obj, "perms");
-  if (perms == null) {
+  if (perms == NULL) {
     return 0;
   }
 
   return json_integer_value(perms);
 }
 
-vector<string> JSONFileSystem::files(const char *path) {
+vector<string> JSONFileSystem::fileNames(const char *path) {
   vector<string> result;
   json_t *dir = dirMap[path];
   if (dir) {
-    const char pName;
+    const char *pName;
     json_t * pFile;
     json_object_foreach(dir, pName, pFile) {
       result.push_back(pName);
@@ -88,23 +88,25 @@ vector<string> JSONFileSystem::files(const char *path) {
 
 vector<string> JSONFileSystem::splitPath(const char *path) {
   assert(path);
-  assert(*path == '/');
-
   vector<string> result;
-  result.push_back("/");
-  const char *pSegmentStart = path+1;
 
-  for (const char *s=pSegmentStart; ;s++) {
-    if (*s == '/') {
-      if (pSegmentStart < s) {
-	result.push_back(string(pSegmentStart, s));
-	pSegmentStart = s+1;
+  if (*path) {
+    assert(*path == '/');
+    result.push_back("/");
+    const char *pSegmentStart = path+1;
+
+    for (const char *s=pSegmentStart; ;s++) {
+      if (*s == '/') {
+	if (pSegmentStart < s) {
+	  result.push_back(string(pSegmentStart, s));
+	  pSegmentStart = s+1;
+	}
+      } else if (*s == 0) {
+	if (pSegmentStart < s) {
+	  result.push_back(string(pSegmentStart, s));
+	}
+	break;
       }
-    } else if (*s == 0) {
-      if (pSegmentStart < s) {
-	result.push_back(string(pSegmentStart, s));
-      }
-      break;
     }
   }
 
@@ -116,7 +118,7 @@ json_t * JSONFileSystem::resolve_file(const char *path) {
   assert(*path == '/');
 
   json_t *result = fileMap[path];
-  if (result != NULL || !create) {
+  if (result != NULL) {
     return result;
   }
   result = json_object();
@@ -125,16 +127,16 @@ json_t * JSONFileSystem::resolve_file(const char *path) {
   vector<string> segments = splitPath(path);
   string parentPath(segments[0]);
   json_t *parent = dirMap[parentPath];
-  for (int i = 1; i < segments.length-1; i++) {
+  for (int i = 1; i < segments.size()-1; i++) {
     if (i > 1) {
       parentPath += "/";
     }
     parentPath += segments[i];
     json_t *parent_kid = dirMap[parentPath];
-    if (parent_kid == null) {
+    if (parent_kid == NULL) {
       parent_kid = json_object();
       dirMap[parentPath] = parent_kid;
-      json_object_set(parent, segments[i], parent_kid);
+      json_object_set(parent, segments[i].c_str(), parent_kid);
     }
     parent = parent_kid;
   }
@@ -144,7 +146,7 @@ json_t * JSONFileSystem::resolve_file(const char *path) {
 
 void JSONFileSystem::create_file(const char *path, int perms) {
   json_t * obj = resolve_file(path);
-  json_object_set(obj, "perms", json_integer(perm));
+  json_object_set(obj, "perms", json_integer(perms));
 }
 
 /////////////////////////////// FireREST /////////////////////////////
@@ -153,7 +155,7 @@ FireREST::FireREST() {
 }
 
 FireREST::~FireREST() {
-  json_t *p_files = dirMap["/"];
+  json_t *p_files = files.get("/");
   if (p_files) {
     json_decref(p_files);
   }
@@ -203,7 +205,8 @@ string FireREST::config_camera(const char*cv_path, json_t *pCamera, const char *
       json_t *pCve = json_object_get(pCveMap, pCveNameStr);
       if (pCve == 0) {
         errMsg = "FireREST::config_camera() missing CVE definition: ";
-	errMsg += pCveNameStr + "\n";
+	errMsg += pCveNameStr;
+	errMsg += "\n";
 	return errMsg;
       }
       string cvePath(profilePath);
@@ -212,19 +215,21 @@ string FireREST::config_camera(const char*cv_path, json_t *pCamera, const char *
       json_t *pFireSight = json_object_get(pCve, "firesight");
       if (pFireSight == 0) {
         errMsg = "FireREST::config_camera() CVE missing definition for: firesight";
-	errMsg += pCveNameStr + "\n";
+	errMsg += pCveNameStr;
+	errMsg += "\n";
 	return errMsg;
       }
       char *pFireSightJson = json_dumps(pFireSight, JSON_COMPACT|JSON_PRESERVE_ORDER);
       if (pFireSightJson == 0) {
         errMsg = "FireREST::config_camera() could not create firesight json string";
-	errMsg += pCveNameStr + "\n";
+	errMsg += pCveNameStr;
+	errMsg += "\n";
 	return errMsg;
       }
 
       string firesightPath(cvePath);
       firesightPath += "firesight.json";
-      SmartPointer<char> firesightJson(pFireSightJson, strlen(pFireSightJson), SmartPointer.MANAGE);
+      SmartPointer<char> firesightJson(pFireSightJson, strlen(pFireSightJson), SmartPointer<char>::MANAGE);
       factory.cve(firesightPath).src_firesight_json.post(firesightJson);
 
       json_t *pProperties = json_object_get(pCve, "properties");
@@ -235,7 +240,7 @@ string FireREST::config_camera(const char*cv_path, json_t *pCamera, const char *
 	  errMsg += pCveNameStr;
 	  return errMsg;
 	}
-	SmartPointer<char> props(pPropertiesJson, strlen(pPropertiesJson), SmartPointer.MANAGE);
+	SmartPointer<char> props(pPropertiesJson, strlen(pPropertiesJson), SmartPointer<char>::MANAGE);
 	factory.cve(cvePath).src_properties_json.post(props);
       }
 
@@ -288,9 +293,9 @@ string FireREST::config_cv(const char* varPath, json_t *pConfig) {
 }
 
 bool FireREST::isSync(const char *pJson) {
-  char *pSlash = pJson;
+  const char *pSlash = pJson;
   while (pSlash && strncmp("/sync/", pSlash, 6)) {
-    pSlash = strchr(pSlash+1);
+    pSlash = strchr(pSlash+1, '/');
   }
   return pSlash ? true : false;
 }
