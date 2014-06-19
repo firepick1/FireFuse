@@ -557,6 +557,8 @@ int testConfig() {
   LOGTRACE2("twoPath:%lx syncTwo:%lx", (ulong) &worker.cve(twoPath), (ulong) &worker.cve(syncTwo.c_str()));
   assert(&worker.cve(twoPath) == &worker.cve(syncTwo.c_str()));
 
+  assert(is_cv_path("/dev/firefuse/cv"));
+  assert(is_cv_path("/dev/firefuse/sync"));
   assert(is_cv_path("/cv"));
   assert(is_cv_path("/sync"));
   assert(is_cv_path("/sync/cv"));

@@ -64,10 +64,12 @@ string cve_path(const char *pPath) {
 }
 
 bool is_cv_path(const char *path) {
-  if (strncmp("/cv", path, 3) == 0) {
-    return TRUE;
-  } else if (strncmp("/sync", path, 5) == 0) {
-    return TRUE;
+  for (const char *s = path; s && *s; s++) {
+    if (strncmp("/cv", s, 3) == 0) {
+      return TRUE;
+    } else if (strncmp("/sync", s, 5) == 0) {
+      return TRUE;
+    }
   }
   return FALSE;
 }
