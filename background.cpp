@@ -272,6 +272,7 @@ int BackgroundWorker::processLoop() {
     idle();
     processed |= 0400000;
   } 
+  LOGTRACE1("BackgroundWorkder::processLoop() => %o", processed);
   return processed;
 }
 
