@@ -563,6 +563,7 @@ int testConfig() {
 }
 
 int testCve() {
+  char buf[100];
   /////////// process.fire test
   cout << "testCve() --------------------------" << endl;
   factory.clear();
@@ -614,8 +615,10 @@ int testCve() {
   assert(testProcess(0100));
   assert(factory.cve(firesightPath).src_save_fire.isFresh());
   save_fire = factory.cve(firesightPath).src_save_fire.peek();
-  assert(testString("save.fire processLoop ", "{\"bytes\":72944}", save_fire));
-  assert(testNumber((size_t)72944, factory.cve(firesightPath).src_saved_png.peek().size()));
+  size_t saveSize = factory.cve(firesightPath).src_saved_png.peek().size();
+  assert(saveSize > 0);
+  snprintf(buf, sizeof(buf), "{\"bytes\":%ld}", saveSize);
+  assert(testString("save.fire processLoop ", buf, save_fire));
   SmartPointer<char> save_fire_contents = factory.cve(firesightPath).src_save_fire.peek();
   testFile("save.fire", "/cv/1/gray/cve/calc-offset/save.fire", save_fire_contents);
   assert(factory.cve(firesightPath).src_save_fire.isFresh()); // Verify async never triggered
