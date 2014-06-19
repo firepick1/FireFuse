@@ -69,6 +69,7 @@ enum CVE_Path {
 #define FIREREST_BGR "/bgr"
 #define FIREREST_CAMERA_JPG "/camera.jpg"
 #define FIREREST_CV "/cv"
+#define FIREREST_SYNC "/sync"
 #define FIREREST_CVE "/cve"
 #define FIREREST_FIRESIGHT_JSON "/firesight.json"
 #define FIREREST_PROPERTIES_JSON "/properties.json"

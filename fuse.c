@@ -174,6 +174,7 @@ static int firefuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     filler(buf, ECHO_PATH + 1, NULL, 0);
     filler(buf, FIRESTEP_PATH + 1, NULL, 0);
     filler(buf, FIREREST_CV + 1, NULL, 0);
+    filler(buf, FIREREST_SYNC + 1, NULL, 0);
   } else {
     LOGERROR1("firefuse_readdir(%s) Unknown path", path);
     return -ENOENT;
