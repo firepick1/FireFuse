@@ -318,8 +318,7 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
       if (FireREST::isSync(path)) {
 	camera.src_camera_jpg.get_sync();
       }
-      worker.cve(path).save(&worker); // Fast, infrequent operation can be synchronous
-      fi->fh = (uint64_t) (size_t) new SmartPointer<char>(worker.cve(path).src_save_fire.peek()); // PEEK for SYNC
+      fi->fh = (uint64_t) (size_t) new SmartPointer<char>(worker.cve(path).src_save_fire.get_sync());
     } else if (cve_isPathSuffix(path, FIREREST_CAMERA_JPG)) {
       if (FireREST::isSync(path)) {
 	fi->fh = (uint64_t) (size_t) new SmartPointer<char>(camera.src_camera_jpg.get_sync());

@@ -268,7 +268,7 @@ int BackgroundWorker::async_save_fire() {
 int BackgroundWorker::processLoop() {
   int processed = 0;
   processed |= cameras[0].async_update_camera_jpg();
-  // processed |= async_save_fire();  // save is synchronous
+  processed |= async_save_fire();  
   processed |= async_process_fire();  
   processed |= cameras[0].async_update_monitor_jpg();
 

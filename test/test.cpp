@@ -651,22 +651,21 @@ int testCve() {
   assert(testString("save.fire GET", "{}",save_fire));
   assert(testNumber((size_t) 0, worker.cve(savePath).src_saved_png.peek().size()));
   assert(!worker.cve(savePath).src_save_fire.isFresh());
-  assert(testProcess(0)); // monitor + save
-  assert(!worker.cve(savePath).src_save_fire.isFresh());
-  assert(testNumber((size_t) 128948, worker.cameras[0].src_monitor_jpg.peek().size()));
-  /* SAVE */ worker.cve(savePath).save(&worker); // Fast, infrequent operation can be synchronous
+  /*ASYNC*/ assert(testProcess(0100100)); // monitor + save
+  assert(worker.cve(savePath).src_save_fire.isFresh());
+  assert(testNumber((size_t) 43249, worker.cameras[0].src_monitor_jpg.peek().size()));
   save_fire = worker.cve(savePath).src_save_fire.peek();
   size_t saveSize = worker.cve(savePath).src_saved_png.peek().size();
   assert(saveSize > 0);
   snprintf(buf, sizeof(buf), "{\"bytes\":%ld}", saveSize);
   assert(testString("save.fire processLoop ", buf, save_fire));
   SmartPointer<char> save_fire_contents = worker.cve(savePath).src_save_fire.peek();
-  testFile("save.fire", "/cv/1/gray/cve/calc-offset/save.fire", save_fire_contents);
-  assert(worker.cve(savePath).src_save_fire.isFresh()); // Verify async never triggered
-  assert(worker.cameras[0].src_output_jpg.isFresh()); 
+  assert(testString("save.fire BEFORE", "{\"bytes\":72944}", save_fire_contents));
+  assert(worker.cve(savePath).src_save_fire.isFresh()); 
+  assert(worker.cameras[0].src_monitor_jpg.isFresh()); 
   assert(testNumber((size_t)43249, worker.cameras[0].src_output_jpg.peek().size()));  
-  assert(testNumber((size_t) 128948, worker.cameras[0].src_monitor_jpg.peek().size()));
-  /*ASYNC*/assert(testProcess(0100005)); // monitor + camera + mat_gray
+  assert(testNumber((size_t) 43249, worker.cameras[0].src_monitor_jpg.peek().size()));
+  /*ASYNC*/assert(testProcess(05)); // camera + mat_gray
   assert(testNumber((size_t) 43249, worker.cameras[0].src_monitor_jpg.peek().size()));
 
   /////////// process.fire test
