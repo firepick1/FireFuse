@@ -194,18 +194,27 @@ template <class T> class SmartPointer {
    * from the provided data (i.e., count>0). Managed data will eventually be freed
    * by SmartPointer. Initialization data will not be freed by SmartPointer.
    *
-   * @param ptr pointer to data. If ptr is null, count must be number of objects to calloc and zero-fill
-   * @count number of T objects to calloc for data copied from ptr
+   * @param aPtr pointer to data. If ptr is null, count must be number of objects to calloc and zero-fill
+   * @param count number of T objects to calloc for data copied from ptr
+   * @param flags ALLOCATE new memory or MANAGE memory to free()
+   * @param blockSize byte data increment for self-describing data (ALLOCATE)
+   * @param blockPad block byte fill value (ALLOCATE)
    */
-  public: inline SmartPointer(T* aPtr, size_t count=0, int flags=ALLOCATE) {
+  public: inline SmartPointer(T* aPtr, size_t count=0, int flags=ALLOCATE, size_t blockSize=1, char blockPad=0) {
     length = count * sizeof(T);
     if (count && flags == ALLOCATE) {
-      T* pData = (T*) calloc(count, sizeof(T));
+      size_t blocks = (count*sizeof(T) + blockSize - 1)/blockSize;
+      T* pData = (T*) calloc(blocks, blockSize);
+      size_t blockBytes = blocks * blockSize;
       if (aPtr) {
+	memset(pData+length, blockPad, blockBytes-length);
         memcpy(pData, aPtr, length);
+      } else {
+	memset(pData, blockPad, blockBytes);
       }
       LOGTRACE3("SmartPointer(%0lx,%ld) calloc:%0lx", (ulong) aPtr, (ulong) count, (ulong) pData);
       pPointer = new ReferencedPointer(pData);
+      length = blockBytes;
     } else {
       LOGTRACE2("SmartPointer(%0lx,%ld)", (ulong) aPtr, (ulong) count);
       pPointer = aPtr ? new ReferencedPointer(aPtr) : NULL;

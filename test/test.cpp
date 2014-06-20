@@ -191,6 +191,18 @@ int testSmartPointer( ){
 
 int testSmartPointer_CopyData( ){
   cout << "testSmartPointer_CopyData() ------------------------" << endl;
+  const char *hello = "hello";
+
+  SmartPointer<char> blockPtr((char*) hello, strlen(hello), SmartPointer<char>::ALLOCATE, 10, '$');
+  assert(testNumber(10l, (long) blockPtr.size()));
+  assert(0==strncmp("hello$$$$$", blockPtr.data(), 10));
+  SmartPointer<char> nullBlock((char*)NULL, 0, SmartPointer<char>::ALLOCATE, 10, 'x');
+  assert(testNumber(0l, (long) nullBlock.size()));
+  assert(testNumber(0l, (long) nullBlock.data()));
+  SmartPointer<char> emptyBlock(NULL, 1, SmartPointer<char>::ALLOCATE, 10, 'x');
+  assert(testNumber(10l, (long) emptyBlock.size()));
+  assert(0==strncmp("xxxxxxxxxx", emptyBlock.data(), 10));
+
   char *pOne = (char*)malloc(100);
   strcpy(pOne, "one");
   cout << "pOne == " << (long) pOne << endl;
