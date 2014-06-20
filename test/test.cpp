@@ -641,7 +641,7 @@ int testCve() {
   string savePath = "/cv/1/gray/cve/calc-offset/save.fire";
   assert(worker.cameras[0].src_camera_mat_gray.isFresh());
   assert(worker.cameras[0].src_camera_mat_bgr.isFresh());
-  assert(worker.cve(savePath).src_save_fire.isFresh());
+  assert(worker.cve(savePath).src_save_fire.isFresh()); // {} 
   assert(!worker.cameras[0].src_output_jpg.isFresh()); 
   assert(testNumber((size_t)0, worker.cameras[0].src_output_jpg.peek().size()));  
   assert(testString("save.fire BEFORE", "{}",worker.cve(savePath).src_save_fire.peek()));
@@ -653,7 +653,8 @@ int testCve() {
   assert(!worker.cve(savePath).src_save_fire.isFresh());
   assert(testProcess(0)); // monitor + save
   assert(!worker.cve(savePath).src_save_fire.isFresh());
-  worker.cve(savePath).save(&worker); // Fast, infrequent operation can be synchronous
+  assert(testNumber((size_t) 128948, worker.cameras[0].src_monitor_jpg.peek().size()));
+  /* SAVE */ worker.cve(savePath).save(&worker); // Fast, infrequent operation can be synchronous
   save_fire = worker.cve(savePath).src_save_fire.peek();
   size_t saveSize = worker.cve(savePath).src_saved_png.peek().size();
   assert(saveSize > 0);
@@ -664,6 +665,9 @@ int testCve() {
   assert(worker.cve(savePath).src_save_fire.isFresh()); // Verify async never triggered
   assert(worker.cameras[0].src_output_jpg.isFresh()); 
   assert(testNumber((size_t)43249, worker.cameras[0].src_output_jpg.peek().size()));  
+  assert(testNumber((size_t) 128948, worker.cameras[0].src_monitor_jpg.peek().size()));
+  /*ASYNC*/assert(testProcess(0100005)); // monitor + camera + mat_gray
+  assert(testNumber((size_t) 43249, worker.cameras[0].src_monitor_jpg.peek().size()));
 
   /////////// process.fire test
   string processPath = "/cv/1/gray/cve/calc-offset/process.fire";
@@ -674,7 +678,7 @@ int testCve() {
   assert(testNumber((size_t)43249, worker.cameras[0].src_output_jpg.peek().size()));
   assert(testString("process.fire GET", "{}",worker.cve(processPath).src_process_fire.peek()));
   assert(!worker.cve(processPath).src_process_fire.isFresh());
-  /*ASYNC*/assert(testProcess(0100015)); // monitor + process + camera + mat_gray
+  /*ASYNC*/assert(testProcess(0100010)); // monitor + process + camera + mat_gray
   assert(testNumber((size_t) 40734, worker.cameras[0].src_output_jpg.peek().size()));
   assert(testNumber((size_t) 40734, worker.cameras[0].src_monitor_jpg.peek().size()));
   /*ASYNC*/assert(testProcess(05)); // monitor + camera + mat_gray
