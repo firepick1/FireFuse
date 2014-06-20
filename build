@@ -200,9 +200,9 @@ if [ -e /var/firefuse/config.json ]; then
 fi
 cp var/firefuse/config.json /var/firefuse/
 
-echo Mounting the firefuse file system on /dev/firefuse
-echo   target/firefuse -s -o allow_other /dev/firefuse
-target/firefuse -s -o allow_other /dev/firefuse
+echo Mounting the multi-threaded firefuse file system on /dev/firefuse
+echo   target/firefuse -o allow_other /dev/firefuse
+target/firefuse -o allow_other /dev/firefuse
 if [ $? -ne 0 ]; then
   echo "!!!!!!!!!!!!!!!!! ERROR !!!!!!!!!!!!!!!!!!!!"
   echo "COULD NOT MOUNT /dev/firefuse"

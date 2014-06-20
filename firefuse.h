@@ -154,6 +154,7 @@ class BackgroundWorker;
 typedef class CVE {
   private: string name;
   private: bool _isColor;
+
   public: LIFOCache<SmartPointer<char> > src_saved_png;
   public: LIFOCache<SmartPointer<char> > src_save_fire;
   public: LIFOCache<SmartPointer<char> > src_process_fire;
@@ -235,6 +236,8 @@ class JSONFileSystem {
 };
 
 typedef class FireREST {
+  private: pthread_mutex_t processMutex;
+  private: int processCount;
   private: JSONFileSystem files;
   private: string config_camera(const char* cv_path, json_t *pCamera, const char *pCameraName, json_t *pCveMap);
   private: string config_cv(const char* root_path, json_t *pConfig);
@@ -243,6 +246,8 @@ typedef class FireREST {
   public: FireREST();
   public: ~FireREST();
 
+  public: int incrementProcessCount();
+  public: int decrementProcessCount();
   public: void configure(const char *pJson);
   public: int perms(const char *path) { return files.perms(path); }
   public: bool isDirectory(const char *path) { return files.isDirectory(path); }

@@ -157,13 +157,38 @@ void JSONFileSystem::create_file(const char *path, int perms) {
 /////////////////////////////// FireREST /////////////////////////////
 
 FireREST::FireREST() {
+  int rc_mutex = pthread_mutex_init(&processMutex, NULL);
+  assert(rc_mutex == 0);
 }
 
 FireREST::~FireREST() {
+  int rc_mutex = pthread_mutex_destroy(&processMutex);
+  assert(rc_mutex == 0);
+
   json_t *p_files = files.get("/");
   if (p_files) {
     json_decref(p_files);
   }
+}
+
+int FireREST::incrementProcessCount() {
+  int result;
+  ///////////////// CRITICAL SECTION BEGIN ///////////////
+  pthread_mutex_lock(&processMutex);			//
+  result++;						//
+  pthread_mutex_unlock(&processMutex);			//
+  ///////////////// CRITICAL SECTION END /////////////////
+  return result;
+}
+
+int FireREST::decrementProcessCount() {
+  int result;
+  ///////////////// CRITICAL SECTION BEGIN ///////////////
+  pthread_mutex_lock(&processMutex);			//
+  result--;						//
+  pthread_mutex_unlock(&processMutex);			//
+  ///////////////// CRITICAL SECTION END /////////////////
+  return result;
 }
 
 void FireREST::create_file(string path, int perm) {

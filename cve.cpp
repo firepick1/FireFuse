@@ -298,8 +298,15 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
     CameraNode &camera = worker.cameras[0];
     if (cve_isPathSuffix(path, FIREREST_PROCESS_FIRE)) {
       if (FireREST::isSync(path)) {
-	camera.src_camera_jpg.get_sync();
-	fi->fh = (uint64_t) (size_t) new SmartPointer<char>(worker.cve(path).src_process_fire.get_sync());
+	int count = firerest.incrementProcessCount();
+	if (count == 1) {
+	  camera.src_camera_jpg.get_sync();
+	  fi->fh = (uint64_t) (size_t) new SmartPointer<char>(worker.cve(path).src_process_fire.get_sync());
+	} else {
+	  LOGERROR1("cve_open(%s) EAGAIN operation would block", path);
+	  result = -EAGAIN;
+	}
+	firerest.decrementProcessCount();
       } else {
 	fi->fh = (uint64_t) (size_t) new SmartPointer<char>(worker.cve(path).src_process_fire.get());
       }
@@ -318,12 +325,7 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
     } else if (cve_isPathSuffix(path, FIREREST_OUTPUT_JPG)) {
       fi->fh = (uint64_t) (size_t) new SmartPointer<char>(camera.src_output_jpg.get());
     } else if (cve_isPathSuffix(path, FIREREST_MONITOR_JPG)) {
-      if (FireREST::isSync(path)) {
-	camera.src_camera_jpg.get_sync();
-	fi->fh = (uint64_t) (size_t) new SmartPointer<char>(camera.src_monitor_jpg.get_sync());
-      } else {
-	fi->fh = (uint64_t) (size_t) new SmartPointer<char>(camera.src_monitor_jpg.get());
-      }
+      fi->fh = (uint64_t) (size_t) new SmartPointer<char>(camera.src_monitor_jpg.get());
     } else if (cve_isPathSuffix(path, FIREREST_FIRESIGHT_JSON)) {
       fi->fh = (uint64_t) (size_t) new SmartPointer<char>(worker.cve(path).src_firesight_json.get());
     } else if (cve_isPathSuffix(path, FIREREST_SAVED_PNG)) {
