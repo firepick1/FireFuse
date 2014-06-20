@@ -638,45 +638,49 @@ int testCve() {
   assert(0==strcmp(firesightJson, worker.cve(firesightPath).src_firesight_json.get().data()));
 
   /////////// save.fire test
+  string savePath = "/cv/1/gray/cve/calc-offset/save.fire";
   assert(worker.cameras[0].src_camera_mat_gray.isFresh());
   assert(worker.cameras[0].src_camera_mat_bgr.isFresh());
-  assert(worker.cve(firesightPath).src_save_fire.isFresh());
+  assert(worker.cve(savePath).src_save_fire.isFresh());
   assert(!worker.cameras[0].src_output_jpg.isFresh()); 
   assert(testNumber((size_t)0, worker.cameras[0].src_output_jpg.peek().size()));  
-  assert(testString("save.fire BEFORE", "{}",worker.cve(firesightPath).src_save_fire.peek()));
-  assert(testNumber((size_t) 0, worker.cve(firesightPath).src_saved_png.peek().size()));
-  assert(worker.cve(firesightPath).src_save_fire.isFresh());
-  /*GET*/ SmartPointer<char> save_fire(worker.cve(firesightPath).src_save_fire.get());
+  assert(testString("save.fire BEFORE", "{}",worker.cve(savePath).src_save_fire.peek()));
+  assert(testNumber((size_t) 0, worker.cve(savePath).src_saved_png.peek().size()));
+  assert(worker.cve(savePath).src_save_fire.isFresh());
+  /*GET*/ SmartPointer<char> save_fire(worker.cve(savePath).src_save_fire.get());
   assert(testString("save.fire GET", "{}",save_fire));
-  assert(!worker.cve(firesightPath).src_save_fire.isFresh());
-  assert(testProcess(0100100));
-  assert(worker.cve(firesightPath).src_save_fire.isFresh());
-  save_fire = worker.cve(firesightPath).src_save_fire.peek();
-  size_t saveSize = worker.cve(firesightPath).src_saved_png.peek().size();
+  assert(testNumber((size_t) 0, worker.cve(savePath).src_saved_png.peek().size()));
+  assert(!worker.cve(savePath).src_save_fire.isFresh());
+  assert(testProcess(0)); // monitor + save
+  assert(!worker.cve(savePath).src_save_fire.isFresh());
+  worker.cve(savePath).save(&worker); // Fast, infrequent operation can be synchronous
+  save_fire = worker.cve(savePath).src_save_fire.peek();
+  size_t saveSize = worker.cve(savePath).src_saved_png.peek().size();
   assert(saveSize > 0);
   snprintf(buf, sizeof(buf), "{\"bytes\":%ld}", saveSize);
   assert(testString("save.fire processLoop ", buf, save_fire));
-  SmartPointer<char> save_fire_contents = worker.cve(firesightPath).src_save_fire.peek();
+  SmartPointer<char> save_fire_contents = worker.cve(savePath).src_save_fire.peek();
   testFile("save.fire", "/cv/1/gray/cve/calc-offset/save.fire", save_fire_contents);
-  assert(worker.cve(firesightPath).src_save_fire.isFresh()); // Verify async never triggered
+  assert(worker.cve(savePath).src_save_fire.isFresh()); // Verify async never triggered
   assert(worker.cameras[0].src_output_jpg.isFresh()); 
   assert(testNumber((size_t)43249, worker.cameras[0].src_output_jpg.peek().size()));  
 
   /////////// process.fire test
-  assert(testString("process.fire BEFORE", "{}",worker.cve(firesightPath).src_process_fire.peek()));
-  assert(worker.cve(firesightPath).src_process_fire.isFresh());
+  string processPath = "/cv/1/gray/cve/calc-offset/process.fire";
+  assert(testString("process.fire BEFORE", "{}",worker.cve(processPath).src_process_fire.peek()));
+  assert(worker.cve(processPath).src_process_fire.isFresh());
   assert(testNumber((size_t)43249, worker.cameras[0].src_output_jpg.peek().size()));
-  /*GET*/ SmartPointer<char> process_fire_json(worker.cve(firesightPath).src_process_fire.get());
+  /*GET*/ SmartPointer<char> process_fire_json(worker.cve(processPath).src_process_fire.get());
   assert(testNumber((size_t)43249, worker.cameras[0].src_output_jpg.peek().size()));
-  assert(testString("process.fire GET", "{}",worker.cve(firesightPath).src_process_fire.peek()));
-  assert(!worker.cve(firesightPath).src_process_fire.isFresh());
+  assert(testString("process.fire GET", "{}",worker.cve(processPath).src_process_fire.peek()));
+  assert(!worker.cve(processPath).src_process_fire.isFresh());
   /*ASYNC*/assert(testProcess(0100015)); // monitor + process + camera + mat_gray
   assert(testNumber((size_t) 40734, worker.cameras[0].src_output_jpg.peek().size()));
   assert(testNumber((size_t) 40734, worker.cameras[0].src_monitor_jpg.peek().size()));
   /*ASYNC*/assert(testProcess(05)); // monitor + camera + mat_gray
   assert(testNumber((size_t) 40734, worker.cameras[0].src_monitor_jpg.peek().size()));
-  assert(worker.cve(firesightPath).src_process_fire.isFresh());
-  assert(testString("process.fire processLoop", "{\"s1\":{}}", worker.cve(firesightPath).src_process_fire.peek()));
+  assert(worker.cve(processPath).src_process_fire.isFresh());
+  assert(testString("process.fire processLoop", "{\"s1\":{}}", worker.cve(processPath).src_process_fire.peek()));
 
   cout << "testCve() PASS" << endl;
   cout << endl;
