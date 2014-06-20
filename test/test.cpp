@@ -70,10 +70,17 @@ bool testString(const char * name, const char*expected, const char*actualValue) 
 }
 
 bool testString(const char * name, const char*expected, SmartPointer<char> actual) {
-  string actualValue(actual.data(), actual.data() + actual.size());
-  if (strlen(expected) != actualValue.size() || strncmp(expected, actualValue.c_str(), strlen(expected))) {
+  char *actualEnd = actual.data() + actual.size();
+  string actualValue(actual.data(), actualEnd);
+  if (strncmp(expected, actualValue.c_str(), strlen(expected))) {
     LOGTRACE3("TEST %s expected:\"%s\" actual:\"%s\"", name, expected, actualValue.c_str());
     return false;
+  }
+  for (char *s = actual.data() + strlen(expected); s < actualEnd; s++) {
+    if (*s != ' ') {
+      LOGTRACE2("TEST %s expected:trailing-blanks actual:\"%s\"", name, actualValue.c_str());
+      return false;
+    }
   }
   return true;
 }

@@ -118,9 +118,11 @@ int cve_getattr(const char *path, struct stat *stbuf) {
   } else if (cve_isPathSuffix(path, FIREREST_SAVED_PNG)) {
     res = cve_getattr_file(path, stbuf, worker.cve(path).src_saved_png.peek().size());
   } else if (cve_isPathSuffix(path, FIREREST_SAVE_FIRE)) {
-    res = cve_getattr_file(path, stbuf, worker.cve(path).src_save_fire.peek().size());
+    size_t bytes = max(MIN_SAVE_SIZE, worker.cve(path).src_save_fire.peek().size());
+    res = cve_getattr_file(path, stbuf, bytes);
   } else if (cve_isPathSuffix(path, FIREREST_PROCESS_FIRE)) {
-    res = cve_getattr_file(path, stbuf, worker.cve(path).src_process_fire.peek().size());
+    size_t bytes = max(MIN_PROCESS_SIZE, worker.cve(path).src_process_fire.peek().size());
+    res = cve_getattr_file(path, stbuf, bytes);
   } else if (cve_isPathSuffix(path, FIREREST_PROPERTIES_JSON)) {
     res = cve_getattr_file(path, stbuf, worker.cve(path).src_properties_json.peek().size(), 0666);
   } else if (cve_isPathSuffix(path, FIREREST_FIRESIGHT_JSON)) {
@@ -207,7 +209,7 @@ static SmartPointer<char> buildErrorMessage(const char* fmt, const char *path, c
   return SmartPointer<char>((char *)errMsg.c_str(), errMsg.size()+1);
 }
 
-int CVE::process(BackgroundWorker *pFactory) {
+int CVE::process(BackgroundWorker *pWorker) {
   int result = 0;
 
   double sStart = cve_seconds();
@@ -220,8 +222,8 @@ int CVE::process(BackgroundWorker *pFactory) {
   try {
     Pipeline pipeline(pipelineJson.data(), Pipeline::JSON);
     Mat image = _isColor ?
-      pFactory->cameras[0].src_camera_mat_bgr.get() :
-      pFactory->cameras[0].src_camera_mat_gray.get();
+      pWorker->cameras[0].src_camera_mat_bgr.get() :
+      pWorker->cameras[0].src_camera_mat_gray.get();
     ArgMap argMap;
     json_t *pProperties = NULL;
     struct stat propertiesStat;   
@@ -264,12 +266,14 @@ int CVE::process(BackgroundWorker *pFactory) {
     }
     int jsonIndent = 0;
     pModelStr = json_dumps(pModel, JSON_PRESERVE_ORDER|JSON_COMPACT|JSON_INDENT(0));
-    int modelLen = pModelStr ? strlen(pModelStr) : 0;
-    jsonResult = SmartPointer<char>(pModelStr, strlen(pModelStr), SmartPointer<char>::MANAGE);
+    size_t modelLen = pModelStr ? strlen(pModelStr) : 0;
+    size_t bytes = max(MIN_PROCESS_SIZE, modelLen);
+    jsonResult = SmartPointer<char>(pModelStr, modelLen, SmartPointer<char>::ALLOCATE, bytes, ' ');
+    free(pModelStr);
     json_decref(pModel);
-    pFactory->cameras[0].setOutput(image);
+    pWorker->cameras[0].setOutput(image);
     double sElapsed = cve_seconds() - sStart;
-    LOGDEBUG3("cve_process(%s) -> JSON %dB %0.3fs", path, modelLen, sElapsed);
+    LOGDEBUG3("cve_process(%s) -> JSON %ldB %0.3fs", path, modelLen, sElapsed);
   } catch (const char * ex) {
     jsonResult = buildErrorMessage("cve_process(%s) EXCEPTION: %s", path, ex);
   } catch (string ex) {
@@ -454,13 +458,13 @@ CVE::~CVE() {
 }
 
 
-int CVE::save(BackgroundWorker *pFactory) {
+int CVE::save(BackgroundWorker *pWorker) {
   double sStart = cve_seconds();
   string errMsg;
 
   Mat image = _isColor ?
-    pFactory->cameras[0].src_camera_mat_bgr.get() :
-    pFactory->cameras[0].src_camera_mat_gray.get();
+    pWorker->cameras[0].src_camera_mat_bgr.get() :
+    pWorker->cameras[0].src_camera_mat_gray.get();
   size_t bytes = 0;
   if (image.rows && image.cols) {
     vector<uchar> pngBuf;
@@ -473,7 +477,7 @@ int CVE::save(BackgroundWorker *pFactory) {
     src_saved_png.post(png);
     putText(image, "Saved", Point(7, image.rows-6), FONT_HERSHEY_SIMPLEX, 2, Scalar(0,0,0), 3);
     putText(image, "Saved", Point(5, image.rows-8), FONT_HERSHEY_SIMPLEX, 2, Scalar(255,255,255), 3);
-    pFactory->cameras[0].setOutput(image);
+    pWorker->cameras[0].setOutput(image);
     LOGTRACE4("CVE::save(%s) %s image saved (%ldB) %0.3fs", name.c_str(), _isColor ? "color" : "gray", bytes, cve_seconds() - sStart);
   } else {
     errMsg = "CVE::save(";
@@ -488,7 +492,8 @@ int CVE::save(BackgroundWorker *pFactory) {
     snprintf(jsonBuf, sizeof(jsonBuf), "{\"bytes\":%ld,\"message\":\"%s\"}", 
       bytes, errMsg.c_str());
   }
-  SmartPointer<char> json(jsonBuf, strlen(jsonBuf));
+  size_t jsonBytes = max(MIN_SAVE_SIZE, (size_t) strlen(jsonBuf));
+  SmartPointer<char> json(jsonBuf, strlen(jsonBuf), SmartPointer<char>::ALLOCATE, jsonBytes, ' ');
   src_save_fire.post(json);
   double sElapsed = cve_seconds() - sStart;
   LOGDEBUG3("CVE::save(%s) -> %ldB %0.3fs", name.c_str(), (ulong) json.size(), sElapsed);

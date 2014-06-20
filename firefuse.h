@@ -18,6 +18,13 @@ extern "C" {
 #define CONFIG_PATH "/config.json"
 #define ECHO_PATH "/echo"
 
+// FireREST JSON network response sizes are obtained from FUSE file size.
+// We provide a minimum size for sync requests that don't know actual response size in cve_getattr()
+// Large values waste bandwidth, small values run the risk of clipping the returned JSON.
+// To match the minimum size constraint, JSON text is padded with trailing spaces
+#define MIN_SAVE_SIZE ((size_t) 256)
+#define MIN_PROCESS_SIZE ((size_t) 2048)
+
 #ifndef bool
 #define bool int
 #define TRUE 1
@@ -163,8 +170,8 @@ typedef class CVE {
   public: inline string getName() { return name; }
   public: CVE(string name);
   public: ~CVE();
-  public: int save(BackgroundWorker *pFactory);
-  public: int process(BackgroundWorker *pFactory);
+  public: int save(BackgroundWorker *pWorker);
+  public: int process(BackgroundWorker *pWorker);
   public: inline bool isColor() { return _isColor; }
 } CVE, *CVEPtr;
 
