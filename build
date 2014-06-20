@@ -117,7 +117,7 @@ if [ ! -e /usr/include/fuse.h ] ; then
   echo "++++++++++++++++++ INSTALLING FUSE C LIBRARIES ++++++++++++"
   apt-get -y install libfuse-dev
   ex -s -c "g/#user_allow_other/s/#//" -c wq /etc/fuse.conf
-  cp firefuse.conf /etc/ld.so.conf.d/
+  echo "/usr/local/lib" > /etc/ld.so.conf.d/firefuse.conf
   ldconfig
 fi
 if [ ! -e /usr/lib/libfirepicam.so ]; then

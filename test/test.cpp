@@ -670,7 +670,7 @@ int testCve() {
   assert(testNumber((size_t)43249, worker.cameras[0].src_output_jpg.peek().size()));
   assert(testString("process.fire GET", "{}",worker.cve(firesightPath).src_process_fire.peek()));
   assert(!worker.cve(firesightPath).src_process_fire.isFresh());
-  /*ASYNC*/assert(testProcess(015)); // process + camera + mat_gray
+  /*ASYNC*/assert(testProcess(0100015)); // monitor + process + camera + mat_gray
   assert(testNumber((size_t) 40734, worker.cameras[0].src_output_jpg.peek().size()));
   assert(worker.cve(firesightPath).src_process_fire.isFresh());
   assert(testString("process.fire processLoop", "{\"s1\":{}}", worker.cve(firesightPath).src_process_fire.peek()));

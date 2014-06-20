@@ -154,6 +154,7 @@ void CameraNode::setOutput(Mat image) {
   imencode(".jpg", image, jpgBuf, param);
   SmartPointer<char> jpg((char *)jpgBuf.data(), jpgBuf.size());
   src_output_jpg.post(jpg);
+  src_monitor_jpg.get(); // discard stale image
   LOGTRACE1("CameraNode::setOutput(%ldB)", (ulong)jpg.size());
 }
 
