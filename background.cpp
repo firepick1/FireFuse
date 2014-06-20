@@ -268,9 +268,9 @@ int BackgroundWorker::async_save_fire() {
 int BackgroundWorker::processLoop() {
   int processed = 0;
   processed |= cameras[0].async_update_camera_jpg();
-  processed |= cameras[0].async_update_monitor_jpg();
   processed |= async_save_fire();  
   processed |= async_process_fire();  
+  processed |= cameras[0].async_update_monitor_jpg();
 
   if (idle_period && processed == 0 && (cve_seconds() - idle_seconds >= idle_period)) {
     idle();
