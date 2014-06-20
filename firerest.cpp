@@ -159,6 +159,7 @@ void JSONFileSystem::create_file(const char *path, int perms) {
 FireREST::FireREST() {
   int rc_mutex = pthread_mutex_init(&processMutex, NULL);
   assert(rc_mutex == 0);
+  processCount = 0;
 }
 
 FireREST::~FireREST() {
@@ -175,7 +176,7 @@ int FireREST::incrementProcessCount() {
   int result;
   ///////////////// CRITICAL SECTION BEGIN ///////////////
   pthread_mutex_lock(&processMutex);			//
-  result++;						//
+  result = ++processCount;
   pthread_mutex_unlock(&processMutex);			//
   ///////////////// CRITICAL SECTION END /////////////////
   return result;
@@ -185,7 +186,7 @@ int FireREST::decrementProcessCount() {
   int result;
   ///////////////// CRITICAL SECTION BEGIN ///////////////
   pthread_mutex_lock(&processMutex);			//
-  result--;						//
+  result = --processCount;
   pthread_mutex_unlock(&processMutex);			//
   ///////////////// CRITICAL SECTION END /////////////////
   return result;

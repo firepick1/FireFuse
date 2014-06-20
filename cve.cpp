@@ -303,7 +303,7 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
 	  camera.src_camera_jpg.get_sync();
 	  fi->fh = (uint64_t) (size_t) new SmartPointer<char>(worker.cve(path).src_process_fire.get_sync());
 	} else {
-	  LOGERROR1("cve_open(%s) EAGAIN operation would block", path);
+	  LOGERROR2("cve_open(%s) EAGAIN operation would block (processCount=%d)", path, count);
 	  result = -EAGAIN;
 	}
 	firerest.decrementProcessCount();
