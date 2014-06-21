@@ -89,28 +89,35 @@ int firestep_init(){
   }
 
   const char * path = "/dev/ttyUSB0";
-  char cmdbuf[CMDMAX+1];
-  int rc;
+  struct stat statbuf;   
+  int rc = 0;
 
-  sprintf(cmdbuf, "stty 115200 -F %s", path);
-  rc = callSystem(cmdbuf);
-  if (rc) { return rc; }
+  if (stat(path, &statbuf) == 0) {
+    LOGINFO1("Configuring %s for FireSTEP", path);
+    char cmdbuf[CMDMAX+1];
 
-  sprintf(cmdbuf, "stty 1400:4:1cb2:a00:3:1c:7f:15:4:1:1:0:11:13:1a:0:12:f:17:16:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0 -F %s", path);
-  rc = callSystem(cmdbuf);
-  if (rc) { return rc; }
+    sprintf(cmdbuf, "stty 115200 -F %s", path);
+    rc = callSystem(cmdbuf);
+    if (rc) { return rc; }
 
-  fdwTinyG = fdrTinyG = open(path, O_RDWR | O_ASYNC | O_NONBLOCK);
-  if (fdrTinyG < 0) {
-    rc = errno;
-    LOGERROR2("Cannot open %s (errno %d)", path, rc);
-    return rc;
+    sprintf(cmdbuf, "stty 1400:4:1cb2:a00:3:1c:7f:15:4:1:1:0:11:13:1a:0:12:f:17:16:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0 -F %s", path);
+    rc = callSystem(cmdbuf);
+    if (rc) { return rc; }
+
+    fdwTinyG = fdrTinyG = open(path, O_RDWR | O_ASYNC | O_NONBLOCK);
+    if (fdrTinyG < 0) {
+      rc = errno;
+      LOGERROR2("Cannot open %s (errno %d)", path, rc);
+      return rc;
+    }
+    LOGINFO1("firestep_init %s (open for write) ", path);
+
+    LOGRC(rc, "pthread_create(firestep_reader) -> ", pthread_create(&tidReader, NULL, &firestep_reader, NULL));
+
+    //firestep_config();
+  } else {
+    LOGWARN1("FireSTEP disabled. No device: %s", path);
   }
-  LOGINFO1("firestep_init %s (open for write) ", path);
-
-  LOGRC(rc, "pthread_create(firestep_reader) -> ", pthread_create(&tidReader, NULL, &firestep_reader, NULL));
-
-  //firestep_config();
 
   return rc;
 }
