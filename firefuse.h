@@ -65,12 +65,6 @@ static inline int firefuse_readBuffer(char *pDst, const char *pSrc, size_t size,
   return sizeOut;
 }
 
-enum CVE_Path {
-    CVEPATH_CAMERA_SAVE=1,
-    CVEPATH_CAMERA_LOAD=2,
-    CVEPATH_PROCESS_JSON=4
-};
-
 #define FIREREST_1 "/1"
 #define FIREREST_GRAY "/gray"
 #define FIREREST_BGR "/bgr"
@@ -155,7 +149,6 @@ const char * firestep_json();
 
 double 	cve_seconds();
 void 	cve_process(const char *path, int *pResult);
-string 	cve_path(const char *pPath);
 class BackgroundWorker;
 
 typedef class CVE {
@@ -167,13 +160,30 @@ typedef class CVE {
   public: LIFOCache<SmartPointer<char> > src_process_fire;
   public: LIFOCache<SmartPointer<char> > src_firesight_json;
   public: LIFOCache<SmartPointer<char> > src_properties_json;
-  public: inline string getName() { return name; }
+  public: static string cve_path(const char *pPath);
   public: CVE(string name);
   public: ~CVE();
+  public: inline string getName() { return name; }
   public: int save(BackgroundWorker *pWorker);
   public: int process(BackgroundWorker *pWorker);
   public: inline bool isColor() { return _isColor; }
 } CVE, *CVEPtr;
+
+typedef class DCE {
+  private: string name;
+
+  // Common data
+  public: LIFOCache<SmartPointer<char> > snk_gcode_fire;
+  public: LIFOCache<SmartPointer<char> > src_gcode_fire;
+  //public: LIFOCache<SmartPointer<char> > src_properties_json;
+  
+  public: static string dce_path(const char *pPath);
+  public: DCE(string name);
+  public: ~DCE();
+  public: inline string getName() { return name; }
+  public: int gcodePOST(BackgroundWorker *pWorker);
+  public: int gcodeGET(BackgroundWorker *pWorker);
+} DCE, *DCEPtr;
 
 class CameraNode {
   private: double output_seconds; // time of last FireSight pipeline completion
@@ -200,16 +210,20 @@ class CameraNode {
 class BackgroundWorker {
   private: double idle_period; // minimum seconds between idle() execution
   private: std::map<string, CVEPtr> cveMap;
+  private: std::map<string, DCEPtr> dceMap;;
   private: double idle_seconds; // time of last idle() execution
   private: int async_save_fire();
   private: int async_process_fire();
+  private: int async_gcode_fire();
 
   public: CameraNode cameras[1];
 
   public: BackgroundWorker();
   public: ~BackgroundWorker();
   public: CVE& cve(string path);
+  public: DCE& dce(string path);
   public: vector<string> getCveNames();
+  public: vector<string> getDceNames();
   public: void clear();
   public: void process();
   public: inline void setIdlePeriod(double value) { idle_period = value; }

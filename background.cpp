@@ -169,11 +169,11 @@ int CameraNode::async_update_monitor_jpg() {
   SmartPointer<char> jpg;
   if (cve_seconds() - output_seconds < monitor_duration) {
     jpg = src_output_jpg.get();
-    processed |= 0100000;
+    processed |= 01000;
     fmt = "async_update_monitor_jpg() src_output_jpg.get(%ldB) %0lx [0]:%0lx";
   } else {
     jpg = src_camera_jpg.get();
-    processed |= 0200000;
+    processed |= 02000;
     fmt = "async_update_monitor_jpg() src_camera_jpg.get(%ldB) %0lx [0]:%0lx";
   }
   src_monitor_jpg.post(jpg);
@@ -210,8 +210,31 @@ vector<string> BackgroundWorker::getCveNames() {
   return result;
 }
 
+vector<string> BackgroundWorker::getDceNames() {
+  vector<string> result;
+
+  for (std::map<string,DCEPtr>::iterator it=dceMap.begin(); it!=dceMap.end(); ++it){
+    result.push_back(it->first);
+  }
+
+  return result;
+}
+
+DCE& BackgroundWorker::dce(string path) {
+  string dcePath = DCE::dce_path(path.c_str());
+  if (dcePath.empty()) {
+    LOGERROR1("BackgroundWorker::dce(%s) invalid DCE path", path.c_str());
+  }
+  DCEPtr pDce = dceMap[dcePath]; 
+  if (!pDce) {
+    pDce = new DCE(dcePath);
+    dceMap[dcePath] = pDce;
+  }
+  return *pDce;
+}
+
 CVE& BackgroundWorker::cve(string path) {
-  string cvePath = cve_path(path.c_str());
+  string cvePath = CVE::cve_path(path.c_str());
   if (cvePath.empty()) {
     LOGERROR1("BackgroundWorker::cve(%s) invalid CVE path", path.c_str());
   }
@@ -235,6 +258,20 @@ void BackgroundWorker::processInit() {
   cameras[0].init();
 }
 
+int BackgroundWorker::async_gcode_fire() {
+  int processed = 0;
+  int mask = 0100;
+  for (std::map<string,DCEPtr>::iterator it=dceMap.begin(); it!=dceMap.end(); ++it){
+    DCEPtr pDce = it->second;
+    if (pDce->snk_gcode_fire.isFresh()) {
+      processed |= mask;
+      LOGTRACE1("BackgroundWorker::async_gcode_fire(%s)", it->first.c_str());
+      //pDce->process(this);
+    }
+  }
+  return processed;
+}
+
 int BackgroundWorker::async_process_fire() {
   int processed = 0;
   int mask = 010;
@@ -242,7 +279,6 @@ int BackgroundWorker::async_process_fire() {
     CVEPtr pCve = it->second;
     if (!pCve->src_process_fire.isFresh()) {
       processed |= mask;
-      mask <<= 1;
       LOGTRACE1("BackgroundWorker::async_process_fire(%s)", it->first.c_str());
       pCve->process(this);
     }
@@ -252,12 +288,11 @@ int BackgroundWorker::async_process_fire() {
 
 int BackgroundWorker::async_save_fire() {
   int processed = 0;
-  int mask = 0100;
+  int mask = 020;
   for (std::map<string,CVEPtr>::iterator it=cveMap.begin(); it!=cveMap.end(); ++it){
     CVEPtr pCve = it->second;
     if (!pCve->src_save_fire.isFresh()) {
       processed |= mask;
-      mask <<= 1;
       LOGTRACE1("BackgroundWorker::async_save_fire(%s)", it->first.c_str());
       pCve->save(this);
     }
@@ -274,7 +309,7 @@ int BackgroundWorker::processLoop() {
 
   if (idle_period && processed == 0 && (cve_seconds() - idle_seconds >= idle_period)) {
     idle();
-    processed |= 0400000;
+    processed |= 04000;
   } 
   if (processed) {
     LOGTRACE1("BackgroundWorkder::processLoop() => %o", processed);

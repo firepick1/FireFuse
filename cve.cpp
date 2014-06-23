@@ -33,7 +33,7 @@ typedef enum{UI_STILL, UI_VIDEO} UIMode;
  *
  * Return empty string if path is not a canonical CVE path
  */
-string cve_path(const char *pPath) {
+string CVE::cve_path(const char *pPath) {
   if (pPath == NULL) {
     return string();
   }
