@@ -23,7 +23,7 @@ DCE::~DCE() {
 
 /**
  * Return canonical DCE path. E.g.:
- *   /dev/firefuse/sync/dce/tinyg/gcode.fire => /dce/tinyg/gcode.fire
+ *   /dev/firefuse/sync/cnc/tinyg/gcode.fire => /cnc/tinyg
  *
  * Return empty string if path is not a canonical DCE path
  */
@@ -36,9 +36,9 @@ string DCE::dce_path(const char *pPath) {
   for (const char *s=pPath; *s; s++) {
     if (*s == '/') {
       pSlash = s;
-      if (strncmp("/dce", s, 4) == 0) {
+      if (strncmp("/cnc/", s, 5) == 0) {
         pDce = s;
-	s += 4;
+	s += 5;
       } else if (pDce) {
         break;
       }

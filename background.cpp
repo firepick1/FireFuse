@@ -198,6 +198,10 @@ void BackgroundWorker::clear() {
     delete it->second;
   }
   cveMap.clear();
+  for (std::map<string,DCEPtr>::iterator it=dceMap.begin(); it!=dceMap.end(); ++it){
+    delete it->second;
+  }
+  dceMap.clear();
 }
 
 vector<string> BackgroundWorker::getCveNames() {

@@ -779,6 +779,36 @@ int testFireREST() {
   return 0;
 }
 
+int testCnc() {
+  char buf[100];
+
+  cout << "testCnc() --------------------------" << endl;
+  worker.clear();
+  worker.processInit();
+
+  //////////// DCE::dce_path
+  const char *expectedPath = "/cnc/tinyg";
+  string sResult = DCE::dce_path("a/b/c/cnc/tinyg/gcode.fire");
+  assert(testString("TEST dce_path(1)", expectedPath, sResult.c_str()));
+  sResult = DCE::dce_path(expectedPath);
+  assert(testString("TEST dce_path(2)", expectedPath, sResult.c_str()));
+  
+  //////////// dceNames
+  vector<string> dceNames = worker.getDceNames();
+  assert(0 == dceNames.size());
+  string gcodePath = "/cnc/tinyg/gcode.fire";
+  DCE& dce = worker.dce(gcodePath);
+  dceNames = worker.getDceNames();
+  assert(1 == dceNames.size());
+  cout << "dceNames[0]: " << dceNames[0] << endl;
+  assert(testString("TEST dce_path(3)", "/cnc/tinyg", dceNames[0].c_str()));
+  assert(testString("TEST dce_path(4)", dceNames[0].c_str(), dce.getName().c_str()));
+
+  cout << "testCnc() PASS" << endl;
+  cout << endl;
+  return 0;
+}
+
 int testSuite() {
   worker.setIdlePeriod(0);
   firelog_level(FIRELOG_TRACE);
@@ -791,6 +821,7 @@ int testSuite() {
       testSmartPointer_CopyData()==0 && 
       testLIFOCache()==0 &&
       testCve()==0 &&
+      testCnc()==0 &&
       TRUE) {
       cout << "ALL TESTS PASS!!!" << endl;
       return 0;
