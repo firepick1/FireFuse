@@ -171,6 +171,8 @@ typedef class CVE {
 
 typedef class DCE {
   private: string name;
+  private: string serial_port;
+  private: int sendSerial(const char *text);
 
   // Common data
   public: LIFOCache<SmartPointer<char> > snk_gcode_fire;
@@ -181,8 +183,7 @@ typedef class DCE {
   public: DCE(string name);
   public: ~DCE();
   public: inline string getName() { return name; }
-  public: int gcodePOST(BackgroundWorker *pWorker);
-  public: int gcodeGET(BackgroundWorker *pWorker);
+  public: int gcode(BackgroundWorker *pWorker);
 } DCE, *DCEPtr;
 
 class CameraNode {

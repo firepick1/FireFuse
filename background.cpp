@@ -266,7 +266,7 @@ int BackgroundWorker::async_gcode_fire() {
     if (pDce->snk_gcode_fire.isFresh()) {
       processed |= mask;
       LOGTRACE1("BackgroundWorker::async_gcode_fire(%s)", it->first.c_str());
-      //pDce->process(this);
+      pDce->gcode(this);
     }
   }
   return processed;
@@ -302,6 +302,7 @@ int BackgroundWorker::async_save_fire() {
 
 int BackgroundWorker::processLoop() {
   int processed = 0;
+  processed |= async_gcode_fire();
   processed |= cameras[0].async_update_camera_jpg();
   processed |= async_save_fire();  
   processed |= async_process_fire();  

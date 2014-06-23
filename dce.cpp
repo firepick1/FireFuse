@@ -53,11 +53,31 @@ string DCE::dce_path(const char *pPath) {
   return string(pDce, pSlash-pDce);
 }
 
-int DCE::gcodePOST(BackgroundWorker *pWorker) {
+int DCE::sendSerial(const char *text) {
+  LOGINFO1("sendSerial(%s)", text);
+  usleep(1000000); // TBD
   return 0;
 }
 
-int DCE::gcodeGET(BackgroundWorker *pWorker) {
+int DCE::gcode(BackgroundWorker *pWorker) {
+  if (!snk_gcode_fire.isFresh()) {
+    return 0; // no command
+  }
+  SmartPointer<char> sp_cmd = snk_gcode_fire.get();
+  string cmd(sp_cmd.data(),sp_cmd.size());
+  LOGINFO1("DCE::gcode() %s", cmd.c_str());
+  json_t * response = json_object();
+  json_object_set(response, "status", json_string("ACTIVE"));
+  json_object_set(response, "gcode", json_string(cmd.c_str()));
+  char *responseStr = json_dumps(response, JSON_PRESERVE_ORDER|JSON_COMPACT|JSON_INDENT(0));
+  src_gcode_fire.post(SmartPointer<char>(responseStr, strlen(responseStr), SmartPointer<char>::MANAGE));
+
+  sendSerial(cmd.c_str());
+ 
+  json_object_set(response, "status", json_string("DONE"));
+  json_object_set(response, "response", json_string("OK"));
+  responseStr = json_dumps(response, JSON_PRESERVE_ORDER|JSON_COMPACT|JSON_INDENT(0));
+  src_gcode_fire.post(SmartPointer<char>(responseStr, strlen(responseStr), SmartPointer<char>::MANAGE));
   return 0;
 }
 
