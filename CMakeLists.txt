@@ -39,8 +39,8 @@ add_executable(firefuse
   firerest.cpp
   fuse.c 
   background.cpp 
-  cve.cpp 
-  dce.cpp
+  cv.cpp 
+  cnc.cpp
   FireStep.cpp 
   )
 target_link_libraries(firefuse libfirepicam.so lib_firesight.so libjansson.so libfuse.so ${OpenCV_LIBS})
@@ -51,8 +51,8 @@ add_executable(testfirefuse
   firerest.cpp
   #fuse.c 
   background.cpp 
-  cve.cpp 
-  dce.cpp 
+  cv.cpp 
+  cnc.cpp 
   #FireStep.cpp 
   )
 target_link_libraries(testfirefuse lib_firesight.so libjansson.so ${OpenCV_LIBS})

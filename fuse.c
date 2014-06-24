@@ -97,6 +97,9 @@ static int firefuse_getattr(const char *path, struct stat *stbuf) {
   if (is_cv_path(path)) {
     return cve_getattr(path, stbuf);
   }
+  if (is_cnc_path(path)) {
+    return cnc_getattr(path, stbuf);
+  }
 
   int res = 0;
   struct stat st; 

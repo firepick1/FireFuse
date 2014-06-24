@@ -78,6 +78,7 @@ static inline int firefuse_readBuffer(char *pDst, const char *pSrc, size_t size,
 #define FIREREST_MONITOR_JPG "/monitor.jpg"
 #define FIREREST_OUTPUT_JPG "/output.jpg"
 #define FIREREST_PROCESS_FIRE "/process.fire"
+#define FIREREST_GCODE_FIRE "/gcode.fire"
 #define FIREREST_SAVED_PNG "/saved.png"
 #define FIREREST_SAVE_FIRE "/save.fire"
 
@@ -92,6 +93,13 @@ int cve_read(const char *path, char *buf, size_t size, off_t offset, struct fuse
 int cve_write(const char *path, const char *buf, size_t bufsize, off_t offset, struct fuse_file_info *fi);
 int cve_release(const char *path, struct fuse_file_info *fi);
 int cve_truncate(const char *path, off_t size);
+int cnc_getattr(const char *path, struct stat *stbuf);
+int cnc_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi);
+int cnc_open(const char *path, struct fuse_file_info *fi);
+int cnc_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi);
+int cnc_write(const char *path, const char *buf, size_t bufsize, off_t offset, struct fuse_file_info *fi);
+int cnc_release(const char *path, struct fuse_file_info *fi);
+int cnc_truncate(const char *path, off_t size);
 
 void firerest_config(const char *pJson);
 

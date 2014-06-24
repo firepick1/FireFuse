@@ -21,6 +21,42 @@ bool is_cnc_path(const char *path) {
   return FALSE;
 }
 
+int cnc_getattr(const char *path, struct stat *stbuf) {
+  int result = 0;
+  return result;
+}
+
+int cnc_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi) {
+  int result = 0;
+  return result;
+}
+
+int cnc_open(const char *path, struct fuse_file_info *fi) {
+  int result = 0;
+  return result;
+}
+
+int cnc_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
+  int result = 0;
+  return result;
+}
+
+int cnc_write(const char *path, const char *buf, size_t bufsize, off_t offset, struct fuse_file_info *fi) {
+  int result = 0;
+  return result;
+}
+
+int cnc_release(const char *path, struct fuse_file_info *fi) {
+  int result = 0;
+  return result;
+}
+
+int cnc_truncate(const char *path, off_t size) {
+  int result = 0;
+  return result;
+}
+
+
 DCE::DCE(string name) {
   this->name = name;
   clear();
@@ -93,4 +129,5 @@ int DCE::gcode(BackgroundWorker *pWorker) {
   src_gcode_fire.post(SmartPointer<char>(responseStr, strlen(responseStr), SmartPointer<char>::MANAGE));
   return 0;
 }
+
 
