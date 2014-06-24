@@ -577,10 +577,12 @@ int testConfig() {
   assert(&worker.cve(twoPath) == &worker.cve(syncTwo.c_str()));
 
   assert(is_cv_path("/dev/firefuse/cv"));
-  assert(is_cv_path("/dev/firefuse/sync"));
+  assert(!is_cv_path("/dev/firefuse/sync"));
   assert(is_cv_path("/cv"));
-  assert(is_cv_path("/sync"));
+  assert(!is_cv_path("/sync"));
   assert(is_cv_path("/sync/cv"));
+  assert(!is_cv_path("/cnc"));
+  assert(!is_cv_path("/sync/cnc"));
   assert(!firerest.isFile("/"));
   assert(firerest.isDirectory("/"));
   assert(!firerest.isFile("/cv"));
@@ -792,6 +794,17 @@ int testCnc() {
   assert(testString("TEST dce_path(1)", expectedPath, sResult.c_str()));
   sResult = DCE::dce_path(expectedPath);
   assert(testString("TEST dce_path(2)", expectedPath, sResult.c_str()));
+  assert(is_cnc_path(expectedPath));
+  assert(!is_cnc_path("/cv"));
+  assert(!is_cnc_path("/sync/cv"));
+  assert(!is_cnc_path("/"));
+  assert(!is_cnc_path("/a"));
+  assert(!is_cnc_path("/a/"));
+  assert(!is_cnc_path("/a/cn"));
+  assert(is_cnc_path("/a/cnc"));
+  assert(is_cnc_path("/a/cnc/"));
+  assert(is_cnc_path("/a/cnc/x"));
+  assert(is_cnc_path("/a/cnc/x/y/z"));
   
   //////////// dceNames
   vector<string> dceNames = worker.getDceNames();

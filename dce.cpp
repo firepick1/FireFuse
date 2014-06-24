@@ -12,6 +12,15 @@
 #include "version.h"
 #include "FirePiCam.h"
 
+bool is_cnc_path(const char *path) {
+  for (const char *s = path; s && *s; s++) {
+    if (strncmp("/cnc", s, 4) == 0) {
+      return TRUE;
+    }
+  }
+  return FALSE;
+}
+
 DCE::DCE(string name) {
   this->name = name;
   clear();
