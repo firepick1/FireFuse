@@ -182,6 +182,9 @@ typedef class DCE {
   public: static string dce_path(const char *pPath);
   public: DCE(string name);
   public: ~DCE();
+  public: void clear();
+  public: inline string getSerialPort() { return serial_port; }
+  public: inline void setSerialPort(string value) { serial_port = value; }
   public: inline string getName() { return name; }
   public: int gcode(BackgroundWorker *pWorker);
 } DCE, *DCEPtr;

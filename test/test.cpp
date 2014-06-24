@@ -804,6 +804,22 @@ int testCnc() {
   assert(testString("TEST dce_path(3)", "/cnc/tinyg", dceNames[0].c_str()));
   assert(testString("TEST dce_path(4)", dceNames[0].c_str(), dce.getName().c_str()));
 
+  ///////////// gcode.fire
+  worker.dce(gcodePath).clear();
+  assert(!worker.dce(gcodePath).snk_gcode_fire.isFresh());
+  assert(worker.dce(gcodePath).src_gcode_fire.isFresh());
+  assert(testString("TEST gcode_fire.clear()", "{}", worker.dce(gcodePath).src_gcode_fire.get()));
+  string g0x1y2z3("G0X1Y2Z3");
+  worker.dce(gcodePath).snk_gcode_fire.post(SmartPointer<char>((char *)g0x1y2z3.c_str(), g0x1y2z3.size()));
+  assert(worker.dce(gcodePath).snk_gcode_fire.isFresh());
+  assert(!worker.dce(gcodePath).src_gcode_fire.isFresh());
+  /*ASYNC*/assert(testProcess(0100)); // gcode
+  assert(!worker.dce(gcodePath).snk_gcode_fire.isFresh());
+  assert(worker.dce(gcodePath).src_gcode_fire.isFresh());
+  assert(testString("TEST gcode_fire(G0X1Y2Z3)", 
+    "{\"status\":\"DONE\",\"gcode\":\"G0X1Y2Z3\",\"response\":\"OK\"}", 
+    worker.dce(gcodePath).src_gcode_fire.peek()));
+
   cout << "testCnc() PASS" << endl;
   cout << endl;
   return 0;

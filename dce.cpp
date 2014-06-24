@@ -14,11 +14,15 @@
 
 DCE::DCE(string name) {
   this->name = name;
-  const char *emptyJson = "{}";
-  src_gcode_fire.post(SmartPointer<char>((char *)emptyJson, strlen(emptyJson)));
+  clear();
 }
 
 DCE::~DCE() {
+}
+
+void DCE::clear() {
+  const char *emptyJson = "{}";
+  src_gcode_fire.post(SmartPointer<char>((char *)emptyJson, strlen(emptyJson)));
 }
 
 /**
