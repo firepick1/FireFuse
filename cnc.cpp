@@ -22,8 +22,16 @@ bool is_cnc_path(const char *path) {
 }
 
 int cnc_getattr(const char *path, struct stat *stbuf) {
-  int result = 0;
-  return result;
+  int res = 0;
+  if (firefuse_isFile(path, FIREREST_CAMERA_JPG)) {
+    res = firefuse_getattr_file(path, stbuf, worker.cameras[0].src_camera_jpg.peek().size(), 0444);
+  } else {
+    res = firerest_getattr_default(path, stbuf);
+  }
+  if (res == 0) {
+    LOGTRACE2("cnc_getattr(%s) stat->st_size:%ldB -> OK", path, (ulong) stbuf->st_size);
+  }
+  return res;
 }
 
 int cnc_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi) {

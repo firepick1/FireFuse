@@ -45,6 +45,7 @@ extern int cameraHeight; // config.json provided camera height
 
 extern FuseDataBuffer* firefuse_allocImage(const char *path, int *pResult);
 extern FuseDataBuffer* firefuse_allocDataBuffer(const char *path, int *pResult, const char *pData, size_t length);
+bool firefuse_isFile(const char *value, const char * suffix);
 extern void firefuse_freeDataBuffer(const char *path, struct fuse_file_info *fi);
 extern const char* firepick_status();
 extern const void* firepick_holes(FuseDataBuffer *pJPG);
@@ -52,6 +53,7 @@ extern int background_worker();
 extern bool is_cv_path(const char * path);
 extern bool is_cnc_path(const char *path);
 int firefuse_getattr_file(const char *path, struct stat *stbuf, size_t length, int perm);
+int firerest_getattr_default(const char *path, struct stat *stbuf);
 int firefuse_main(int argc, char *argv[]);
 
 static inline int firefuse_readBuffer(char *pDst, const char *pSrc, size_t size, off_t offset, size_t len) {

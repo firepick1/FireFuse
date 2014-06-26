@@ -365,3 +365,22 @@ void FireREST::configure(const char *pJson) {
 void firerest_config(const char *pJson) {
   firerest.configure(pJson);
 }
+
+int firerest_getattr_default(const char *path, struct stat *stbuf) {
+  int res = -ENOENT;
+  if (firerest.isDirectory(path)) {
+    memset(stbuf, 0, sizeof(struct stat));
+    stbuf->st_uid = getuid();
+    stbuf->st_gid = getgid();
+    stbuf->st_atime = stbuf->st_mtime = stbuf->st_ctime = time(NULL);
+    stbuf->st_nlink = 2;
+    stbuf->st_mode = S_IFDIR | firerest.perms(path);
+    stbuf->st_size = 4096;
+    res = 0;
+  } else {
+    LOGERROR1("cve_getattr(%s) ENOENT", path);
+    res = -ENOENT;
+  }
+  return res;
+}
+

@@ -378,6 +378,15 @@ static int firefuse_truncate(const char *path, off_t size)
   return 0;
 }
 
+bool firefuse_isFile(const char *value, const char * suffix) {
+  int suffixLen = strlen(suffix);
+  int valueLen = strlen(value);
+  if (suffixLen < valueLen) {
+    return strcmp(value + valueLen - suffixLen, suffix) == 0;
+  }
+  return FALSE;
+}
+
 int firefuse_getattr_file(const char *path, struct stat *stbuf, size_t length, int perm) {
   memset(stbuf, 0, sizeof(struct stat));
   stbuf->st_uid = getuid();
@@ -388,7 +397,6 @@ int firefuse_getattr_file(const char *path, struct stat *stbuf, size_t length, i
   stbuf->st_size = length;
   return 0;
 }
-
 
 static struct fuse_operations firefuse_oper = {
   .init    = firefuse_init,
