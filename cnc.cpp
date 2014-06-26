@@ -23,8 +23,8 @@ bool is_cnc_path(const char *path) {
 
 int cnc_getattr(const char *path, struct stat *stbuf) {
   int res = 0;
-  if (firefuse_isFile(path, FIREREST_CAMERA_JPG)) {
-    res = firefuse_getattr_file(path, stbuf, worker.cameras[0].src_camera_jpg.peek().size(), 0444);
+  if (firefuse_isFile(path, FIREREST_GCODE_FIRE)) {
+    res = firefuse_getattr_file(path, stbuf, worker.dce(path).src_gcode_fire.peek().size(), 0666);
   } else {
     res = firerest_getattr_default(path, stbuf);
   }
@@ -34,30 +34,77 @@ int cnc_getattr(const char *path, struct stat *stbuf) {
   return res;
 }
 
+int cnc_open(const char *path, struct fuse_file_info *fi) {
+  int result = 0;
+    
+  if (firefuse_isFile(path, FIREREST_GCODE_FIRE)) {
+    if (verifyOpenRW(path, fi, &result)) {
+      if ((fi->flags&3) == O_WRONLY && worker.dce(path).snk_gcode_fire.isFresh()) {
+        result = -EAGAIN;
+      } else {
+	fi->fh = (uint64_t) (size_t) new SmartPointer<char>(worker.dce(path).src_gcode_fire.get());
+      }
+    }
+  }
+  return result;
+}
+
 int cnc_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi) {
   int result = 0;
   return result;
 }
 
-int cnc_open(const char *path, struct fuse_file_info *fi) {
-  int result = 0;
-  return result;
-}
-
 int cnc_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
-  int result = 0;
-  return result;
+  size_t sizeOut = size;
+  size_t len;
+  (void) fi;
+
+  if (firefuse_isFile(path, FIREREST_GCODE_FIRE) ||
+      firefuse_isFile(path, FIREREST_PROPERTIES_JSON) ||
+      FALSE) {
+    SmartPointer<char> *pJpg = (SmartPointer<char> *) fi->fh;
+    sizeOut = firefuse_readBuffer(buf, (char *)pJpg->data(), size, offset, pJpg->size());
+  } else {
+    LOGERROR2("cnc_read(%s, %ldB) ENOENT", path, size);
+    return -ENOENT;
+  }
+
+  LOGTRACE3("cnc_read(%s, %ldB) -> %ldB", path, size, sizeOut);
+  return sizeOut;
 }
 
 int cnc_write(const char *path, const char *buf, size_t bufsize, off_t offset, struct fuse_file_info *fi) {
-  int result = 0;
-  return result;
+  assert(offset == 0);
+  assert(buf != NULL);
+  assert(bufsize >= 0);
+  SmartPointer<char> data((char *) buf, bufsize);
+  if (firefuse_isFile(path, FIREREST_GCODE_FIRE)) {
+    worker.dce(path).snk_gcode_fire.post(data);
+    string cmd(buf, bufsize);
+    LOGINFO1("DCE::cnc_write() %s", cmd.c_str());
+    json_t * response = json_object();
+    json_object_set(response, "status", json_string("ACTIVE"));
+    json_object_set(response, "gcode", json_string(cmd.c_str()));
+    char *responseStr = json_dumps(response, JSON_PRESERVE_ORDER|JSON_COMPACT|JSON_INDENT(0));
+    worker.dce(path).src_gcode_fire.post(SmartPointer<char>(responseStr, strlen(responseStr), SmartPointer<char>::MANAGE));
+    json_decref(response);
+  } else {
+    LOGERROR2("cnc_write(%s,%ldB) ENOENT", path, bufsize);
+    return -ENOENT;
+  }
+
+  return bufsize;
 }
 
 int cnc_release(const char *path, struct fuse_file_info *fi) {
   int result = 0;
-  return result;
+  LOGTRACE1("cnc_release(%s)", path);
+  if (firefuse_isFile(path, FIREREST_GCODE_FIRE)) {
+    if (fi->fh) { free( (SmartPointer<char> *) fi->fh); }
+  }
+  return 0;
 }
+
 
 int cnc_truncate(const char *path, off_t size) {
   int result = 0;
@@ -112,7 +159,7 @@ string DCE::dce_path(const char *pPath) {
 
 int DCE::sendSerial(const char *text) {
   LOGINFO1("sendSerial(%s)", text);
-  usleep(1000000); // TBD
+  usleep(500000); // TBD
   return 0;
 }
 
@@ -122,19 +169,17 @@ int DCE::gcode(BackgroundWorker *pWorker) {
   }
   SmartPointer<char> sp_cmd = snk_gcode_fire.get();
   string cmd(sp_cmd.data(),sp_cmd.size());
-  LOGINFO1("DCE::gcode() %s", cmd.c_str());
-  json_t * response = json_object();
-  json_object_set(response, "status", json_string("ACTIVE"));
-  json_object_set(response, "gcode", json_string(cmd.c_str()));
-  char *responseStr = json_dumps(response, JSON_PRESERVE_ORDER|JSON_COMPACT|JSON_INDENT(0));
-  src_gcode_fire.post(SmartPointer<char>(responseStr, strlen(responseStr), SmartPointer<char>::MANAGE));
 
   sendSerial(cmd.c_str());
  
+  json_t *response = json_object();
   json_object_set(response, "status", json_string("DONE"));
+    json_object_set(response, "gcode", json_string(cmd.c_str()));
   json_object_set(response, "response", json_string("OK"));
-  responseStr = json_dumps(response, JSON_PRESERVE_ORDER|JSON_COMPACT|JSON_INDENT(0));
+  char * responseStr = json_dumps(response, JSON_PRESERVE_ORDER|JSON_COMPACT|JSON_INDENT(0));
   src_gcode_fire.post(SmartPointer<char>(responseStr, strlen(responseStr), SmartPointer<char>::MANAGE));
+  json_decref(response);
+
   return 0;
 }
 

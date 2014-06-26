@@ -384,3 +384,25 @@ int firerest_getattr_default(const char *path, struct stat *stbuf) {
   return res;
 }
 
+int firerest_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi) {
+  (void) offset;
+  (void) fi;
+
+  LOGTRACE1("firerest_readdir(%s)", path);
+
+  filler(buf, ".", NULL, 0);
+  filler(buf, "..", NULL, 0);
+  if (!firerest.isDirectory(path)) {
+    LOGERROR1("firerest_readdir(%s) not a directory", path);
+    return -ENOENT;
+  }
+
+  vector<string> names = firerest.fileNames(path);
+  for (int iFile = 0; iFile < names.size(); iFile++) {
+    LOGTRACE2("firerest_readdir(%s) readdir:%s", path, names[iFile].c_str());
+    filler(buf, names[iFile].c_str(), NULL, 0);
+  }
+
+  return 0;
+}
+

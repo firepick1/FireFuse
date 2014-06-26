@@ -159,7 +159,7 @@ static int firefuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
        off_t offset, struct fuse_file_info *fi)
 {
   if (is_cv_path(path)) {
-    return cve_readdir(path, buf, filler, offset, fi);
+    return firerest_readdir(path, buf, filler, offset, fi);
   }
 
   (void) offset;
@@ -186,9 +186,12 @@ static int firefuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
   return 0;
 }
 
-static int firefuse_open(const char *path, struct fuse_file_info *fi) {
+int firefuse_open(const char *path, struct fuse_file_info *fi) {
   if (is_cv_path(path)) {
     return cve_open(path, fi);
+  }
+  if (is_cnc_path(path)) {
+    return cnc_open(path, fi);
   }
 
   int result = 0;
@@ -240,9 +243,12 @@ void firefuse_freeDataBuffer(const char *path, struct fuse_file_info *fi) {
   }
 }
 
-static int firefuse_release(const char *path, struct fuse_file_info *fi) {
+int firefuse_release(const char *path, struct fuse_file_info *fi) {
   if (is_cv_path(path)) {
     return cve_release(path, fi);
+  }
+  if (is_cnc_path(path)) {
+    return cnc_release(path, fi);
   }
 
   LOGTRACE1("firefuse_release %s", path);
@@ -262,9 +268,16 @@ static int firefuse_release(const char *path, struct fuse_file_info *fi) {
   return 0;
 }
 
-static int firefuse_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
+int firefuse_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
   if (is_cv_path(path)) {
     int res = cve_read(path, buf, size, offset, fi);
+    if (res > 0) {
+      bytes_read += res;
+    }
+    return res;
+  }
+  if (is_cnc_path(path)) {
+    int res = cnc_read(path, buf, size, offset, fi);
     if (res > 0) {
       bytes_read += res;
     }
@@ -301,7 +314,7 @@ static int firefuse_read(const char *path, char *buf, size_t size, off_t offset,
   return sizeOut;
 }
 
-static int firefuse_write(const char *path, const char *buf, size_t bufsize, off_t offset, struct fuse_file_info *fi) {
+int firefuse_write(const char *path, const char *buf, size_t bufsize, off_t offset, struct fuse_file_info *fi) {
   if (offset) {
     LOGERROR2("firefuse_write %s -> non-zero offset:%ld", path, (long) offset);
     return EINVAL;
@@ -312,6 +325,8 @@ static int firefuse_write(const char *path, const char *buf, size_t bufsize, off
   }
   if (is_cv_path(path)) {
     return cve_write(path, buf, bufsize, offset, fi);
+  } else if (is_cnc_path(path)) {
+    return cnc_write(path, buf, bufsize, offset, fi);
   } else if (strcmp(path, ECHO_PATH) == 0) {
     if (bufsize > MAX_ECHO) {
       sprintf(echoBuf, "firefuse_write %s -> string too long (%ld > %d bytes)", path, bufsize, MAX_ECHO);

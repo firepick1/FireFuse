@@ -124,28 +124,6 @@ int cve_getattr(const char *path, struct stat *stbuf) {
   return res;
 }
 
-int cve_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi) {
-  (void) offset;
-  (void) fi;
-
-  LOGTRACE1("cve_readdir(%s)", path);
-
-  filler(buf, ".", NULL, 0);
-  filler(buf, "..", NULL, 0);
-  if (!firerest.isDirectory(path)) {
-    LOGERROR1("cve_readdir(%s) not a directory", path);
-    return -ENOENT;
-  }
-
-  vector<string> names = firerest.fileNames(path);
-  for (int iFile = 0; iFile < names.size(); iFile++) {
-    LOGTRACE2("cve_readdir(%s) readdir:%s", path, names[iFile].c_str());
-    filler(buf, names[iFile].c_str(), NULL, 0);
-  }
-
-  return 0;
-}
-
 static int cve_openVarFile(const char *path, struct fuse_file_info *fi) {
   int result = 0;
   char varPath[255];

@@ -85,13 +85,14 @@ bool testString(const char * name, const char*expected, SmartPointer<char> actua
   return true;
 }
 
-bool testFile(const char * title, const char * path, SmartPointer<char> &contents, const char *pWriteData = NULL) {
+bool testFile(const char * title, const char * path, SmartPointer<char> &contents, const char *pWriteData=NULL, const char *pWriteResult=NULL) {
   int perm = pWriteData ? 0666 : 0444;
   struct fuse_file_info file_info;
   struct stat file_stat;
   int rc;
 
-  rc = cve_getattr(path, &file_stat);
+  //////////////// TEST READ /////////
+  rc = firefuse_getattr(path, &file_stat);
   LOGINFO4("TEST %s st_size:%ld perm:%o contents.size():%ld", title, file_stat.st_size, file_stat.st_mode & 0777, contents.size());
   assert(rc == 0);
   assert(file_stat.st_uid == getuid());
@@ -104,33 +105,56 @@ bool testFile(const char * title, const char * path, SmartPointer<char> &content
   assert(file_stat.st_size == contents.size());
   memset(&file_info, 0, sizeof(fuse_file_info));
   file_info.flags = O_RDONLY;
-  rc = cve_open(path, &file_info);
+  rc = firefuse_open(path, &file_info);
+  LOGINFO3("TEST %s firefuse_open(%s,O_RDONLY) -> %d", title, path, rc);
   assert(rc == 0);
+
+  size_t bytes = file_stat.st_size+1;
+  char * readbuf = (char *) malloc(bytes);
+  assert(readbuf);
+  memset(readbuf, '!', bytes);
+  LOGTRACE2("readbuf[%ld] %c", bytes-1, readbuf[bytes-1]);
+  assert('!' == readbuf[bytes-1]);
+  rc = firefuse_read(path, readbuf, bytes-1, 0, &file_info);
+  assert('!' == readbuf[bytes-1]);
+  readbuf[bytes-1] = 0;
+  assert(testString("testFile(reverse actual/expected)",  readbuf, contents));
+  free(readbuf);
 
   if (pWriteData) {
     char buf[101];
     // TEST WRITE
     size_t len = strlen(pWriteData);
     assert(len < 100);	// test limitation
-    rc = cve_write(path, pWriteData, len, 0, &file_info);
+    rc = firefuse_write(path, pWriteData, len, 0, &file_info);
     assert(rc == len);
-    rc = cve_release(path, &file_info);
+    rc = firefuse_release(path, &file_info);
     assert(rc == 0);
 
     // VERIFY WRITE
+    memset(&file_info, 0, sizeof(fuse_file_info));
     file_info.flags = O_WRONLY;
-    rc = cve_open(path, &file_info);
+    rc = firefuse_open(path, &file_info);
+    LOGINFO3("TEST %s firefuse_open(%s,O_WRONLY) -> %d", title, path, rc);
     assert(rc == 0);
     memset(buf, 0, 101);
-    rc = cve_getattr(path, &file_stat);
+    rc = firefuse_getattr(path, &file_stat);
     assert(rc == 0);
-    assert(file_stat.st_size == len);
-    rc = cve_read(path, buf, len, 0, &file_info);
-    assert(rc == len);
-    assert(0 == strcmp(buf, pWriteData));
+    if (pWriteResult) {
+      assert(file_stat.st_size == strlen(pWriteResult));
+      rc = firefuse_read(path, buf, strlen(pWriteResult), 0, &file_info);
+      assert(rc == strlen(pWriteResult));
+      LOGTRACE3("testFile(%s) verifyWrite expected:%s actual:%s", path, pWriteResult, buf);
+      assert(0 == strcmp(buf, pWriteResult));
+    } else {
+      assert(file_stat.st_size == len);
+      rc = firefuse_read(path, buf, len, 0, &file_info);
+      assert(rc == len);
+      assert(0 == strcmp(buf, pWriteData));
+    }
   }
 
-  rc = cve_release(path, &file_info);
+  rc = firefuse_release(path, &file_info);
   assert(rc == 0);
 
 
@@ -783,6 +807,7 @@ int testFireREST() {
 
 int testCnc() {
   char buf[100];
+  int rc;
 
   cout << "testCnc() --------------------------" << endl;
   worker.clear();
@@ -832,6 +857,23 @@ int testCnc() {
   assert(testString("TEST gcode_fire(G0X1Y2Z3)", 
     "{\"status\":\"DONE\",\"gcode\":\"G0X1Y2Z3\",\"response\":\"OK\"}", 
     worker.dce(gcodePath).src_gcode_fire.peek()));
+  const char *jsonResult = "{\"status\":\"DONE\",\"gcode\":\"G0X1Y2Z3\",\"response\":\"OK\"}";
+  SmartPointer<char> sp_gcode((char*)jsonResult, strlen(jsonResult));
+  
+  //////////////// test write
+  worker.dce(gcodePath).snk_gcode_fire.post(SmartPointer<char>((char *)g0x1y2z3.c_str(), g0x1y2z3.size()));
+  assert(worker.dce(gcodePath).snk_gcode_fire.isFresh());
+  struct fuse_file_info file_info;
+  memset(&file_info, 0, sizeof(fuse_file_info));
+  file_info.flags = O_WRONLY;
+  rc = firefuse_open(gcodePath.c_str(), &file_info);
+  LOGINFO2("firefuse_open(%s,O_WRONLY) -> %d", gcodePath.c_str(), rc);
+  assert(rc == -EAGAIN);
+  assert(worker.dce(gcodePath).snk_gcode_fire.isFresh());
+  worker.dce(gcodePath).snk_gcode_fire.get();
+  assert(!worker.dce(gcodePath).snk_gcode_fire.isFresh());
+  const char *jsonResult2 = "{\"status\":\"DONE\",\"gcode\":\"G0X3Y2Z1\",\"response\":\"OK\"}";
+  testFile("gcode.fire", gcodePath.c_str(), sp_gcode, "G0X3Y2Z1", jsonResult2);
 
   cout << "testCnc() PASS" << endl;
   cout << endl;

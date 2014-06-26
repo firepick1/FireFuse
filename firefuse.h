@@ -54,6 +54,12 @@ extern bool is_cv_path(const char * path);
 extern bool is_cnc_path(const char *path);
 int firefuse_getattr_file(const char *path, struct stat *stbuf, size_t length, int perm);
 int firerest_getattr_default(const char *path, struct stat *stbuf);
+int firefuse_getattr(const char *path, struct stat *stbuf);
+int firefuse_open(const char *path, struct fuse_file_info *fi);
+int firefuse_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi);
+int firefuse_write(const char *path, const char *buf, size_t bufsize, off_t offset, struct fuse_file_info *fi);
+int firefuse_release(const char *path, struct fuse_file_info *fi);
+int firerest_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi);
 int firefuse_main(int argc, char *argv[]);
 
 static inline int firefuse_readBuffer(char *pDst, const char *pSrc, size_t size, off_t offset, size_t len) {
