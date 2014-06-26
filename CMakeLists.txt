@@ -36,6 +36,7 @@ configure_file (
 find_package( OpenCV REQUIRED )
 
 add_executable(firefuse 
+  firefuse.cpp
   firerest.cpp
   fuse.c 
   background.cpp 
@@ -49,13 +50,13 @@ add_executable(testfirefuse
   test/test.cpp
   test/mock.cpp
   firerest.cpp
-  #fuse.c 
+  fuse.c 
   background.cpp 
   cv.cpp 
   cnc.cpp 
   #FireStep.cpp 
   )
-target_link_libraries(testfirefuse lib_firesight.so libjansson.so ${OpenCV_LIBS})
+target_link_libraries(testfirefuse lib_firesight.so libjansson.so libfuse.so ${OpenCV_LIBS})
 
 INSTALL(TARGETS firefuse DESTINATION bin)
 INSTALL(PROGRAMS mountfirefuse.sh DESTINATION /etc/init.d/)

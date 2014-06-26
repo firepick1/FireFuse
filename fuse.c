@@ -93,7 +93,7 @@ static void firefuse_destroy(void * initData) {
   }
 }
 
-static int firefuse_getattr(const char *path, struct stat *stbuf) {
+int firefuse_getattr(const char *path, struct stat *stbuf) {
   if (is_cv_path(path)) {
     return cve_getattr(path, stbuf);
   }
@@ -378,6 +378,17 @@ static int firefuse_truncate(const char *path, off_t size)
   return 0;
 }
 
+int firefuse_getattr_file(const char *path, struct stat *stbuf, size_t length, int perm) {
+  memset(stbuf, 0, sizeof(struct stat));
+  stbuf->st_uid = getuid();
+  stbuf->st_gid = getgid();
+  stbuf->st_atime = stbuf->st_mtime = stbuf->st_ctime = time(NULL);
+  stbuf->st_nlink = 1;
+  stbuf->st_mode = S_IFREG | perm;
+  stbuf->st_size = length;
+  return 0;
+}
+
 
 static struct fuse_operations firefuse_oper = {
   .init    = firefuse_init,
@@ -391,7 +402,7 @@ static struct fuse_operations firefuse_oper = {
   .write    = firefuse_write,
 };
 
-int main(int argc, char *argv[]) {
+int firefuse_main(int argc, char *argv[]) {
   fuse_root = argv[argc-1];
   return fuse_main(argc, argv, &firefuse_oper, NULL);
 }

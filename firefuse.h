@@ -51,6 +51,8 @@ extern const void* firepick_holes(FuseDataBuffer *pJPG);
 extern int background_worker();
 extern bool is_cv_path(const char * path);
 extern bool is_cnc_path(const char *path);
+int firefuse_getattr_file(const char *path, struct stat *stbuf, size_t length, int perm);
+int firefuse_main(int argc, char *argv[]);
 
 static inline int firefuse_readBuffer(char *pDst, const char *pSrc, size_t size, off_t offset, size_t len) {
   size_t sizeOut = size;

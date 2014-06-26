@@ -93,38 +93,27 @@ static string camera_profile(const char * path) {
   return result;
 }
 
-int cve_getattr_file(const char *path, struct stat *stbuf, size_t length, int perm=0444) {
-  memset(stbuf, 0, sizeof(struct stat));
-  stbuf->st_uid = getuid();
-  stbuf->st_gid = getgid();
-  stbuf->st_atime = stbuf->st_mtime = stbuf->st_ctime = time(NULL);
-  stbuf->st_nlink = 1;
-  stbuf->st_mode = S_IFREG | perm;
-  stbuf->st_size = length;
-  return 0;
-}
-
 int cve_getattr(const char *path, struct stat *stbuf) {
   int res = 0;
 
   if (cve_isPathSuffix(path, FIREREST_CAMERA_JPG)) {
-    res = cve_getattr_file(path, stbuf, worker.cameras[0].src_camera_jpg.peek().size());
+    res = firefuse_getattr_file(path, stbuf, worker.cameras[0].src_camera_jpg.peek().size(), 0444);
   } else if (cve_isPathSuffix(path, FIREREST_OUTPUT_JPG)) {
-    res = cve_getattr_file(path, stbuf, worker.cameras[0].src_output_jpg.peek().size());
+    res = firefuse_getattr_file(path, stbuf, worker.cameras[0].src_output_jpg.peek().size(), 0444);
   } else if (cve_isPathSuffix(path, FIREREST_MONITOR_JPG)) {
-    res = cve_getattr_file(path, stbuf, worker.cameras[0].src_monitor_jpg.peek().size());
+    res = firefuse_getattr_file(path, stbuf, worker.cameras[0].src_monitor_jpg.peek().size(), 0444);
   } else if (cve_isPathSuffix(path, FIREREST_SAVED_PNG)) {
-    res = cve_getattr_file(path, stbuf, worker.cve(path).src_saved_png.peek().size());
+    res = firefuse_getattr_file(path, stbuf, worker.cve(path).src_saved_png.peek().size(), 0444);
   } else if (cve_isPathSuffix(path, FIREREST_SAVE_FIRE)) {
     size_t bytes = max(MIN_SAVE_SIZE, worker.cve(path).src_save_fire.peek().size());
-    res = cve_getattr_file(path, stbuf, bytes);
+    res = firefuse_getattr_file(path, stbuf, bytes, 0444);
   } else if (cve_isPathSuffix(path, FIREREST_PROCESS_FIRE)) {
     size_t bytes = max(MIN_PROCESS_SIZE, worker.cve(path).src_process_fire.peek().size());
-    res = cve_getattr_file(path, stbuf, bytes);
+    res = firefuse_getattr_file(path, stbuf, bytes, 0444);
   } else if (cve_isPathSuffix(path, FIREREST_PROPERTIES_JSON)) {
-    res = cve_getattr_file(path, stbuf, worker.cve(path).src_properties_json.peek().size(), 0666);
+    res = firefuse_getattr_file(path, stbuf, worker.cve(path).src_properties_json.peek().size(), 0666);
   } else if (cve_isPathSuffix(path, FIREREST_FIRESIGHT_JSON)) {
-    res = cve_getattr_file(path, stbuf, worker.cve(path).src_firesight_json.peek().size());
+    res = firefuse_getattr_file(path, stbuf, worker.cve(path).src_firesight_json.peek().size(), 0444);
   } else if (firerest.isDirectory(path)) {
     memset(stbuf, 0, sizeof(struct stat));
     stbuf->st_uid = getuid();
