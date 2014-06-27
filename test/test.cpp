@@ -69,6 +69,22 @@ bool testString(const char * name, const char*expected, const char*actualValue) 
   return true;
 }
 
+bool testString(const char * name, SmartPointer<char> expected, const char*actual) {
+  char *expectedEnd = expected.data() + expected.size();
+  string expectedValue(expected.data(), expectedEnd);
+  if (strncmp(expectedValue.c_str(), actual, expected.size())) {
+    LOGTRACE3("TEST %s expected:\"%s\" actual:\"%s\"", name, expectedValue.c_str(), actual);
+    return false;
+  }
+  for (const char *s = actual + expected.size(); *s; s++) {
+    if (*s != ' ') {
+      LOGTRACE2("TEST %s expected:trailing-blanks actual:\"%s\"", name, s);
+      return false;
+    }
+  }
+  return true;
+}
+
 bool testString(const char * name, const char*expected, SmartPointer<char> actual) {
   char *actualEnd = actual.data() + actual.size();
   string actualValue(actual.data(), actualEnd);
@@ -86,7 +102,6 @@ bool testString(const char * name, const char*expected, SmartPointer<char> actua
 }
 
 bool testFile(const char * title, const char * path, SmartPointer<char> &contents, const char *pWriteData=NULL, const char *pWriteResult=NULL) {
-  int perm = pWriteData ? 0666 : 0444;
   struct fuse_file_info file_info;
   struct stat file_stat;
   int rc;
@@ -101,8 +116,7 @@ bool testFile(const char * title, const char * path, SmartPointer<char> &content
   assert(file_stat.st_atime == file_stat.st_ctime);
   assert(file_stat.st_atime);
   assert(file_stat.st_nlink == 1);
-  assert(file_stat.st_mode == (S_IFREG | perm));
-  assert(file_stat.st_size == contents.size());
+  assert(file_stat.st_mode==(S_IFREG|0666) || !pWriteData && file_stat.st_mode==(S_IFREG|0444));
   memset(&file_info, 0, sizeof(fuse_file_info));
   file_info.flags = O_RDONLY;
   rc = firefuse_open(path, &file_info);
@@ -118,12 +132,21 @@ bool testFile(const char * title, const char * path, SmartPointer<char> &content
   rc = firefuse_read(path, readbuf, bytes-1, 0, &file_info);
   assert('!' == readbuf[bytes-1]);
   readbuf[bytes-1] = 0;
-  assert(testString("testFile(reverse actual/expected)",  readbuf, contents));
+  assert(testString("testFile()",  contents, readbuf));
+  assert(file_stat.st_size == contents.size());
   free(readbuf);
+  rc = firefuse_release(path, &file_info);
+  assert(rc == 0);
 
   if (pWriteData) {
     char buf[101];
     // TEST WRITE
+    memset(&file_info, 0, sizeof(fuse_file_info));
+    file_info.flags = O_WRONLY;
+    rc = firefuse_open(path, &file_info);
+    LOGINFO3("TEST %s firefuse_open(%s,O_WRONLY) -> %d", title, path, rc);
+    assert(rc == 0);
+    memset(buf, 0, 101);
     size_t len = strlen(pWriteData);
     assert(len < 100);	// test limitation
     rc = firefuse_write(path, pWriteData, len, 0, &file_info);
@@ -133,29 +156,29 @@ bool testFile(const char * title, const char * path, SmartPointer<char> &content
 
     // VERIFY WRITE
     memset(&file_info, 0, sizeof(fuse_file_info));
-    file_info.flags = O_WRONLY;
+    file_info.flags = O_RDONLY;
     rc = firefuse_open(path, &file_info);
-    LOGINFO3("TEST %s firefuse_open(%s,O_WRONLY) -> %d", title, path, rc);
+    LOGINFO3("TEST %s firefuse_open(%s,O_RDONLY) -> %d", title, path, rc);
     assert(rc == 0);
     memset(buf, 0, 101);
     rc = firefuse_getattr(path, &file_stat);
     assert(rc == 0);
     if (pWriteResult) {
-      assert(file_stat.st_size == strlen(pWriteResult));
       rc = firefuse_read(path, buf, strlen(pWriteResult), 0, &file_info);
-      assert(rc == strlen(pWriteResult));
       LOGTRACE3("testFile(%s) verifyWrite expected:%s actual:%s", path, pWriteResult, buf);
       assert(0 == strcmp(buf, pWriteResult));
+      assert(rc == strlen(pWriteResult));
+      assert(file_stat.st_size == strlen(pWriteResult));
     } else {
       assert(file_stat.st_size == len);
       rc = firefuse_read(path, buf, len, 0, &file_info);
       assert(rc == len);
       assert(0 == strcmp(buf, pWriteData));
     }
+    rc = firefuse_release(path, &file_info);
+    assert(rc == 0);
   }
 
-  rc = firefuse_release(path, &file_info);
-  assert(rc == 0);
 
 
   return true;
@@ -872,8 +895,12 @@ int testCnc() {
   assert(worker.dce(gcodePath).snk_gcode_fire.isFresh());
   worker.dce(gcodePath).snk_gcode_fire.get();
   assert(!worker.dce(gcodePath).snk_gcode_fire.isFresh());
-  const char *jsonResult2 = "{\"status\":\"DONE\",\"gcode\":\"G0X3Y2Z1\",\"response\":\"OK\"}";
+  const char *jsonResult2 = "{\"status\":\"ACTIVE\",\"gcode\":\"G0X3Y2Z1\"}";
   testFile("gcode.fire", gcodePath.c_str(), sp_gcode, "G0X3Y2Z1", jsonResult2);
+  const char *jsonResult3 = "{\"status\":\"DONE\",\"gcode\":\"G0X3Y2Z1\",\"response\":\"OK\"}";
+  SmartPointer<char> jsonDone((char*) jsonResult3, strlen(jsonResult3));
+  /*ASYNC*/assert(testProcess(0100)); // gcode
+  testFile("gcode.fire", gcodePath.c_str(), jsonDone);
 
   cout << "testCnc() PASS" << endl;
   cout << endl;

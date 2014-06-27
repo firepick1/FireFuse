@@ -40,6 +40,7 @@ int cnc_open(const char *path, struct fuse_file_info *fi) {
   if (firefuse_isFile(path, FIREREST_GCODE_FIRE)) {
     if (verifyOpenRW(path, fi, &result)) {
       if ((fi->flags&3) == O_WRONLY && worker.dce(path).snk_gcode_fire.isFresh()) {
+	LOGTRACE("snk_gcode_fire.isFresh()");
         result = -EAGAIN;
       } else {
 	fi->fh = (uint64_t) (size_t) new SmartPointer<char>(worker.dce(path).src_gcode_fire.get());
