@@ -53,14 +53,16 @@ extern int background_worker();
 extern bool is_cv_path(const char * path);
 extern bool is_cnc_path(const char *path);
 int firefuse_getattr_file(const char *path, struct stat *stbuf, size_t length, int perm);
-int firerest_getattr_default(const char *path, struct stat *stbuf);
 int firefuse_getattr(const char *path, struct stat *stbuf);
 int firefuse_open(const char *path, struct fuse_file_info *fi);
 int firefuse_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi);
 int firefuse_write(const char *path, const char *buf, size_t bufsize, off_t offset, struct fuse_file_info *fi);
 int firefuse_release(const char *path, struct fuse_file_info *fi);
-int firerest_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi);
 int firefuse_main(int argc, char *argv[]);
+
+int firerest_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi);
+int firerest_getattr_default(const char *path, struct stat *stbuf);
+char * firerest_config(const char *path);
 
 static inline int firefuse_readBuffer(char *pDst, const char *pSrc, size_t size, off_t offset, size_t len) {
   size_t sizeOut = size;
@@ -110,8 +112,6 @@ int cnc_read(const char *path, char *buf, size_t size, off_t offset, struct fuse
 int cnc_write(const char *path, const char *buf, size_t bufsize, off_t offset, struct fuse_file_info *fi);
 int cnc_release(const char *path, struct fuse_file_info *fi);
 int cnc_truncate(const char *path, off_t size);
-
-void firerest_config(const char *pJson);
 
 inline bool verifyOpenR_(const char *path, struct fuse_file_info *fi, int *pResult) {
   switch (fi->flags & 3) {
@@ -288,14 +288,15 @@ typedef class FireREST {
   private: string config_camera(const char* cv_path, json_t *pCamera, const char *pCameraName, json_t *pCveMap);
   private: string config_cv(const char* root_path, json_t *pConfig);
   private: string config_cnc(const char* root_path, json_t *pConfig);
-  private: void create_file(string path, int perm);
+  private: void create_resource(string path, int perm);
 
   public: FireREST();
   public: ~FireREST();
 
   public: int incrementProcessCount();
   public: int decrementProcessCount();
-  public: void configure(const char *pJson);
+  public: char * configure_path(const char *path);
+  public: void configure_json(const char *pJson);
   public: int perms(const char *path) { return files.perms(path); }
   public: bool isDirectory(const char *path) { return files.isDirectory(path); }
   public: bool isFile(const char *path) { return files.isFile(path); }

@@ -192,8 +192,8 @@ int FireREST::decrementProcessCount() {
   return result;
 }
 
-void FireREST::create_file(string path, int perm) {
-  LOGINFO2("FIreREST::create_file(%s, %o)", path.c_str(), perm);
+void FireREST::create_resource(string path, int perm) {
+  LOGINFO2("FIreREST::create_resource(%s, %o)", path.c_str(), perm);
   files.create_file(path, perm);
 }
 
@@ -215,9 +215,9 @@ string FireREST::config_camera(const char*cv_path, json_t *pCamera, const char *
   }
   LOGINFO1("FireREST::config_camera(%s)", cameraPath.c_str());
 
-  create_file(cameraPath + "/camera.jpg", 0444);
-  create_file(cameraPath + "/output.jpg", 0444);
-  create_file(cameraPath + "/monitor.jpg", 0444);
+  create_resource(cameraPath + "/camera.jpg", 0444);
+  create_resource(cameraPath + "/output.jpg", 0444);
+  create_resource(cameraPath + "/monitor.jpg", 0444);
 
   json_t *pProfileMap = json_object_get(pCamera, "profile_map");
   if (pProfileMap == 0) {
@@ -281,11 +281,11 @@ string FireREST::config_camera(const char*cv_path, json_t *pCamera, const char *
 	worker.cve(cvePath).src_properties_json.post(props);
       }
 
-      create_file(cvePath + "firesight.json", 0444);
-      create_file(cvePath + "save.fire", 0444);
-      create_file(cvePath + "process.fire", 0444);
-      create_file(cvePath + "saved.png", 0444);
-      create_file(cvePath + "properties.json", 0666);
+      create_resource(cvePath + "firesight.json", 0444);
+      create_resource(cvePath + "save.fire", 0444);
+      create_resource(cvePath + "process.fire", 0444);
+      create_resource(cvePath + "saved.png", 0444);
+      create_resource(cvePath + "properties.json", 0666);
     }
   }
 
@@ -307,7 +307,7 @@ string FireREST::config_cv(const char* varPath, json_t *pConfig) {
   const char *pKey;
   json_t *pCve;
   json_object_foreach(pCveMap, pKey, pCve) {
-    LOGINFO1("firerest_config_cv() loaded cve: %s", pKey);
+    LOGINFO1("FireREST::config_cv() loaded cve: %s", pKey);
   }
 
   json_t *pCameraMap = 0;
@@ -343,7 +343,7 @@ string FireREST::config_cnc(const char* varPath, json_t *pConfig) {
   json_object_foreach(pCnc, pKey, pDce) {
     string dcePath(cncPath);
     dcePath += pKey;
-    LOGINFO1("firerest_config_cnc() loaded dce: %s", dcePath.c_str());
+    LOGINFO1("FireREST::config_cnc() loaded dce: %s", dcePath.c_str());
     worker.dce(dcePath, TRUE);
   }
 
@@ -358,20 +358,20 @@ bool FireREST::isSync(const char *pJson) {
   return pSlash ? true : false;
 }
 
-void FireREST::configure(const char *pJson) {
+void FireREST::configure_json(const char *pJson) {
   string errMsg;
 
   json_error_t jerr;
   json_t *pConfig = json_loads(pJson, 0, &jerr);
   if (pConfig == 0) {
-    LOGERROR3("FireREST::configure() cannot parse json: %s src:%s line:%d", jerr.text, jerr.source, jerr.line);
+    LOGERROR3("FireREST::configure_json() cannot parse json: %s src:%s line:%d", jerr.text, jerr.source, jerr.line);
     throw jerr;
   }
 
   errMsg += config_cv("/", pConfig);
   errMsg += config_cv("/sync/", pConfig);
   errMsg += config_cnc("/", pConfig);
-  errMsg += config_cnc("/sync", pConfig);
+  errMsg += config_cnc("/sync/", pConfig);
 
   char *p_files_json = json_dumps(files.get("/"), JSON_INDENT(2)|JSON_PRESERVE_ORDER);
   cout << p_files_json << endl;
@@ -381,14 +381,36 @@ void FireREST::configure(const char *pJson) {
     json_decref(pConfig);
   }
   if (!errMsg.empty()) {
-    LOGERROR1("%s", errMsg.c_str());
+    LOGERROR1("FireREST::configure_json() -> %s", errMsg.c_str());
     throw errMsg;
   }
 }
 
-void firerest_config(const char *pJson) {
-  firerest.configure(pJson);
+char * FireREST::configure_path(const char *path) {
+  LOGINFO1("Loading FireREST configuration: %s", path);
+  FILE *fConfig = fopen(path, "r");
+  if (fConfig == 0) {
+    LOGERROR1("FireREST::configure_path(%s) Could not open configuration file", path);
+    exit(-ENOENT);
+  }
+  fseek(fConfig, 0, SEEK_END);
+  size_t length = ftell(fConfig);
+  fseek(fConfig, 0, SEEK_SET);
+  char * pConfigJson = (char *) malloc(length + 1);
+  size_t bytesRead = fread(pConfigJson, 1, length, fConfig);
+  if (bytesRead != length) {
+    LOGERROR3("FireREST::configure_path(%s) configuration file size expected:%ldB actual:%ldB", path, length, bytesRead);
+    exit(-EIO);
+  }
+  pConfigJson[length] = 0;
+  fclose(fConfig);
+
+  configure_json(pConfigJson);
+
+  return pConfigJson;
 }
+
+///////////////////////////// C methods ////////////////////////////
 
 int firerest_getattr_default(const char *path, struct stat *stbuf) {
   int res = -ENOENT;
@@ -430,3 +452,7 @@ int firerest_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t 
   return 0;
 }
 
+
+char * firerest_config(const char * path) {
+  return firerest.configure_path(path);
+}

@@ -579,35 +579,17 @@ int testConfig() {
   cout << "testConfig() --------------------------" << endl;
   worker.clear();
   worker.processInit();
-  const char *config_json = \
-  "{ \"FireREST\":{\"title\":\"Raspberry Pi FireFUSE\",\"provider\":\"FireFUSE\", \"version\":{\"major\":0, \"minor\":6, \"patch\":0}},\n" \
-    "\"cv\":{\n" \
-      "\"cve_map\":{\n" \
-	"\"one\":{ \"firesight\": [ {\"op\":\"putText\", \"text\":\"one\"} ], \"properties\": { \"caps\":\"ONE\" } },\n" \
-	"\"two\":{ \"firesight\": [ {\"op\":\"putText\", \"text\":\"two\"} ], \"properties\": { \"caps\":\"TWO\" } }\n" \
-      "},\n" \
-      "\"camera_map\":{\n" \
-	"\"1\":{ \
-	  \"width\":400,\
-	  \"height\":400,\
-	  \"profile_map\":{ \"gray\":{ \"cve_names\":[ \"one\", \"two\" ] }, \"bgr\":{ \"cve_names\":[ \"one\", \"two\" ] }}}\n" \
-      "}\n" \
-    "},\n" \
-    "\"cnc\":{" \
-      "\"tinyg\":{" \
-	"\"path\":\"/dev/ttyUSB0\"" \
-      "}\n" \
-    "}\n" \
-  "}\n"; 
 
   assert(testString("TEST fuse_root", "/dev/firefuse", fuse_root));
 
   /////////// config test
-  firerest_config(config_json);
+  char * configJson = firerest.configure_path("test/testconfig.json");
+  assert(configJson);
+  free(configJson);
   vector<string> cveNames = worker.getCveNames();
   assert(4 == cveNames.size());
   for (int i = 0; i < 4; i++) {
-    LOGINFO2("TEST config_json cveNames[%d] = %s", i, cveNames[i].c_str());
+    LOGINFO2("TEST configure_path cveNames[%d] = %s", i, cveNames[i].c_str());
   }
   assert(0==strcmp("/cv/1/bgr/cve/one", cveNames[0].c_str()));
   assert(0==strcmp("/cv/1/bgr/cve/two", cveNames[1].c_str()));

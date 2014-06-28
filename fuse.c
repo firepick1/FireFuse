@@ -50,24 +50,7 @@ static void * firefuse_init(struct fuse_conn_info *conn) {
   LOGINFO4("FireFUSE %d.%d.%d fuse_root:%s", FireFUSE_VERSION_MAJOR, FireFUSE_VERSION_MINOR, FireFUSE_VERSION_PATCH, fuse_root);
   LOGINFO2("PID%d UID%d", (int) getpid(), (int)getuid());
 
-  LOGINFO1("Loading FireREST configuration: %s", CONFIG_JSON);
-  FILE *fConfig = fopen(CONFIG_JSON, "r");
-  if (fConfig == 0) {
-    LOGERROR1("FATAL: Could not open configuration file: %s", CONFIG_JSON);
-    exit(-ENOENT);
-  }
-  fseek(fConfig, 0, SEEK_END);
-  size_t length = ftell(fConfig);
-  fseek(fConfig, 0, SEEK_SET);
-  pConfigJson = malloc(length + 1);
-  size_t bytesRead = fread(pConfigJson, 1, length, fConfig);
-  if (bytesRead != length) {
-    LOGERROR2("FATAL: Could not read configuration file: expected:%ldB actual:%ldB", length, bytesRead);
-    exit(-EIO);
-  }
-  pConfigJson[length] = 0;
-  fclose(fConfig);
-  firerest_config(pConfigJson);
+  pConfigJson = firerest_config(CONFIG_JSON);
 
   memset(echoBuf, 0, sizeof(echoBuf));
 

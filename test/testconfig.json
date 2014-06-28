@@ -1,0 +1,26 @@
+{ "FireREST":{"title":"Raspberry Pi FireFUSE","provider":"FireFUSE", "version":{"major":0, "minor":6, "patch":0}},
+  "cv":{
+    "cve_map":{
+      "one":{ "firesight": [ {"op":"putText", "text":"one"} ], "properties": { "caps":"ONE" } },
+      "two":{ "firesight": [ {"op":"putText", "text":"two"} ], "properties": { "caps":"TWO" } }
+    },
+    "camera_map":{
+      "1":{ 
+	"width":400,
+	"height":400,
+	"profile_map":{ "gray":{ "cve_names":[ "one", "two" ] }, "bgr":{ "cve_names":[ "one", "two" ] }}}
+    }
+  },
+  "cnc":{ 
+    "tinyg":{ 
+      "serial": {
+        "path":"/dev/ttyUSB0",
+	"baud":115200,
+	"bits":8,
+	"parity":"none",
+	"stop-bits":1,
+	"flow-control":"none"
+      }
+    }
+  }
+}

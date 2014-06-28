@@ -227,7 +227,11 @@ vector<string> BackgroundWorker::getDceNames() {
 DCE& BackgroundWorker::dce(string path, bool create) {
   string dcePath = DCE::dce_path(path.c_str());
   if (dcePath.empty()) {
-    LOGERROR1("BackgroundWorker::dce(%s) invalid DCE path", path.c_str());
+    string err("BackgroundWorkder::dce(");
+    err += path;
+    err += ") invalid DCE path";
+    LOGERROR1("%s", err.c_str());
+    throw err;
   }
   DCEPtr pDce = dceMap[dcePath]; 
   if (!pDce) {
@@ -247,7 +251,11 @@ DCE& BackgroundWorker::dce(string path, bool create) {
 CVE& BackgroundWorker::cve(string path, bool create) {
   string cvePath = CVE::cve_path(path.c_str());
   if (cvePath.empty()) {
-    LOGERROR1("BackgroundWorker::cve(%s) invalid CVE path", path.c_str());
+    string err("BackgroundWorkder::cve(");
+    err += path;
+    err += ") invalid CVE path";
+    LOGERROR1("%s", err.c_str());
+    throw err;
   }
   CVEPtr pCve = cveMap[cvePath]; 
   if (!pCve) {
