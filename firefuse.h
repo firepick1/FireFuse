@@ -190,7 +190,7 @@ typedef class CVE {
 
 typedef class DCE {
   private: string name;
-  private: string serial_port;
+  private: string serial_path;
   private: int sendSerial(const char *text);
 
   protected: virtual void send(SmartPointer<char> request, json_t*response);
@@ -206,8 +206,8 @@ typedef class DCE {
   public: void clear();
   public: inline string getName() { return name; }
   public: int gcode(BackgroundWorker *pWorker);
-  public: inline string getSerialPort() { return serial_port; }
-  public: inline void setSerialPort(string value) { serial_port = value; }
+  public: inline string getSerialPath() { return serial_path; }
+  public: inline void setSerialPath(const char * value) { serial_path = value; }
 } DCE, *DCEPtr;
 
 typedef class CameraNode {
@@ -288,6 +288,7 @@ typedef class FireREST {
   private: string config_camera(const char* cv_path, json_t *pCamera, const char *pCameraName, json_t *pCveMap);
   private: string config_cv(const char* root_path, json_t *pConfig);
   private: string config_cnc(const char* root_path, json_t *pConfig);
+  private: string config_cnc_serial(string dcePath, json_t *pSerial);
   private: void create_resource(string path, int perm);
 
   public: FireREST();

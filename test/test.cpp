@@ -635,6 +635,7 @@ int testConfig() {
   assert(!firerest.isFile("/cv/1/bgr/cve/one"));
   assert(firerest.isDirectory("/cv/1/bgr/cve/one"));
 
+
   cout << "testConfig() PASS" << endl;
   cout << endl;
   return 0;

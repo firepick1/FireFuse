@@ -329,6 +329,58 @@ string FireREST::config_cv(const char* varPath, json_t *pConfig) {
   return errMsg;
 }
 
+static string config_string(const char * context, json_t *pJson, const char *propName, const char *defaultValue=NULL){
+  string errMsg;
+  string result;
+  json_t * propValue = json_object_get(pJson, propName);
+  const char * value;
+  if (!json_is_string(propValue)) {
+    if (defaultValue) {
+      value = defaultValue;
+    } else {
+      errMsg = context;
+      errMsg += " expected configuration string:\"";
+      errMsg += propName;
+      errMsg += "\"";
+      LOGERROR1("%s", errMsg.c_str());
+      throw errMsg;
+    }
+  }
+  value = json_string_value(propValue);
+  LOGINFO3("%s %s:%s", context, propName, value);
+  return result;
+}
+
+string FireREST::config_cnc_serial(string dcePath, json_t *pSerial) {
+  LOGINFO1("FireREST::config_cnc_serial(%s)", dcePath.c_str());
+  string errMsg;
+  DCE &dce = worker.dce(dcePath, TRUE);
+
+  json_t * pPath = json_object_get(pSerial, "path");
+  if (!json_is_string(pPath)) {
+    errMsg += "FireREST::config_cnc_serial(";
+    errMsg += dcePath;
+    errMsg += ") missing serial configuration: path";
+    LOGERROR1("%s", errMsg.c_str());
+    return errMsg;
+  }
+  string context("FIreREST::config_cnc_serial(");
+  context += dcePath;
+  context += ")";
+
+  string path = config_string(context.c_str(), pSerial, "path");
+  LOGINFO2("FireREST::config_cnc_serial(%s) path:%s", dcePath.c_str(), path.c_str());
+  dce.setSerialPath(path.c_str());
+
+  string parity = config_string(context.c_str(), pSerial, "parity", "");
+  LOGINFO2("FireREST::config_cnc_serial(%s) parity:%s", dcePath.c_str(), parity.c_str());
+  if (0!=parity.compare("none") && 0!=parity.empty()) {
+    LOGWARN1("%s parity configuration not implemented", context.c_str());
+  }
+
+  return errMsg;
+}
+
 string FireREST::config_cnc(const char* varPath, json_t *pConfig) {
   string errMsg;
 
@@ -344,7 +396,10 @@ string FireREST::config_cnc(const char* varPath, json_t *pConfig) {
     string dcePath(cncPath);
     dcePath += pKey;
     LOGINFO1("FireREST::config_cnc() loaded dce: %s", dcePath.c_str());
-    worker.dce(dcePath, TRUE);
+    json_t *pSerial = json_object_get(pDce, "serial");
+    if (pSerial) {
+      errMsg += config_cnc_serial(dcePath, pSerial);
+    }
   }
 
   return errMsg;
