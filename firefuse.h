@@ -287,6 +287,7 @@ typedef class FireREST {
   private: JSONFileSystem files;
   private: string config_camera(const char* cv_path, json_t *pCamera, const char *pCameraName, json_t *pCveMap);
   private: string config_cv(const char* root_path, json_t *pConfig);
+  private: string config_cnc(const char* root_path, json_t *pConfig);
   private: void create_file(string path, int perm);
 
   public: FireREST();

@@ -616,6 +616,8 @@ int testConfig() {
   string caughtex;
   try { worker.cve("/cv/1/gray/cve/one"); } catch (string ex) { caughtex = ex; }
   assert(caughtex.empty());
+  try { worker.dce("/cnc/tinyg"); } catch (string ex) { caughtex = ex; }
+  assert(caughtex.empty());
   SmartPointer<char> one_json(worker.cve("/cv/1/gray/cve/one").src_firesight_json.get());
   assert(testString("firesight.json GET","[{\"op\":\"putText\",\"text\":\"one\"}]", one_json));
   assert(400 == cameraWidth);

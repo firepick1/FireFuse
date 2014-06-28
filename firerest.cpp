@@ -329,6 +329,27 @@ string FireREST::config_cv(const char* varPath, json_t *pConfig) {
   return errMsg;
 }
 
+string FireREST::config_cnc(const char* varPath, json_t *pConfig) {
+  string errMsg;
+
+  json_t *pCnc = json_object_get(pConfig, "cnc");
+  if (pCnc == 0) {
+    return string("FireREST::config_cnc() missing configuration: cv\n");
+  }
+  string cncPath(varPath);
+  cncPath += "cnc/";
+  const char *pKey;
+  json_t *pDce;
+  json_object_foreach(pCnc, pKey, pDce) {
+    string dcePath(cncPath);
+    dcePath += pKey;
+    LOGINFO1("firerest_config_cnc() loaded dce: %s", dcePath.c_str());
+    worker.dce(dcePath, TRUE);
+  }
+
+  return errMsg;
+}
+
 bool FireREST::isSync(const char *pJson) {
   const char *pSlash = pJson;
   while (pSlash && strncmp("/sync/", pSlash, 6)) {
@@ -349,6 +370,8 @@ void FireREST::configure(const char *pJson) {
 
   errMsg += config_cv("/", pConfig);
   errMsg += config_cv("/sync/", pConfig);
+  errMsg += config_cnc("/", pConfig);
+  errMsg += config_cnc("/sync", pConfig);
 
   char *p_files_json = json_dumps(files.get("/"), JSON_INDENT(2)|JSON_PRESERVE_ORDER);
   cout << p_files_json << endl;
