@@ -613,6 +613,9 @@ int testConfig() {
   assert(0==strcmp("/cv/1/bgr/cve/two", cveNames[1].c_str()));
   assert(0==strcmp("/cv/1/gray/cve/one", cveNames[2].c_str()));
   assert(0==strcmp("/cv/1/gray/cve/two", cveNames[3].c_str()));
+  string caughtex;
+  try { worker.cve("/cv/1/gray/cve/one"); } catch (string ex) { caughtex = ex; }
+  assert(caughtex.empty());
   SmartPointer<char> one_json(worker.cve("/cv/1/gray/cve/one").src_firesight_json.get());
   assert(testString("firesight.json GET","[{\"op\":\"putText\",\"text\":\"one\"}]", one_json));
   assert(400 == cameraWidth);
@@ -651,7 +654,7 @@ int testConfig() {
   cout << "testConfig() PASS" << endl;
   cout << endl;
   return 0;
-}
+} // testConfig()
 
 int testCve() {
   char buf[100];
@@ -673,6 +676,13 @@ int testCve() {
   vector<string> cveNames = worker.getCveNames();
   assert(0 == cveNames.size());
   string firesightPath = "/cv/1/gray/cve/calc-offset/firesight.json";
+  string caughtex;
+  LOGTRACE("TEST cve ERROR");
+  try { worker.cve(firesightPath); } catch(string ex) { caughtex = ex; }
+  assert(!caughtex.empty());
+  caughtex = string();
+  try { worker.cve(firesightPath, TRUE); } catch(string ex) { caughtex = ex; }
+  assert(caughtex.empty());
   CVE& cve = worker.cve(firesightPath);
   cveNames = worker.getCveNames();
   assert(1 == cveNames.size());
@@ -742,7 +752,7 @@ int testCve() {
   cout << "testCve() PASS" << endl;
   cout << endl;
   return 0;
-}
+} // testCve
 
 int testFireREST() {
   cout << "testFireREST() --------------------" << endl;
@@ -834,80 +844,91 @@ int testFireREST() {
 }
 
 int testCnc() {
-  char buf[100];
-  int rc;
+  try {
+    char buf[100];
+    int rc;
 
-  cout << "testCnc() --------------------------" << endl;
-  worker.clear();
-  worker.processInit();
+    cout << "testCnc() --------------------------" << endl;
+    worker.clear();
+    worker.processInit();
 
-  //////////// DCE::dce_path
-  const char *expectedPath = "/cnc/tinyg";
-  string sResult = DCE::dce_path("a/b/c/cnc/tinyg/gcode.fire");
-  assert(testString("TEST dce_path(1)", expectedPath, sResult.c_str()));
-  sResult = DCE::dce_path(expectedPath);
-  assert(testString("TEST dce_path(2)", expectedPath, sResult.c_str()));
-  assert(is_cnc_path(expectedPath));
-  assert(!is_cnc_path("/cv"));
-  assert(!is_cnc_path("/sync/cv"));
-  assert(!is_cnc_path("/"));
-  assert(!is_cnc_path("/a"));
-  assert(!is_cnc_path("/a/"));
-  assert(!is_cnc_path("/a/cn"));
-  assert(is_cnc_path("/a/cnc"));
-  assert(is_cnc_path("/a/cnc/"));
-  assert(is_cnc_path("/a/cnc/x"));
-  assert(is_cnc_path("/a/cnc/x/y/z"));
-  
-  //////////// dceNames
-  vector<string> dceNames = worker.getDceNames();
-  assert(0 == dceNames.size());
-  string gcodePath = "/cnc/tinyg/gcode.fire";
-  DCE& dce = worker.dce(gcodePath);
-  dceNames = worker.getDceNames();
-  assert(1 == dceNames.size());
-  cout << "dceNames[0]: " << dceNames[0] << endl;
-  assert(testString("TEST dce_path(3)", "/cnc/tinyg", dceNames[0].c_str()));
-  assert(testString("TEST dce_path(4)", dceNames[0].c_str(), dce.getName().c_str()));
+    //////////// DCE::dce_path
+    const char *expectedPath = "/cnc/tinyg";
+    string sResult = DCE::dce_path("a/b/c/cnc/tinyg/gcode.fire");
+    assert(testString("TEST dce_path(1)", expectedPath, sResult.c_str()));
+    sResult = DCE::dce_path(expectedPath);
+    assert(testString("TEST dce_path(2)", expectedPath, sResult.c_str()));
+    assert(is_cnc_path(expectedPath));
+    assert(!is_cnc_path("/cv"));
+    assert(!is_cnc_path("/sync/cv"));
+    assert(!is_cnc_path("/"));
+    assert(!is_cnc_path("/a"));
+    assert(!is_cnc_path("/a/"));
+    assert(!is_cnc_path("/a/cn"));
+    assert(is_cnc_path("/a/cnc"));
+    assert(is_cnc_path("/a/cnc/"));
+    assert(is_cnc_path("/a/cnc/x"));
+    assert(is_cnc_path("/a/cnc/x/y/z"));
+    
+    //////////// dceNames
+    vector<string> dceNames = worker.getDceNames();
+    assert(0 == dceNames.size());
+    string gcodePath = "/cnc/tinyg/gcode.fire";
+    string caughtex;
+  LOGTRACE("TEST cnc ERROR");
+    try { worker.dce(gcodePath); } catch (string e) { caughtex = e; }
+    assert(!caughtex.empty());
+    caughtex = string();
+    try { worker.dce(gcodePath, TRUE); } catch (string e) { caughtex = e; }
+    assert(caughtex.empty());
+    DCE& dce = worker.dce(gcodePath);
+    dceNames = worker.getDceNames();
+    assert(1 == dceNames.size());
+    cout << "dceNames[0]: " << dceNames[0] << endl;
+    assert(testString("TEST dce_path(3)", "/cnc/tinyg", dceNames[0].c_str()));
+    assert(testString("TEST dce_path(4)", dceNames[0].c_str(), dce.getName().c_str()));
 
-  ///////////// gcode.fire
-  worker.dce(gcodePath).clear();
-  assert(!worker.dce(gcodePath).snk_gcode_fire.isFresh());
-  assert(worker.dce(gcodePath).src_gcode_fire.isFresh());
-  assert(testString("TEST gcode_fire.clear()", "{}", worker.dce(gcodePath).src_gcode_fire.get()));
-  string g0x1y2z3("G0X1Y2Z3");
-  worker.dce(gcodePath).snk_gcode_fire.post(SmartPointer<char>((char *)g0x1y2z3.c_str(), g0x1y2z3.size()));
-  assert(worker.dce(gcodePath).snk_gcode_fire.isFresh());
-  assert(!worker.dce(gcodePath).src_gcode_fire.isFresh());
-  /*ASYNC*/assert(testProcess(0100)); // gcode
-  assert(!worker.dce(gcodePath).snk_gcode_fire.isFresh());
-  assert(worker.dce(gcodePath).src_gcode_fire.isFresh());
-  const char *jsonResult = "{\"status\":\"ERROR\",\"gcode\":\"G0X1Y2Z3\",\"response\":\"No serial port configured\"}";
-  assert(testString("TEST gcode_fire(G0X1Y2Z3)", jsonResult, worker.dce(gcodePath).src_gcode_fire.peek()));
-  SmartPointer<char> sp_gcode((char*)jsonResult, strlen(jsonResult));
-  
-  //////////////// test write
-  worker.dce(gcodePath).snk_gcode_fire.post(SmartPointer<char>((char *)g0x1y2z3.c_str(), g0x1y2z3.size()));
-  assert(worker.dce(gcodePath).snk_gcode_fire.isFresh());
-  struct fuse_file_info file_info;
-  memset(&file_info, 0, sizeof(fuse_file_info));
-  file_info.flags = O_WRONLY;
-  rc = firefuse_open(gcodePath.c_str(), &file_info);
-  LOGINFO2("firefuse_open(%s,O_WRONLY) -> %d", gcodePath.c_str(), rc);
-  assert(rc == -EAGAIN);
-  assert(worker.dce(gcodePath).snk_gcode_fire.isFresh());
-  worker.dce(gcodePath).snk_gcode_fire.get();
-  assert(!worker.dce(gcodePath).snk_gcode_fire.isFresh());
-  const char *jsonResult2 = "{\"status\":\"ACTIVE\",\"gcode\":\"G0X3Y2Z1\"}";
-  testFile("gcode.fire", gcodePath.c_str(), sp_gcode, "G0X3Y2Z1", jsonResult2);
-  const char *jsonResult3 = "{\"status\":\"ERROR\",\"gcode\":\"G0X3Y2Z1\",\"response\":\"No serial port configured\"}";
-  SmartPointer<char> jsonDone((char*) jsonResult3, strlen(jsonResult3));
-  /*ASYNC*/assert(testProcess(0100)); // gcode
-  testFile("gcode.fire", gcodePath.c_str(), jsonDone);
+    ///////////// gcode.fire
+    worker.dce(gcodePath).clear();
+    assert(!worker.dce(gcodePath).snk_gcode_fire.isFresh());
+    assert(worker.dce(gcodePath).src_gcode_fire.isFresh());
+    assert(testString("TEST gcode_fire.clear()", "{}", worker.dce(gcodePath).src_gcode_fire.get()));
+    string g0x1y2z3("G0X1Y2Z3");
+    worker.dce(gcodePath).snk_gcode_fire.post(SmartPointer<char>((char *)g0x1y2z3.c_str(), g0x1y2z3.size()));
+    assert(worker.dce(gcodePath).snk_gcode_fire.isFresh());
+    assert(!worker.dce(gcodePath).src_gcode_fire.isFresh());
+    /*ASYNC*/assert(testProcess(0100)); // gcode
+    assert(!worker.dce(gcodePath).snk_gcode_fire.isFresh());
+    assert(worker.dce(gcodePath).src_gcode_fire.isFresh());
+    const char *jsonResult = "{\"status\":\"ERROR\",\"gcode\":\"G0X1Y2Z3\",\"response\":\"No serial port configured\"}";
+    assert(testString("TEST gcode_fire(G0X1Y2Z3)", jsonResult, worker.dce(gcodePath).src_gcode_fire.peek()));
+    SmartPointer<char> sp_gcode((char*)jsonResult, strlen(jsonResult));
+    
+    //////////////// test write
+    worker.dce(gcodePath).snk_gcode_fire.post(SmartPointer<char>((char *)g0x1y2z3.c_str(), g0x1y2z3.size()));
+    assert(worker.dce(gcodePath).snk_gcode_fire.isFresh());
+    struct fuse_file_info file_info;
+    memset(&file_info, 0, sizeof(fuse_file_info));
+    file_info.flags = O_WRONLY;
+    rc = firefuse_open(gcodePath.c_str(), &file_info);
+    LOGINFO2("firefuse_open(%s,O_WRONLY) -> %d", gcodePath.c_str(), rc);
+    assert(rc == -EAGAIN);
+    assert(worker.dce(gcodePath).snk_gcode_fire.isFresh());
+    worker.dce(gcodePath).snk_gcode_fire.get();
+    assert(!worker.dce(gcodePath).snk_gcode_fire.isFresh());
+    const char *jsonResult2 = "{\"status\":\"ACTIVE\",\"gcode\":\"G0X3Y2Z1\"}";
+    testFile("gcode.fire", gcodePath.c_str(), sp_gcode, "G0X3Y2Z1", jsonResult2);
+    const char *jsonResult3 = "{\"status\":\"ERROR\",\"gcode\":\"G0X3Y2Z1\",\"response\":\"No serial port configured\"}";
+    SmartPointer<char> jsonDone((char*) jsonResult3, strlen(jsonResult3));
+    /*ASYNC*/assert(testProcess(0100)); // gcode
+    testFile("gcode.fire", gcodePath.c_str(), jsonDone);
 
-  cout << "testCnc() PASS" << endl;
-  cout << endl;
-  return 0;
+    cout << "testCnc() PASS" << endl;
+    cout << endl;
+    return 0;
+  } catch (...) {
+    cout << "testCnc() FAILED" << endl;
+  }
 }
 
 int testSuite() {

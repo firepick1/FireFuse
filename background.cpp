@@ -224,26 +224,40 @@ vector<string> BackgroundWorker::getDceNames() {
   return result;
 }
 
-DCE& BackgroundWorker::dce(string path) {
+DCE& BackgroundWorker::dce(string path, bool create) {
   string dcePath = DCE::dce_path(path.c_str());
   if (dcePath.empty()) {
     LOGERROR1("BackgroundWorker::dce(%s) invalid DCE path", path.c_str());
   }
   DCEPtr pDce = dceMap[dcePath]; 
   if (!pDce) {
+    if (!create) {
+      string err("BackgroundWorkder::dce(");
+      err += path;
+      err += ") DCE has not been configured";
+      LOGERROR1("%s", err.c_str());
+      throw err;
+    } 
     pDce = new DCE(dcePath);
     dceMap[dcePath] = pDce;
   }
   return *pDce;
 }
 
-CVE& BackgroundWorker::cve(string path) {
+CVE& BackgroundWorker::cve(string path, bool create) {
   string cvePath = CVE::cve_path(path.c_str());
   if (cvePath.empty()) {
     LOGERROR1("BackgroundWorker::cve(%s) invalid CVE path", path.c_str());
   }
   CVEPtr pCve = cveMap[cvePath]; 
   if (!pCve) {
+    if (!create) {
+      string err("BackgroundWorkder::cve(");
+      err += path;
+      err += ") CVE has not been configured";
+      LOGERROR1("%s", err.c_str());
+      throw err;
+    } 
     pCve = new CVE(cvePath);
     cveMap[cvePath] = pCve;
   }

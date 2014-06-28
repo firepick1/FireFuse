@@ -210,7 +210,7 @@ typedef class DCE {
   public: inline void setSerialPort(string value) { serial_port = value; }
 } DCE, *DCEPtr;
 
-class CameraNode {
+typedef class CameraNode {
   private: double output_seconds; // time of last FireSight pipeline completion
   private: double monitor_duration; // number of seconds to show last output
 
@@ -230,9 +230,9 @@ class CameraNode {
   public: void setOutput(Mat image);
 
   public: void temp_set_output_seconds() { output_seconds = cve_seconds(); }
-};
+} CameraNode;
 
-class BackgroundWorker {
+typedef class BackgroundWorker {
   private: double idle_period; // minimum seconds between idle() execution
   private: std::map<string, CVEPtr> cveMap;
   private: std::map<string, DCEPtr> dceMap;;
@@ -245,8 +245,8 @@ class BackgroundWorker {
 
   public: BackgroundWorker();
   public: ~BackgroundWorker();
-  public: CVE& cve(string path);
-  public: DCE& dce(string path);
+  public: CVE& cve(string path, bool create=FALSE);
+  public: DCE& dce(string path, bool create=FALSE);
   public: vector<string> getCveNames();
   public: vector<string> getDceNames();
   public: void clear();
@@ -258,11 +258,11 @@ class BackgroundWorker {
   public: void processInit();
   public: int processLoop();
   public: void idle();
-};
+} BackgroundWorker;
 
 extern BackgroundWorker worker; // BackgroundWorker singleton background worker
 
-class JSONFileSystem {
+typedef class JSONFileSystem {
   private: std::map<string, json_t *> dirMap;
   private: std::map<string, json_t *> fileMap;
   private: json_t *resolve_file(const char *path);
@@ -279,7 +279,7 @@ class JSONFileSystem {
   public: bool isFile(const char *path);
   public: bool isDirectory(const char *path);
   public: int perms(const char *path);
-};
+} JSONFileSystem;
 
 typedef class FireREST {
   private: pthread_mutex_t processMutex;

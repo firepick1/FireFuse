@@ -265,6 +265,7 @@ string FireREST::config_camera(const char*cv_path, json_t *pCamera, const char *
 
       string firesightPath(cvePath);
       firesightPath += "firesight.json";
+      worker.cve(firesightPath, TRUE);
       SmartPointer<char> firesightJson(pFireSightJson, strlen(pFireSightJson), SmartPointer<char>::MANAGE);
       worker.cve(firesightPath).src_firesight_json.post(firesightJson);
 
