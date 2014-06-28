@@ -600,6 +600,7 @@ int testConfig() {
   assert(caughtex.empty());
   try { worker.dce("/cnc/tinyg"); } catch (string ex) { caughtex = ex; }
   assert(caughtex.empty());
+  assert(testString("TEST testConfig()", "/dev/ttyUSB0", worker.dce("/cnc/tinyg").getSerialPath().c_str()));
   SmartPointer<char> one_json(worker.cve("/cv/1/gray/cve/one").src_firesight_json.get());
   assert(testString("firesight.json GET","[{\"op\":\"putText\",\"text\":\"one\"}]", one_json));
   assert(400 == cameraWidth);
@@ -634,7 +635,10 @@ int testConfig() {
   assert(!firerest.isDirectory("/cv/1/monitor.jpg"));
   assert(!firerest.isFile("/cv/1/bgr/cve/one"));
   assert(firerest.isDirectory("/cv/1/bgr/cve/one"));
-
+  assert(!firerest.isFile("/cnc/tinyg"));
+  assert(firerest.isDirectory("/cnc/tinyg"));
+  assert(firerest.isFile("/cnc/tinyg/gcode.fire"));
+  assert(!firerest.isDirectory("/cnc/tinyg/gcode.fire"));
 
   cout << "testConfig() PASS" << endl;
   cout << endl;
@@ -860,7 +864,7 @@ int testCnc() {
     assert(0 == dceNames.size());
     string gcodePath = "/cnc/tinyg/gcode.fire";
     string caughtex;
-  LOGTRACE("TEST cnc ERROR");
+    LOGTRACE("TEST cnc ERROR");
     try { worker.dce(gcodePath); } catch (string e) { caughtex = e; }
     assert(!caughtex.empty());
     caughtex = string();
@@ -874,6 +878,9 @@ int testCnc() {
     assert(testString("TEST dce_path(4)", dceNames[0].c_str(), dce.getName().c_str()));
 
     ///////////// gcode.fire
+    char * configJson = firerest.configure_path("test/testconfig-cnc.json");
+    assert(configJson);
+    free(configJson);
     worker.dce(gcodePath).clear();
     assert(!worker.dce(gcodePath).snk_gcode_fire.isFresh());
     assert(worker.dce(gcodePath).src_gcode_fire.isFresh());
@@ -885,7 +892,7 @@ int testCnc() {
     /*ASYNC*/assert(testProcess(0100)); // gcode
     assert(!worker.dce(gcodePath).snk_gcode_fire.isFresh());
     assert(worker.dce(gcodePath).src_gcode_fire.isFresh());
-    const char *jsonResult = "{\"status\":\"ERROR\",\"gcode\":\"G0X1Y2Z3\",\"response\":\"No serial port configured\"}";
+    const char *jsonResult = "{\"status\":\"DONE\",\"gcode\":\"G0X1Y2Z3\",\"response\":\"Mock response\"}";
     assert(testString("TEST gcode_fire(G0X1Y2Z3)", jsonResult, worker.dce(gcodePath).src_gcode_fire.peek()));
     SmartPointer<char> sp_gcode((char*)jsonResult, strlen(jsonResult));
     
@@ -903,7 +910,7 @@ int testCnc() {
     assert(!worker.dce(gcodePath).snk_gcode_fire.isFresh());
     const char *jsonResult2 = "{\"status\":\"ACTIVE\",\"gcode\":\"G0X3Y2Z1\"}";
     testFile("gcode.fire", gcodePath.c_str(), sp_gcode, "G0X3Y2Z1", jsonResult2);
-    const char *jsonResult3 = "{\"status\":\"ERROR\",\"gcode\":\"G0X3Y2Z1\",\"response\":\"No serial port configured\"}";
+    const char *jsonResult3 = "{\"status\":\"DONE\",\"gcode\":\"G0X3Y2Z1\",\"response\":\"Mock response\"}";
     SmartPointer<char> jsonDone((char*) jsonResult3, strlen(jsonResult3));
     /*ASYNC*/assert(testProcess(0100)); // gcode
     testFile("gcode.fire", gcodePath.c_str(), jsonDone);

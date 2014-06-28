@@ -333,10 +333,9 @@ static string config_string(const char * context, json_t *pJson, const char *pro
   string errMsg;
   string result;
   json_t * propValue = json_object_get(pJson, propName);
-  const char * value;
   if (!json_is_string(propValue)) {
     if (defaultValue) {
-      value = defaultValue;
+      result = defaultValue;
     } else {
       errMsg = context;
       errMsg += " expected configuration string:\"";
@@ -346,8 +345,8 @@ static string config_string(const char * context, json_t *pJson, const char *pro
       throw errMsg;
     }
   }
-  value = json_string_value(propValue);
-  LOGINFO3("%s %s:%s", context, propName, value);
+  result = json_string_value(propValue);
+  LOGINFO3("%s %s:%s", context, propName, result.c_str());
   return result;
 }
 
@@ -364,7 +363,7 @@ string FireREST::config_cnc_serial(string dcePath, json_t *pSerial) {
     LOGERROR1("%s", errMsg.c_str());
     return errMsg;
   }
-  string context("FIreREST::config_cnc_serial(");
+  string context("FireREST::config_cnc_serial(");
   context += dcePath;
   context += ")";
 
@@ -396,6 +395,17 @@ string FireREST::config_cnc(const char* varPath, json_t *pConfig) {
     string dcePath(cncPath);
     dcePath += pKey;
     LOGINFO1("FireREST::config_cnc() loaded dce: %s", dcePath.c_str());
+    json_t *protocol = json_object_get(pDce, "protocol");
+    const char *protocolStr = json_is_string(protocol) ? json_string_value(protocol) : "gcode";
+    if (0==strcmp("gcode", protocolStr)) {
+      create_resource(dcePath + "/gcode.fire", 0666);
+    } else {
+      errMsg += "FireREST::config_cnc(";
+      errMsg += dcePath;
+      errMsg += ") unsupported protocol:";
+      errMsg += protocolStr;
+    }
+
     json_t *pSerial = json_object_get(pDce, "serial");
     if (pSerial) {
       errMsg += config_cnc_serial(dcePath, pSerial);

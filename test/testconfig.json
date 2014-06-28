@@ -13,6 +13,7 @@
   },
   "cnc":{ 
     "tinyg":{ 
+      "protocol":"gcode",
       "serial": {
         "path":"/dev/ttyUSB0",
 	"baud":115200,
