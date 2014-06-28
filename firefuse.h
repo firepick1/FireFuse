@@ -193,6 +193,8 @@ typedef class DCE {
   private: string serial_port;
   private: int sendSerial(const char *text);
 
+  protected: virtual void send(SmartPointer<char> request, json_t*response);
+
   // Common data
   public: LIFOCache<SmartPointer<char> > snk_gcode_fire;
   public: LIFOCache<SmartPointer<char> > src_gcode_fire;
@@ -202,10 +204,10 @@ typedef class DCE {
   public: DCE(string name);
   public: ~DCE();
   public: void clear();
-  public: inline string getSerialPort() { return serial_port; }
-  public: inline void setSerialPort(string value) { serial_port = value; }
   public: inline string getName() { return name; }
   public: int gcode(BackgroundWorker *pWorker);
+  public: inline string getSerialPort() { return serial_port; }
+  public: inline void setSerialPort(string value) { serial_port = value; }
 } DCE, *DCEPtr;
 
 class CameraNode {
