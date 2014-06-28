@@ -16,17 +16,6 @@
 int cameraTime;
 char *cameraBuffer;
 
-int firestep_write(const char *buf, size_t bufsize) {
-  return 0;
-}
-
-const char * firestep_json() {
-  return "{\"mock\":\"firestep_json\"}";
-}
-
-int firestep_init() { 
-  return 0;
-}
 
 int firepicam_create(int argc, const char **argv) {
   cameraTime = 0;

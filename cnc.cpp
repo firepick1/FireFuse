@@ -126,6 +126,29 @@ void DCE::clear() {
   src_gcode_fire.post(SmartPointer<char>((char *)emptyJson, strlen(emptyJson)));
 }
 
+int DCE::callSystem(char *cmdbuf) {
+  int rc = 0;
+  rc = system(cmdbuf);
+  if (rc == -1) {
+    LOGERROR2("DCE::callSystem(%s) -> %d", cmdbuf, rc);
+    return rc;
+  }
+  if (WIFEXITED(rc)) {
+    if (WEXITSTATUS(rc)) {
+      LOGERROR2("DCE::callSystem(%s) -> EXIT %d", cmdbuf, WEXITSTATUS(rc));
+      return rc;
+    }
+  } else if (WIFSTOPPED(rc)) {
+      LOGERROR2("DCE::callSystem(%s) -> STOPPED %d", cmdbuf, WSTOPSIG(rc));
+      return rc;
+  } else if (WIFSIGNALED(rc)) {
+      LOGERROR2("DCE::callSystem(%s) -> SIGNALED %d", cmdbuf, WTERMSIG(rc));
+      return rc;
+  }
+  LOGINFO1("DCE::callSystem(%s)", cmdbuf);
+  return 0;
+}
+
 /**
  * Return canonical DCE path. E.g.:
  *   /dev/firefuse/sync/cnc/tinyg/gcode.fire => /cnc/tinyg

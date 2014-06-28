@@ -200,6 +200,7 @@ typedef class DCE {
   public: LIFOCache<SmartPointer<char> > src_gcode_fire;
   //public: LIFOCache<SmartPointer<char> > src_properties_json;
   
+  public: static int callSystem(char *cmdbuf);
   public: static string dce_path(const char *pPath);
   public: DCE(string name);
   public: ~DCE();
