@@ -152,7 +152,7 @@ int DCE::callSystem(char *cmdbuf) {
       LOGERROR2("DCE::callSystem(%s) -> SIGNALED %d", cmdbuf, WTERMSIG(rc));
       return rc;
   }
-  LOGINFO1("DCE::callSystem(%s)", cmdbuf);
+  LOGINFO1("DCE::callSystem(%s) OK", cmdbuf);
   return 0;
 }
 
@@ -219,10 +219,10 @@ int DCE::serial_init(){
       LOGINFO1("DCE::serial_init(%s) serial configuration unchanged", path);
     } else {
       snprintf(cmdbuf, sizeof(cmdbuf), "stty 0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0 -F %s", path);
-      LOGDEBUG2("DCE::serial_init(%s) %s", path, cmdbuf);
+      LOGDEBUG2("DCE::serial_init(%s) %s (first call may fail)", path, cmdbuf);
       rc = DCE::callSystem(cmdbuf);
       if (rc) {
-	LOGDEBUG3("DCE::serial_init(%s) %s -> %d RETRYING...", path, cmdbuf, rc);
+	LOGINFO3("DCE::serial_init(%s) %s -> %d RETRYING...", path, cmdbuf, rc);
 	rc = DCE::callSystem(cmdbuf);
       }
       if (rc) { 
