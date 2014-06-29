@@ -97,6 +97,10 @@ int firefuse_getattr(const char *path, struct stat *stbuf) {
     stbuf->st_mode = S_IFDIR | 0755;
     stbuf->st_nlink = 2;
     stbuf->st_nlink = 1; // Safe default value
+  } else if (strcmp(path, FIREREST_SYNC) == 0) {
+    stbuf->st_mode = S_IFDIR | 0755;
+    stbuf->st_nlink = 2;
+    stbuf->st_nlink = 1; // Safe default value
   } else if (strcmp(path, CONFIG_PATH) == 0) {
     stbuf->st_mode = S_IFREG | 0444;
     stbuf->st_nlink = 1;
