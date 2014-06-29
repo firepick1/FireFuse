@@ -221,6 +221,10 @@ int DCE::serial_init(){
       snprintf(cmdbuf, sizeof(cmdbuf), "stty 0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0 -F %s", path);
       LOGDEBUG2("DCE::serial_init(%s) %s", path, cmdbuf);
       rc = DCE::callSystem(cmdbuf);
+      if (rc) {
+	LOGDEBUG3("DCE::serial_init(%s) %s -> %d RETRYING...", path, cmdbuf, rc);
+	rc = DCE::callSystem(cmdbuf);
+      }
       if (rc) { 
 	LOGERROR2("DCE::serial_init(%s) clear serial port failed -> %d", path, rc);
 	return rc; 

@@ -85,6 +85,7 @@ static inline int firefuse_readBuffer(char *pDst, const char *pSrc, size_t size,
 #define FIREREST_CV "/cv"
 #define FIREREST_SYNC "/sync"
 #define FIREREST_CVE "/cve"
+#define FIREREST_CNC "/cnc"
 #define FIREREST_FIRESIGHT_JSON "/firesight.json"
 #define FIREREST_PROPERTIES_JSON "/properties.json"
 #define FIREREST_MONITOR_JPG "/monitor.jpg"
