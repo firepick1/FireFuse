@@ -333,20 +333,42 @@ static string config_string(const char * context, json_t *pJson, const char *pro
   string errMsg;
   string result;
   json_t * propValue = json_object_get(pJson, propName);
-  if (!json_is_string(propValue)) {
+  if (json_is_string(propValue)) {
+    result = json_string_value(propValue);
+  } else {
     if (defaultValue) {
       result = defaultValue;
     } else {
       errMsg = context;
-      errMsg += " expected configuration string:\"";
+      errMsg += " expected string: \"";
       errMsg += propName;
       errMsg += "\"";
       LOGERROR1("%s", errMsg.c_str());
       throw errMsg;
     }
   }
-  result = json_string_value(propValue);
   LOGINFO3("%s %s:%s", context, propName, result.c_str());
+  return result;
+}
+
+static double config_double(const char * context, json_t *pJson, const char *propName, double defaultValue){
+  string errMsg;
+  double result;
+  json_t * propValue = json_object_get(pJson, propName);
+  if (!json_is_number(propValue)) {
+    if (!propValue) {
+      result = defaultValue;
+    } else {
+      errMsg = context;
+      errMsg += " expected number: \"";
+      errMsg += propName;
+      errMsg += "\"";
+      LOGERROR1("%s", errMsg.c_str());
+      throw errMsg;
+    }
+  }
+  result = json_number_value(propValue);
+  LOGINFO3("%s %s:%f", context, propName, result);
   return result;
 }
 
@@ -371,11 +393,11 @@ string FireREST::config_cnc_serial(string dcePath, json_t *pSerial) {
   LOGINFO2("FireREST::config_cnc_serial(%s) path:%s", dcePath.c_str(), path.c_str());
   dce.setSerialPath(path.c_str());
 
-  string parity = config_string(context.c_str(), pSerial, "parity", "");
-  LOGINFO2("FireREST::config_cnc_serial(%s) parity:%s", dcePath.c_str(), parity.c_str());
-  if (0!=parity.compare("none") && 0!=parity.empty()) {
-    LOGWARN1("%s parity configuration not implemented", context.c_str());
-  }
+  string stty = config_string(context.c_str(), pSerial, "stty", "115200 cs8");
+  LOGDEBUG2("FireREST::config_cnc_serial(%s) stty %s", dcePath.c_str(), stty.c_str());
+  dce.setSerialStty(stty.c_str());
+
+  dce.serial_init();
 
   return errMsg;
 }
@@ -385,7 +407,7 @@ string FireREST::config_cnc(const char* varPath, json_t *pConfig) {
 
   json_t *pCnc = json_object_get(pConfig, "cnc");
   if (pCnc == 0) {
-    return string("FireREST::config_cnc() missing configuration: cv\n");
+    return string("FireREST::config_cnc() missing configuration: cnc\n");
   }
   string cncPath(varPath);
   cncPath += "cnc/";

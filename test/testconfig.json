@@ -15,12 +15,8 @@
     "tinyg":{ 
       "protocol":"gcode",
       "serial": {
-        "path":"/dev/ttyUSB0",
-	"baud":115200,
-	"bits":8,
-	"parity":"none",
-	"stop-bits":1,
-	"flow-control":"none"
+        "path":"mock",
+	"stty":"cs8 115200"
       }
     }
   }

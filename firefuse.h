@@ -190,7 +190,9 @@ typedef class CVE {
 
 typedef class DCE {
   private: string name;
+  private: int serial_fd;
   private: string serial_path;
+  private: string serial_stty;
   private: int sendSerial(const char *text);
 
   protected: virtual void send(SmartPointer<char> request, json_t*response);
@@ -205,8 +207,11 @@ typedef class DCE {
   public: DCE(string name);
   public: ~DCE();
   public: void clear();
+  public: int serial_init();
   public: inline string getName() { return name; }
   public: int gcode(BackgroundWorker *pWorker);
+  public: inline string getSerialStty() { return serial_stty; }
+  public: inline void setSerialStty(const char * value) { serial_stty = value; }
   public: inline string getSerialPath() { return serial_path; }
   public: inline void setSerialPath(const char * value) { serial_path = value; }
 } DCE, *DCEPtr;

@@ -115,6 +115,7 @@ int cnc_truncate(const char *path, off_t size) {
 
 DCE::DCE(string name) {
   this->name = name;
+  this->serial_fd = -1;
   clear();
 }
 
@@ -122,8 +123,14 @@ DCE::~DCE() {
 }
 
 void DCE::clear() {
+  LOGTRACE1("DCE::clear(%s)", name.c_str());
   const char *emptyJson = "{}";
   src_gcode_fire.post(SmartPointer<char>((char *)emptyJson, strlen(emptyJson)));
+  if (serial_fd >= 0) {
+    LOGTRACE2("DCE::clear(%s) close serial port: %s", name.c_str(), serial_path.c_str());
+    close(serial_fd);
+    serial_fd = -1;
+  }
 }
 
 int DCE::callSystem(char *cmdbuf) {
@@ -184,6 +191,65 @@ string DCE::dce_path(const char *pPath) {
 json_t *json_string(char *value, size_t length) {
   string str(value, length);
   return json_string(str.c_str());
+}
+
+int DCE::serial_init(){
+  if (serial_fd >= 0) {
+    LOGINFO1("DCE::serial_init(%s) already open", name.c_str());
+    return 0; // already started
+  }
+  if (serial_path.empty()) {
+    LOGINFO1("DCE::serial_init(%s) no serial configuration", name.c_str());
+    return 0; 
+  }
+  if (0==serial_path.compare("mock")) {
+    LOGINFO1("DCE::serial_init(%s) mock serial", name.c_str());
+    return 0; 
+  }
+
+  const char * path = serial_path.c_str();
+  struct stat statbuf;   
+  int rc = 0;
+
+  if (stat(path, &statbuf) == 0) {
+    LOGINFO1("DCE::serial_init(%s)", path);
+    char cmdbuf[256];
+
+    if (serial_stty.empty()) {
+      LOGINFO1("DCE::serial_init(%s) serial configuration unchanged", path);
+    } else {
+      snprintf(cmdbuf, sizeof(cmdbuf), "stty 0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0 -F %s", path);
+      LOGDEBUG2("DCE::serial_init(%s) %s", path, cmdbuf);
+      rc = DCE::callSystem(cmdbuf);
+      if (rc) { 
+	LOGERROR2("DCE::serial_init(%s) clear serial port failed -> %d", path, rc);
+	return rc; 
+      }
+
+      snprintf(cmdbuf, sizeof(cmdbuf), "stty %s -F %s", serial_stty.c_str(), path);
+      LOGINFO2("DCE::serial_init(%s) %s", path, cmdbuf);
+      rc = DCE::callSystem(cmdbuf);
+      if (rc) { 
+	LOGERROR3("DCE::serial_init(%s) %s -> %d", path, cmdbuf, rc);
+	return rc; 
+      }
+    }
+
+    LOGDEBUG1("DCE::serial_init:open(%s)", path);
+    serial_fd = open(path, O_RDWR | O_ASYNC | O_NONBLOCK);
+    if (serial_fd < 0) {
+      rc = errno;
+      LOGERROR2("DCE::serial_init:open(%s) failed -> %d", path, rc);
+      return rc;
+    }
+    LOGINFO1("DCE::serial_init(%s) opened for write", path);
+
+    //TBD LOGRC(rc, "pthread_create(firestep_reader) -> ", pthread_create(&tidReader, NULL, &firestep_reader, NULL));
+  } else {
+    LOGERROR1("DCE::serial_init(%s) No device", path);
+  }
+
+  return rc;
 }
 
 void DCE::send(SmartPointer<char> request, json_t*response) {
