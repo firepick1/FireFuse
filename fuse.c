@@ -145,6 +145,7 @@ int firefuse_getattr(const char *path, struct stat *stbuf) {
 static int firefuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
        off_t offset, struct fuse_file_info *fi)
 {
+  LOGTRACE1("firefuse_readdir(%s)", path);
   if (is_cv_path(path) ||
       is_cnc_path(path) ||
       0==strcmp(path, FIREREST_SYNC)) {
@@ -177,6 +178,7 @@ static int firefuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 }
 
 int firefuse_open(const char *path, struct fuse_file_info *fi) {
+  LOGTRACE1("firefuse_open(%s)", path);
   if (is_cv_path(path)) {
     return cve_open(path, fi);
   }
@@ -234,6 +236,7 @@ void firefuse_freeDataBuffer(const char *path, struct fuse_file_info *fi) {
 }
 
 int firefuse_release(const char *path, struct fuse_file_info *fi) {
+  LOGTRACE1("firefuse_release(%s)", path);
   if (is_cv_path(path)) {
     return cve_release(path, fi);
   }
@@ -241,7 +244,6 @@ int firefuse_release(const char *path, struct fuse_file_info *fi) {
     return cnc_release(path, fi);
   }
 
-  LOGTRACE1("firefuse_release %s", path);
   if (strcmp(path, STATUS_PATH) == 0) {
     // NOP
   } else if (strcmp(path, CONFIG_PATH) == 0) {
@@ -259,6 +261,7 @@ int firefuse_release(const char *path, struct fuse_file_info *fi) {
 }
 
 int firefuse_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
+  LOGTRACE1("firefuse_read(%s)", path);
   if (is_cv_path(path)) {
     int res = cve_read(path, buf, size, offset, fi);
     if (res > 0) {
@@ -305,6 +308,7 @@ int firefuse_read(const char *path, char *buf, size_t size, off_t offset, struct
 }
 
 int firefuse_write(const char *path, const char *buf, size_t bufsize, off_t offset, struct fuse_file_info *fi) {
+  LOGTRACE1("firefuse_write(%s)", path);
   if (offset) {
     LOGERROR2("firefuse_write %s -> non-zero offset:%ld", path, (long) offset);
     return EINVAL;
@@ -361,10 +365,13 @@ int firefuse_write(const char *path, const char *buf, size_t bufsize, off_t offs
   return bufsize;
 }
 
-static int firefuse_truncate(const char *path, off_t size)
-{
+static int firefuse_truncate(const char *path, off_t size) {
+  LOGTRACE1("firefuse_truncate(%s)", path);
   if (is_cv_path(path)) {
     return cve_truncate(path, size);
+  }
+  if (is_cnc_path(path)) {
+    return cnc_truncate(path, size);
   }
 
   (void) size;
@@ -377,6 +384,7 @@ static int firefuse_truncate(const char *path, off_t size)
   } else if (strcmp(path, FIRESTEP_PATH) == 0) {
     // NOP
   } else {
+    LOGERROR1("firefuse_truncate(%s) -> ENOENT", path);
     return -ENOENT;
   }
   LOGDEBUG1("firefuse_truncate %s", path);
