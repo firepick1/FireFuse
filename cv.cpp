@@ -360,21 +360,21 @@ int cve_write(const char *path, const char *buf, size_t bufsize, off_t offset, s
 int cve_release(const char *path, struct fuse_file_info *fi) {
   LOGTRACE1("cve_release(%s)", path);
   if (firefuse_isFile(path, FIREREST_PROCESS_FIRE)) {
-    if (fi->fh) { free( (SmartPointer<char> *) fi->fh); }
+    if (fi->fh) { delete (SmartPointer<char> *) fi->fh; }
   } else if (firefuse_isFile(path, FIREREST_MONITOR_JPG)) {
-    if (fi->fh) { free( (SmartPointer<char> *) fi->fh); }
+    if (fi->fh) { delete (SmartPointer<char> *) fi->fh; }
   } else if (firefuse_isFile(path, FIREREST_SAVED_PNG)) {
-    if (fi->fh) { free( (SmartPointer<char> *) fi->fh); }
+    if (fi->fh) { delete (SmartPointer<char> *) fi->fh; }
   } else if (firefuse_isFile(path, FIREREST_OUTPUT_JPG)) {
-    if (fi->fh) { free( (SmartPointer<char> *) fi->fh); }
+    if (fi->fh) { delete (SmartPointer<char> *) fi->fh; }
   } else if (firefuse_isFile(path, FIREREST_FIRESIGHT_JSON)) {
-    if (fi->fh) { free( (SmartPointer<char> *) fi->fh); }
+    if (fi->fh) { delete (SmartPointer<char> *) fi->fh; }
   } else if (firefuse_isFile(path, FIREREST_PROPERTIES_JSON)) {
-    if (fi->fh) { free( (SmartPointer<char> *) fi->fh); }
+    if (fi->fh) { delete (SmartPointer<char> *) fi->fh; }
   } else if (firefuse_isFile(path, FIREREST_CAMERA_JPG)) {
-    if (fi->fh) { free( (SmartPointer<char> *) fi->fh); }
+    if (fi->fh) { delete (SmartPointer<char> *) fi->fh; }
   } else if (firefuse_isFile(path, FIREREST_SAVE_FIRE)) {
-    if (fi->fh) { free( (SmartPointer<char> *) fi->fh); }
+    if (fi->fh) { delete (SmartPointer<char> *) fi->fh; }
   }
   return 0;
 }
