@@ -14,7 +14,7 @@
 #include "FireLog.h"
 #include "firefuse.h"
 
-int firefuse_main(int argc, char *argv[]) {
+int main(int argc, char *argv[]) {
   return firefuse_main(argc, argv);
 }
 
