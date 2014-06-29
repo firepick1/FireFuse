@@ -61,7 +61,7 @@ static void * firefuse_init(struct fuse_conn_info *conn) {
 
   LOGRC(rc, "pthread_create(&tidCamera...) -> ", pthread_create(&tidCamera, NULL, &firefuse_cameraThread, NULL));
 
-  firestep_init();
+  //firestep_init();
 
   return NULL; /* init */
 }
