@@ -394,7 +394,7 @@ string FireREST::config_cnc_serial(string dcePath, json_t *pSerial) {
   dce.setSerialPath(path.c_str());
 
   string stty = config_string(context.c_str(), pSerial, "stty", "115200 cs8");
-  LOGDEBUG2("FireREST::config_cnc_serial(%s) stty %s", dcePath.c_str(), stty.c_str());
+  LOGINFO2("FireREST::config_cnc_serial(%s) stty %s", dcePath.c_str(), stty.c_str());
   dce.setSerialStty(stty.c_str());
 
   dce.serial_init();
@@ -465,7 +465,7 @@ void FireREST::configure_json(const char *pJson) {
     json_t * idle_period = json_object_get(bgwkr, "idle-period");
     if (json_is_number(idle_period)) {
       int period = json_integer_value(idle_period);
-      LOGDEBUG1("FireREST::configure_json() idle_period:%ds", period);
+      LOGINFO1("FireREST::configure_json() idle_period:%ds", period);
       worker.setIdlePeriod(period);
     }
   }

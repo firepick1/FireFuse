@@ -354,10 +354,23 @@ int DCE::serial_send(const char *buf, size_t bufsize) {
   ssize_t rc = write(serial_fd, buf, bufsize);
   if (rc == bufsize) {
     LOGINFO2("DCE::serial_send(%s) %ldB", logmsg, bufsize);
+    rc = serial_send_eol(buf, bufsize);
   } else {
     LOGERROR2("DCE::serial_send(%s) -> [%ld]", logmsg, rc);
   }
   return rc < 0 ? rc : 0;
+}
+
+int DCE::serial_send_eol(const char *buf, size_t bufsize) {
+  char lastChar = buf[bufsize=1];
+  if (lastChar != '\r' && lastChar != '\n') {
+    size_t rc = write(serial_fd, "\r", 1);
+    if (rc != 1) {
+      LOGERROR1("DCE::serial_send(CR) -> [%ld]", rc);
+      return -EIO;
+    }
+  }
+  return 0;
 }
 
 // Add the given character to jsonBuf if it is the inner part of the json response 

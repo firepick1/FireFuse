@@ -201,6 +201,7 @@ typedef class DCE {
   private: char *inbuf;
   private: int inbuflen;
   private: int inbufEmptyLine;
+  private: int serial_send_eol(const char *buf, size_t bufsize);
   private: int serial_send(const char *data, size_t length);
   private: int serial_read_char(int c);
   private: static void * serial_reader(void *arg);
