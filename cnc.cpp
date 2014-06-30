@@ -123,10 +123,6 @@ DCE::DCE(string name) {
   this->serial_fd = -1;
   this->jsonBuf = (char*)malloc(JSONMAX+3); // +nl, cr, EOS
   this->inbuf = (char*)malloc(INBUFMAX+1); // +EOS
-  this-> jsonLen = 0;
-  this-> jsonDepth = 0;
-  this-> inbuflen = 0;
-  this-> inbufEmptyLine = 0;
   clear();
 }
 
@@ -148,6 +144,10 @@ void DCE::clear() {
     close(serial_fd);
     serial_fd = -1;
   }
+  jsonLen = 0;
+  jsonDepth = 0;
+  inbuflen = 0;
+  inbufEmptyLine = 0;
 }
 
 int DCE::callSystem(char *cmdbuf) {
@@ -439,7 +439,8 @@ int DCE::serial_read_char(int c) {
       } else if (c == '}') {
         ADD_JSON(c);
         if (--jsonDepth < 0) {
-          LOGWARN1("Invalid JSON %s", jsonBuf);
+	  jsonDepth = 0;
+          LOGWARN2("DCE::read_char(%c) invalid JSON %s", (int) c, jsonBuf);
           return 0;
         }
       } else {
@@ -447,17 +448,17 @@ int DCE::serial_read_char(int c) {
       }
       if (inbuflen >= INBUFMAX) {
         inbuf[INBUFMAX] = 0;
-        LOGERROR1("DCE::read_char overflow %s", inbuf);
+        LOGERROR2("DCE::read_char(%c) overflow %s", (int) c, inbuf);
         break;
       } else {
         inbuf[inbuflen] = c;
         inbuflen++;
-        LOGTRACE2("DCE::read_char %x %c", (int) c, (int) c);
+        LOGTRACE2("DCE::read_char(%x %c)", (int) c, (int) c);
       }
       break;
     default:
       // discard unexpected character (probably wrong baud rate)
-      LOGTRACE2("DCE::read_char %x ?", (int) c, (int) c);
+      LOGTRACE2("DCE::read_char(%x ?)", (int) c, (int) c);
       break;
   }
   return 1;
