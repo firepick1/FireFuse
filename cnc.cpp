@@ -497,7 +497,7 @@ void * DCE::serial_reader(void *arg) {
     }
   }
   
-  LOGINFO("DCE::serial_reader() EXIT: SERIAL PORT WILL NO LONGER BE READ");
+  LOGINFO("DCE::serial_reader() EXIT: SERIAL PORT WILL NO LONGER BE READ <<<NOTE!!!>>>");
   return NULL;
 }
 
