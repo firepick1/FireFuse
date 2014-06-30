@@ -381,7 +381,7 @@ int DCE::serial_send(const char *buf, size_t bufsize) {
 }
 
 int DCE::serial_send_eol(const char *buf, size_t bufsize) {
-  char lastChar = buf[bufsize=1];
+  char lastChar = buf[bufsize-1];
   if (lastChar != '\r' && lastChar != '\n') {
     size_t rc = write(serial_fd, "\r", 1);
     if (rc != 1) {
