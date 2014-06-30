@@ -195,6 +195,7 @@ typedef class DCE {
   private: string serial_path;
   private: string serial_stty;
   private: pthread_t tidReader;
+  public: vector<string> serial_device_config;
   private: char *jsonBuf;
   private: int jsonLen;
   private: int jsonDepth;
@@ -226,6 +227,7 @@ typedef class DCE {
   public: inline void setSerialStty(const char * value) { serial_stty = value; }
   public: inline string getSerialPath() { return serial_path; }
   public: inline void setSerialPath(const char * value) { serial_path = value; }
+  public: inline vector<string> getSerialDeviceConfig() { return serial_device_config; }
 } DCE, *DCEPtr;
 
 typedef class CameraNode {
@@ -307,6 +309,7 @@ typedef class FireREST {
   private: string config_cv(const char* root_path, json_t *pConfig);
   private: string config_cnc(const char* root_path, json_t *pConfig);
   private: string config_cnc_serial(string dcePath, json_t *pSerial);
+  private: string config_dce(string dcePath, json_t *pConfig);
   private: void create_resource(string path, int perm);
 
   public: FireREST();

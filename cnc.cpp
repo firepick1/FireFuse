@@ -82,7 +82,7 @@ int cnc_write(const char *path, const char *buf, size_t bufsize, off_t offset, s
   if (firefuse_isFile(path, FIREREST_GCODE_FIRE)) {
     worker.dce(path).snk_gcode_fire.post(data);
     string cmd(buf, bufsize);
-    LOGINFO1("DCE::cnc_write() %s", cmd.c_str());
+    LOGTRACE1("DCE::cnc_write() %s", cmd.c_str());
     json_t * response = json_object();
     json_object_set(response, "status", json_string("ACTIVE"));
     json_object_set(response, "gcode", json_string(cmd.c_str()));
@@ -266,6 +266,11 @@ int DCE::serial_init(){
     LOGINFO1("DCE::serial_init(%s) opened for write", path);
 
     LOGRC(rc, "pthread_create(serial_reader) -> ", pthread_create(&tidReader, NULL, &serial_reader, this));
+
+    for (int i=0; i < serial_device_config.size(); i++) {
+      string config = serial_device_config[i];
+      serial_send(config.c_str(), config.size());
+    }
   } else {
     LOGERROR1("DCE::serial_init(%s) No device", path);
   }
@@ -285,7 +290,6 @@ void DCE::send(SmartPointer<char> request, json_t*response) {
     json_object_set(response, "status", json_string("DONE"));
     json_object_set(response, "response", json_string("Mock response"));
   } else {
-    LOGTRACE2("DCE::send(%s) serial_path:%s", data.c_str(), serial_path.c_str());
     serial_send(request.data(), request.size());
   }
 }

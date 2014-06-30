@@ -1,4 +1,11 @@
 { "FireREST":{"title":"Raspberry Pi FireFUSE","provider":"FireFUSE", "version":{"major":0, "minor":6, "patch":0}},
+  "cnc":{ 
+    "tinyg":{ 
+      "protocol":"tinyg",
+      "serial": { "path":"mock", "stty":"cs8 115200" },
+      "device-config": [ {"jv":5,"sv":2, "tv":0}, "hello" ]
+    }
+  },
   "cv":{
     "cve_map":{
       "one":{ "firesight": [ {"op":"putText", "text":"one"} ], "properties": { "caps":"ONE" } },
@@ -9,17 +16,6 @@
 	"width":400,
 	"height":400,
 	"profile_map":{ "gray":{ "cve_names":[ "one", "two" ] }, "bgr":{ "cve_names":[ "one", "two" ] }}}
-    }
-  },
-  "cnc":{ 
-    "tinyg":{ 
-      "protocol":"gcode",
-      "serial": { "path":"mock", "stty":"cs8 115200" },
-      "device-config": [
-	{"jv":5,"sv":2, "tv":0},
-	{"sr":{"mpox":true,"mpoy":true,"mpoz":true,"vel":true,"stat":true}},
-	{"y":{"am":1,"vm":35000,"fr":40000,"tm":400,"jm":20000000000,"jh":40000000000,"jd":0.050,"sn":3,"sx":0,"sv":3000,"lv":1000,"lb":2,"zb":1}}
-      ]
     }
   }
 }

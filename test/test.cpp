@@ -895,6 +895,10 @@ int testCnc() {
     const char *jsonResult = "{\"status\":\"DONE\",\"gcode\":\"G0X1Y2Z3\",\"response\":\"Mock response\"}";
     assert(testString("TEST gcode_fire(G0X1Y2Z3)", jsonResult, worker.dce(gcodePath).src_gcode_fire.peek()));
     SmartPointer<char> sp_gcode((char*)jsonResult, strlen(jsonResult));
+    vector<string> dc = worker.dce(gcodePath).getSerialDeviceConfig();
+    assert(testNumber((size_t) 2, dc.size()));
+    assert(testString("TEST gcode.fire serialDeviceConfig", "{\"jv\": 5, \"sv\": 2, \"tv\": 0}", dc[0].c_str()));
+    assert(testString("TEST gcode.fire serialDeviceConfig", "hello", dc[1].c_str()));
     
     //////////////// test write
     worker.dce(gcodePath).snk_gcode_fire.post(SmartPointer<char>((char *)g0x1y2z3.c_str(), g0x1y2z3.size()));
