@@ -345,13 +345,10 @@ int DCE::serial_send(const char *buf, size_t bufsize) {
     }
   }
   for (; bufsize > 0; bufsize--) {
-    switch (buf[bufsize-1]) {
-      case '\n': case '\r': case '\t': case ' ':
-	// trim trailing whitespace
-        continue;
-      default:
-        break;
-    }
+    char c = buf[bufsize-1];
+    if (c!='\n' && c!='\r' && c!='\t' && c!=' ') {
+      break;
+    } 
   }
   long cksum = 0;
   int ckxor = 0;
