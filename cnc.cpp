@@ -335,15 +335,6 @@ const char * DCE::read_json() {
 int DCE::serial_send(const char *buf, size_t bufsize) {
 #define LOGBUFMAX 100
   char logmsg[LOGBUFMAX+4];
-  char *s;
-  for (s = logmsg; *s; s++) {
-    switch (*s) {
-      case '\n':
-      case '\r':
-        *s = ' ';
-        break;
-    }
-  }
   for (; bufsize > 0; bufsize--) {
     char c = buf[bufsize-1];
     if (c!='\n' && c!='\r' && c!='\t' && c!=' ') {
