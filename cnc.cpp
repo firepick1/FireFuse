@@ -335,16 +335,6 @@ const char * DCE::read_json() {
 int DCE::serial_send(const char *buf, size_t bufsize) {
 #define LOGBUFMAX 100
   char logmsg[LOGBUFMAX+4];
-  if (bufsize > LOGBUFMAX) {
-    memcpy(logmsg, buf, LOGBUFMAX);
-    logmsg[LOGBUFMAX] = '.'; 
-    logmsg[LOGBUFMAX+1] = '.'; 
-    logmsg[LOGBUFMAX+2] = '.'; 
-    logmsg[LOGBUFMAX+3] = 0;
-  } else {
-    memcpy(logmsg, buf, bufsize);
-    logmsg[bufsize] = 0;
-  }
   char *s;
   for (s = logmsg; *s; s++) {
     switch (*s) {
@@ -354,10 +344,38 @@ int DCE::serial_send(const char *buf, size_t bufsize) {
         break;
     }
   }
-  LOGDEBUG1("DCE::serial_send(%s) start", logmsg);
-  ssize_t rc = write(serial_fd, buf, bufsize);
+  for (; bufsize > 0; bufsize--) {
+    switch (buf[bufsize-1]) {
+      case '\n': case '\r': case '\t': case ' ':
+	// trim trailing whitespace
+        continue;
+      default:
+        break;
+    }
+  }
+  long cksum = 0;
+  int ckxor = 0;
+  for (int i=0; i < bufsize; i++) {
+    uchar c = (uchar) buf[i];
+    cksum += c;
+    ckxor ^= c;
+    if (i < LOGBUFMAX) {
+      logmsg[i] = c;
+    }
+  }
+  ckxor &= 0xff; 
+  if (bufsize > LOGBUFMAX) {
+    logmsg[LOGBUFMAX] = '.'; 
+    logmsg[LOGBUFMAX+1] = '.'; 
+    logmsg[LOGBUFMAX+2] = '.'; 
+    logmsg[LOGBUFMAX+3] = 0;
+  } else {
+    logmsg[bufsize] = 0;
+  }
+  LOGTRACE4("DCE::serial_send(%s) write:%ldB cksum:%ld ckxor:%d", logmsg, bufsize, cksum, ckxor);
+  size_t rc = write(serial_fd, buf, bufsize);
   if (rc == bufsize) {
-    LOGINFO2("DCE::serial_send(%s) %ldB", logmsg, bufsize);
+    LOGINFO4("DCE::serial_send(%s) %ldB cksum:%ld ckxor:%d", logmsg, bufsize, cksum, ckxor);
     rc = serial_send_eol(buf, bufsize);
   } else {
     LOGERROR2("DCE::serial_send(%s) -> [%ld]", logmsg, rc);
