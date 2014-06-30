@@ -112,14 +112,31 @@ int cnc_truncate(const char *path, off_t size) {
   return result;
 }
 
+//////////////////////////////// DCE //////////////////////////////////
+
+#define CMDMAX 255
+#define INBUFMAX 3000
+#define JSONMAX 3000
 
 DCE::DCE(string name) {
   this->name = name;
   this->serial_fd = -1;
+  this->jsonBuf = (char*)malloc(JSONMAX+3); // +nl, cr, EOS
+  this->inbuf = (char*)malloc(INBUFMAX+1); // +EOS
+  this-> jsonLen = 0;
+  this-> jsonDepth = 0;
+  this-> inbuflen = 0;
+  this-> inbufEmptyLine = 0;
   clear();
 }
 
 DCE::~DCE() {
+  if (jsonBuf) {
+    free(jsonBuf);
+  }
+  if (inbuf) {
+    free(inbuf);
+  }
 }
 
 void DCE::clear() {
@@ -248,7 +265,7 @@ int DCE::serial_init(){
     }
     LOGINFO1("DCE::serial_init(%s) opened for write", path);
 
-    //TBD LOGRC(rc, "pthread_create(firestep_reader) -> ", pthread_create(&tidReader, NULL, &firestep_reader, NULL));
+    LOGRC(rc, "pthread_create(serial_reader) -> ", pthread_create(&tidReader, NULL, &serial_reader, this));
   } else {
     LOGERROR1("DCE::serial_init(%s) No device", path);
   }
@@ -269,6 +286,7 @@ void DCE::send(SmartPointer<char> request, json_t*response) {
     json_object_set(response, "response", json_string("Mock response"));
   } else {
     LOGTRACE2("DCE::send(%s) serial_path:%s", data.c_str(), serial_path.c_str());
+    serial_send(request.data(), request.size());
   }
 }
 
@@ -291,4 +309,171 @@ int DCE::gcode(BackgroundWorker *pWorker) {
   return 0;
 }
 
+
+const char * DCE::read_json() {
+  int wait = 0;
+  while (jsonDepth > 0) {
+    LOGDEBUG1("DCE::read_json() waiting for JSON %d", wait++);
+    sched_yield(); // wait for completion
+    if (wait > 10) {
+      LOGERROR("DCE::read_json() unterminated JSON");
+      return "{\"error\":\"unterminated JSON\"}";
+    }
+  }
+  jsonBuf[jsonLen] = 0;
+  if (jsonLen > 0) {
+    jsonBuf[jsonLen++] = '\n';
+    jsonBuf[jsonLen++] = 0;
+  }
+  return jsonBuf;
+}
+
+int DCE::serial_send(const char *buf, size_t bufsize) {
+#define LOGBUFMAX 100
+  char logmsg[LOGBUFMAX+4];
+  if (bufsize > LOGBUFMAX) {
+    memcpy(logmsg, buf, LOGBUFMAX);
+    logmsg[LOGBUFMAX] = '.'; 
+    logmsg[LOGBUFMAX+1] = '.'; 
+    logmsg[LOGBUFMAX+2] = '.'; 
+    logmsg[LOGBUFMAX+3] = 0;
+  } else {
+    memcpy(logmsg, buf, bufsize);
+    logmsg[bufsize] = 0;
+  }
+  char *s;
+  for (s = logmsg; *s; s++) {
+    switch (*s) {
+      case '\n':
+      case '\r':
+        *s = ' ';
+        break;
+    }
+  }
+  LOGDEBUG1("DCE::serial_send(%s) start", logmsg);
+  ssize_t rc = write(serial_fd, buf, bufsize);
+  if (rc == bufsize) {
+    LOGINFO2("DCE::serial_send(%s) %ldB", logmsg, bufsize);
+  } else {
+    LOGERROR2("DCE::serial_send(%s) -> [%ld]", logmsg, rc);
+  }
+  return rc < 0 ? rc : 0;
+}
+
+// Add the given character to jsonBuf if it is the inner part of the json response 
+#define ADD_JSON(c) \
+      if (jsonDepth > 1) {\
+        jsonBuf[jsonLen++] = c; \
+        if (jsonLen >= JSONMAX) { \
+          LOGWARN1("Maximum JSON length is %d", JSONMAX); \
+          return 0; \
+        } \
+        jsonBuf[jsonLen] = 0;\
+      }
+
+int DCE::serial_read_char(int c) {
+  switch (c) {
+    case EOF:
+      inbuf[inbuflen] = 0;
+      inbuflen = 0;
+      LOGERROR1("DCE::read_char(%s) [EOF]", inbuf);
+      return 0;
+    case '\n':
+      inbuf[inbuflen] = 0;
+      if (inbuflen) { // discard blank lines
+        if (strncmp("{\"sr\"",inbuf, 5) == 0) {
+          LOGDEBUG2("DCE::read_char(%s) %dB", inbuf, inbuflen);
+        } else {
+          LOGINFO2("DCE::read_char(%s) %dB", inbuf, inbuflen);
+        }
+      } else {
+        inbufEmptyLine++;
+        if (inbufEmptyLine % 1000 == 0) {
+          LOGWARN1("DCE::read_char() skipped %ld blank lines", (long) inbufEmptyLine);
+        }
+      }
+      inbuflen = 0;
+      break;
+    case '\r':
+      // skip
+      break;
+    case 'a': case 'A': case 'b': case 'B': case 'c': case 'C': case 'd': case 'D':
+    case 'e': case 'E': case 'f': case 'F': case 'g': case 'G': case 'h': case 'H':
+    case 'i': case 'I': case 'j': case 'J': case 'k': case 'K': case 'l': case 'L':
+    case 'm': case 'M': case 'n': case 'N': case 'o': case 'O': case 'p': case 'P':
+    case 'q': case 'Q': case 'r': case 'R': case 's': case 'S': case 't': case 'T':
+    case 'u': case 'U': case 'v': case 'V': case 'w': case 'W': case 'x': case 'X':
+    case 'y': case 'Y': case 'z': case 'Z':
+    case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9':
+    case '.': case '-': case '_': case '/': case '{': case '}': case '(': case ')':
+    case '[': case ']': case '<': case '>': case '"': case '\'': case ':': case ',':
+    case ' ': case '\t':
+      if (c == '{') {
+        if (jsonDepth++ <= 0) {
+          jsonLen = 0;
+        }
+        ADD_JSON(c);
+      } else if (c == '}') {
+        ADD_JSON(c);
+        if (--jsonDepth < 0) {
+          LOGWARN1("Invalid JSON %s", jsonBuf);
+          return 0;
+        }
+      } else {
+        ADD_JSON(c);
+      }
+      if (inbuflen >= INBUFMAX) {
+        inbuf[INBUFMAX] = 0;
+        LOGERROR1("DCE::read_char overflow %s", inbuf);
+        break;
+      } else {
+        inbuf[inbuflen] = c;
+        inbuflen++;
+        LOGTRACE2("DCE::read_char %x %c", (int) c, (int) c);
+      }
+      break;
+    default:
+      // discard unexpected character (probably wrong baud rate)
+      LOGTRACE2("DCE::read_char %x ?", (int) c, (int) c);
+      break;
+  }
+  return 1;
+}
+
+void * DCE::serial_reader(void *arg) {
+#define READBUFLEN 100
+  char readbuf[READBUFLEN];
+  DCE *pDce = (DCE*) arg;
+
+  LOGINFO("DCE::serial_reader() listening...");
+
+  if (pDce->serial_fd >= 0) {
+    char c;
+    char loop = TRUE;
+    while (loop) {
+      int rc = read(pDce->serial_fd, readbuf, READBUFLEN);
+      if (rc < 0) {
+        if (errno == EAGAIN) {
+          sched_yield();
+          continue;
+        }
+        LOGERROR2("DCE::serial_reader(%s) [ERRNO:%d]", pDce->inbuf, errno);
+        break;
+      } else if (rc == 0) {
+        sched_yield(); // nothing available to read
+        continue;
+      } else  {
+        for (int i = 0; i < rc; i++) {
+          if (!pDce->serial_read_char(readbuf[i])) {
+            loop = FALSE;
+            break;
+          }
+        }
+      }
+    }
+  }
+  
+  LOGINFO("DCE::serial_reader() exit");
+  return NULL;
+}
 

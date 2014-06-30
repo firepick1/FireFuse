@@ -14,10 +14,7 @@
   "cnc":{ 
     "tinyg":{ 
       "protocol":"gcode",
-      "serial": {
-        "path":"mock",
-	"stty":"cs8 115200"
-      }
+      "serial": { "path":"mock", "stty":"cs8 115200" }
     }
   }
 }

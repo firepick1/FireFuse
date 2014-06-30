@@ -194,7 +194,17 @@ typedef class DCE {
   private: int serial_fd;
   private: string serial_path;
   private: string serial_stty;
-  private: int sendSerial(const char *text);
+  private: pthread_t tidReader;
+  private: char *jsonBuf;
+  private: int jsonLen;
+  private: int jsonDepth;
+  private: char *inbuf;
+  private: int inbuflen;
+  private: int inbufEmptyLine;
+  private: int serial_send(const char *data, size_t length);
+  private: int serial_read_char(int c);
+  private: static void * serial_reader(void *arg);
+  private: const char * read_json();
 
   protected: virtual void send(SmartPointer<char> request, json_t*response);
 
