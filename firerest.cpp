@@ -460,6 +460,16 @@ void FireREST::configure_json(const char *pJson) {
   errMsg += config_cnc("/", pConfig);
   errMsg += config_cnc("/sync/", pConfig);
 
+  json_t * bgwkr = json_object_get(pConfig, "background-worker");
+  if (json_is_object(bgwkr)) {
+    json_t * idle_period = json_object_get(bgwkr, "idle-period");
+    if (json_is_number(idle_period)) {
+      int period = json_integer_value(idle_period);
+      LOGDEBUG1("FireREST::configure_json() idle_period:%ds", period);
+      worker.setIdlePeriod(period);
+    }
+  }
+
   char *p_files_json = json_dumps(files.get("/"), JSON_INDENT(2)|JSON_PRESERVE_ORDER);
   cout << p_files_json << endl;
   free (p_files_json);
