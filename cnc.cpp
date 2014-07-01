@@ -341,16 +341,17 @@ int DCE::serial_send(const char *buf, size_t bufsize) {
       break;
     } 
   }
-  long cksum = 0;
+  uint32_t ckhash = 0;
   int ckxor = 0;
   for (int i=0; i < bufsize; i++) {
     uchar c = (uchar) buf[i];
-    cksum += c;
+    ckhash = 31 * ckhash + c;
     ckxor ^= c;
     if (i < LOGBUFMAX) {
       logmsg[i] = c;
     }
   }
+  ckhash %= 9999;
   ckxor &= 0xff; 
   if (bufsize > LOGBUFMAX) {
     logmsg[LOGBUFMAX] = '.'; 
@@ -360,7 +361,7 @@ int DCE::serial_send(const char *buf, size_t bufsize) {
   } else {
     logmsg[bufsize] = 0;
   }
-  LOGINFO4("DCE::serial_send(%s) %ldB cksum:%ld ckxor:%d", logmsg, bufsize, cksum, ckxor);
+  LOGINFO4("DCE::serial_send(%s) %ldB ckhash:%d ckxor:%d", logmsg, bufsize, ckhash, ckxor);
   size_t rc = write(serial_fd, buf, bufsize);
   if (rc == bufsize) {
     rc = serial_send_eol(buf, bufsize);
