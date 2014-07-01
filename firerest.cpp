@@ -193,7 +193,7 @@ int FireREST::decrementProcessCount() {
 }
 
 void FireREST::create_resource(string path, int perm) {
-  LOGINFO2("FIreREST::create_resource(%s, %o)", path.c_str(), perm);
+  LOGINFO2("FireREST::create_resource(%s, %o)", path.c_str(), perm);
   files.create_file(path, perm);
 }
 
@@ -329,7 +329,7 @@ string FireREST::config_cv(const char* varPath, json_t *pConfig) {
   return errMsg;
 }
 
-static string config_string(const char * context, json_t *pJson, const char *propName, const char *defaultValue=NULL){
+static string config_string(json_t *pJson, const char *propName, const char *defaultValue=NULL){
   string errMsg;
   string result;
   json_t * propValue = json_object_get(pJson, propName);
@@ -339,36 +339,13 @@ static string config_string(const char * context, json_t *pJson, const char *pro
     if (defaultValue) {
       result = defaultValue;
     } else {
-      errMsg = context;
-      errMsg += " expected string: \"";
+      errMsg = "config_string(";
       errMsg += propName;
-      errMsg += "\"";
+      errMsg += ") expected string";
       LOGERROR1("%s", errMsg.c_str());
       throw errMsg;
     }
   }
-  LOGINFO3("%s %s:%s", context, propName, result.c_str());
-  return result;
-}
-
-static double config_double(const char * context, json_t *pJson, const char *propName, double defaultValue){
-  string errMsg;
-  double result;
-  json_t * propValue = json_object_get(pJson, propName);
-  if (!json_is_number(propValue)) {
-    if (!propValue) {
-      result = defaultValue;
-    } else {
-      errMsg = context;
-      errMsg += " expected number: \"";
-      errMsg += propName;
-      errMsg += "\"";
-      LOGERROR1("%s", errMsg.c_str());
-      throw errMsg;
-    }
-  }
-  result = json_number_value(propValue);
-  LOGINFO3("%s %s:%f", context, propName, result);
   return result;
 }
 
@@ -385,15 +362,12 @@ string FireREST::config_cnc_serial(string dcePath, json_t *pSerial) {
     LOGERROR1("%s", errMsg.c_str());
     return errMsg;
   }
-  string context("FireREST::config_cnc_serial(");
-  context += dcePath;
-  context += ")";
 
-  string path = config_string(context.c_str(), pSerial, "path");
+  string path = config_string(pSerial, "path");
   LOGINFO2("FireREST::config_cnc_serial(%s) path:%s", dcePath.c_str(), path.c_str());
   dce.setSerialPath(path.c_str());
 
-  string stty = config_string(context.c_str(), pSerial, "stty", "115200 cs8");
+  string stty = config_string(pSerial, "stty", "115200 cs8");
   LOGINFO2("FireREST::config_cnc_serial(%s) stty %s", dcePath.c_str(), stty.c_str());
   dce.setSerialStty(stty.c_str());
 

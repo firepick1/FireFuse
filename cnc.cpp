@@ -360,10 +360,9 @@ int DCE::serial_send(const char *buf, size_t bufsize) {
   } else {
     logmsg[bufsize] = 0;
   }
-  LOGTRACE4("DCE::serial_send(%s) write:%ldB cksum:%ld ckxor:%d", logmsg, bufsize, cksum, ckxor);
+  LOGINFO4("DCE::serial_send(%s) %ldB cksum:%ld ckxor:%d", logmsg, bufsize, cksum, ckxor);
   size_t rc = write(serial_fd, buf, bufsize);
   if (rc == bufsize) {
-    LOGINFO4("DCE::serial_send(%s) %ldB cksum:%ld ckxor:%d", logmsg, bufsize, cksum, ckxor);
     rc = serial_send_eol(buf, bufsize);
   } else {
     LOGERROR2("DCE::serial_send(%s) -> [%ld]", logmsg, rc);
@@ -374,9 +373,10 @@ int DCE::serial_send(const char *buf, size_t bufsize) {
 int DCE::serial_send_eol(const char *buf, size_t bufsize) {
   char lastChar = buf[bufsize-1];
   if (lastChar != '\r' && lastChar != '\n') {
+    LOGTRACE("DCE::serial_send_eol()");
     size_t rc = write(serial_fd, "\r", 1);
     if (rc != 1) {
-      LOGERROR1("DCE::serial_send(CR) -> [%ld]", rc);
+      LOGERROR1("DCE::serial_send_eol() -> [%ld]", rc);
       return -EIO;
     }
   }
@@ -441,7 +441,7 @@ int DCE::serial_read_char(int c) {
         if (--jsonDepth < 0) {
 	  jsonDepth = 0;
           LOGWARN2("DCE::read_char(%c) invalid JSON %s", (int) c, jsonBuf);
-          return 0;
+          //return 0;
         }
       } else {
         ADD_JSON(c);
