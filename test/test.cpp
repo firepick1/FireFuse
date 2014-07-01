@@ -919,6 +919,10 @@ int testCnc() {
     /*ASYNC*/assert(testProcess(0100)); // gcode
     testFile("gcode.fire", gcodePath.c_str(), jsonDone);
 
+    ////////////// TINYG
+    const char *s = "{\"r\":{\"f\":[1,60,5,[8401]}}"; 
+    assert(testNumber(8401L, (long) tinyg_hash(s)));
+
     cout << "testCnc() PASS" << endl;
     cout << endl;
     return 0;
@@ -942,6 +946,7 @@ int testSuite() {
       testCnc()==0 &&
       TRUE) {
       cout << "ALL TESTS PASS!!!" << endl;
+
       return 0;
     } else {
       cout << "*** TEST(S) FAILED ***" << endl;

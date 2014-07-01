@@ -158,6 +158,7 @@ int firestep_init();
 void firestep_destroy();
 int firestep_write(const char *buf, size_t bufsize);
 const char * firestep_json();
+int tinyg_hash(const char *value);
 
 #ifdef __cplusplus
 //////////////////////////////////// C++ DECLARATIONS ////////////////////////////////////////////////////////
@@ -327,6 +328,7 @@ typedef class FireREST {
 } FireREST;
 
 extern FireREST firerest;
+
 
 #endif
 //////////////////////////////////// FIREFUSE_H ////////////////////////////////////////////////////////

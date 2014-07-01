@@ -266,7 +266,10 @@ int DCE::serial_init(){
     LOGINFO1("DCE::serial_init(%s) opened for write", path);
 
     LOGRC(rc, "pthread_create(serial_reader) -> ", pthread_create(&tidReader, NULL, &serial_reader, this));
+    LOGINFO("DCE::serial_init() yielding to serial_reader");
+    sched_yield();
 
+    LOGINFO("DCE::serial_init() sending device_config");
     for (int i=0; i < serial_device_config.size(); i++) {
       string config = serial_device_config[i];
       serial_send(config.c_str(), config.size());
@@ -341,17 +344,14 @@ int DCE::serial_send(const char *buf, size_t bufsize) {
       break;
     } 
   }
-  uint32_t ckhash = 0;
   int ckxor = 0;
   for (int i=0; i < bufsize; i++) {
     uchar c = (uchar) buf[i];
-    ckhash = 31 * ckhash + c;
     ckxor ^= c;
     if (i < LOGBUFMAX) {
       logmsg[i] = c;
     }
   }
-  ckhash %= 9999;
   ckxor &= 0xff; 
   if (bufsize > LOGBUFMAX) {
     logmsg[LOGBUFMAX] = '.'; 
@@ -361,7 +361,7 @@ int DCE::serial_send(const char *buf, size_t bufsize) {
   } else {
     logmsg[bufsize] = 0;
   }
-  LOGINFO4("DCE::serial_send(%s) %ldB ckhash:%d ckxor:%d", logmsg, bufsize, ckhash, ckxor);
+  LOGINFO3("DCE::serial_send(%s) %ldB ckxor:%d", logmsg, bufsize, ckxor);
   size_t rc = write(serial_fd, buf, bufsize);
   if (rc == bufsize) {
     rc = serial_send_eol(buf, bufsize);
@@ -498,7 +498,24 @@ void * DCE::serial_reader(void *arg) {
     }
   }
   
-  LOGINFO("DCE::serial_reader() EXIT: SERIAL PORT WILL NO LONGER BE READ <<<NOTE!!!>>>");
+  LOGINFO("DCE::serial_reader(EXIT) ////////////////// SERIAL PORT WILL NO LONGER BE READ //////////////////>");
   return NULL;
 }
 
+//////////////////////////// TINYG ////////////////
+
+int tinyg_hash(const char *value) {
+  size_t len = strlen(value);
+  while (len > 0) {
+    if (value[--len] == ',') {
+      break;
+    }
+  }
+
+  uint32_t h = 0;
+  for (int i = 0; i < len; i++) { 
+    h = h * 31 + value[i]; 
+  }
+
+  return h % 9999;
+}
