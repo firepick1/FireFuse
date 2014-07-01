@@ -1,5 +1,5 @@
 { "FireREST":{"title":"Raspberry Pi FireFUSE","provider":"FireFUSE", "version":{"major":0, "minor":6, "patch":0}},
-  "background-worker":{"idle-period":300},
+  "background-worker":{"idle-period":3000},
   "cnc":{ 
     "tinyg":{ 
       "protocol":"gcode",
