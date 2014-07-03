@@ -454,7 +454,7 @@ int DCE::serial_read_char(int c) {
       } else {
         inbuf[inbuflen] = c;
         inbuflen++;
-        LOGTRACE2("DCE::read_char(%x %c) %d %d", (int) c, (int) c, jsonDepth, jsonLen);
+        LOGTRACE4("DCE::read_char(%x %c) %d %d", (int) c, (int) c, jsonDepth, jsonLen);
       }
       break;
     default:
