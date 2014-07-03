@@ -4,7 +4,7 @@ project( FireFUSE )
 SET(COMPILE_DEFINITIONS -Werror)
 SET(FireFUSE_VERSION_MAJOR 0)
 SET(FireFUSE_VERSION_MINOR 7)
-SET(FireFUSE_VERSION_PATCH 1)
+SET(FireFUSE_VERSION_PATCH 2)
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -g -D_FILE_OFFSET_BITS=64")
 SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_FILE_OFFSET_BITS=64")
 SET(BUILD_TARGET_DIR "${CMAKE_CURRENT_SOURCE_DIR}/target" CACHE STRING "Put all binary output in target")
@@ -36,10 +36,12 @@ configure_file (
 find_package( OpenCV REQUIRED )
 
 add_executable(firefuse 
+  firefuse.cpp
   firerest.cpp
   fuse.c 
   background.cpp 
-  cve.cpp 
+  cv.cpp 
+  cnc.cpp
   FireStep.cpp 
   )
 target_link_libraries(firefuse libfirepicam.so lib_firesight.so libjansson.so libfuse.so ${OpenCV_LIBS})
@@ -48,12 +50,13 @@ add_executable(testfirefuse
   test/test.cpp
   test/mock.cpp
   firerest.cpp
-  #fuse.c 
+  fuse.c 
   background.cpp 
-  cve.cpp 
-  #FireStep.cpp 
+  cv.cpp 
+  cnc.cpp 
+  FireStep.cpp 
   )
-target_link_libraries(testfirefuse lib_firesight.so libjansson.so ${OpenCV_LIBS})
+target_link_libraries(testfirefuse lib_firesight.so libjansson.so libfuse.so ${OpenCV_LIBS})
 
 INSTALL(TARGETS firefuse DESTINATION bin)
 INSTALL(PROGRAMS mountfirefuse.sh DESTINATION /etc/init.d/)

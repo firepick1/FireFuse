@@ -16,6 +16,7 @@
 int cameraTime;
 char *cameraBuffer;
 
+
 int firepicam_create(int argc, const char **argv) {
   cameraTime = 0;
   cameraBuffer = NULL;

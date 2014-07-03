@@ -153,10 +153,11 @@ template <class T> class SmartPointer {
     public: inline void decref() {
       references--;
       if (references < 0) {
-	throw "ReferencedPointer extra dereference";
+	LOGERROR1("ReferencedPointer::decref(%0lx) extra derefence", (ulong) ptr);
+	throw "ReferencedPointer::decref() extra dereference";
       }
       if (ptr && references == 0) {
-	LOGTRACE1("ReferencedPointer(%0lx) free", (ulong) ptr);
+	LOGTRACE1("ReferencedPointer::decref(%0lx) free", (ulong) ptr);
 	// Comment out the following to determine if memory is accessed after being freed
 	///////////// FREE BEGIN
 	* (char *) ptr = 0; // mark as deleted

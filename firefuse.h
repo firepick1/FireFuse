@@ -45,11 +45,24 @@ extern int cameraHeight; // config.json provided camera height
 
 extern FuseDataBuffer* firefuse_allocImage(const char *path, int *pResult);
 extern FuseDataBuffer* firefuse_allocDataBuffer(const char *path, int *pResult, const char *pData, size_t length);
+bool firefuse_isFile(const char *value, const char * suffix);
 extern void firefuse_freeDataBuffer(const char *path, struct fuse_file_info *fi);
 extern const char* firepick_status();
 extern const void* firepick_holes(FuseDataBuffer *pJPG);
 extern int background_worker();
 extern bool is_cv_path(const char * path);
+extern bool is_cnc_path(const char *path);
+int firefuse_getattr_file(const char *path, struct stat *stbuf, size_t length, int perm);
+int firefuse_getattr(const char *path, struct stat *stbuf);
+int firefuse_open(const char *path, struct fuse_file_info *fi);
+int firefuse_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi);
+int firefuse_write(const char *path, const char *buf, size_t bufsize, off_t offset, struct fuse_file_info *fi);
+int firefuse_release(const char *path, struct fuse_file_info *fi);
+int firefuse_main(int argc, char *argv[]);
+
+int firerest_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi);
+int firerest_getattr_default(const char *path, struct stat *stbuf);
+char * firerest_config(const char *path);
 
 static inline int firefuse_readBuffer(char *pDst, const char *pSrc, size_t size, off_t offset, size_t len) {
   size_t sizeOut = size;
@@ -65,12 +78,6 @@ static inline int firefuse_readBuffer(char *pDst, const char *pSrc, size_t size,
   return sizeOut;
 }
 
-enum CVE_Path {
-    CVEPATH_CAMERA_SAVE=1,
-    CVEPATH_CAMERA_LOAD=2,
-    CVEPATH_PROCESS_JSON=4
-};
-
 #define FIREREST_1 "/1"
 #define FIREREST_GRAY "/gray"
 #define FIREREST_BGR "/bgr"
@@ -78,11 +85,13 @@ enum CVE_Path {
 #define FIREREST_CV "/cv"
 #define FIREREST_SYNC "/sync"
 #define FIREREST_CVE "/cve"
+#define FIREREST_CNC "/cnc"
 #define FIREREST_FIRESIGHT_JSON "/firesight.json"
 #define FIREREST_PROPERTIES_JSON "/properties.json"
 #define FIREREST_MONITOR_JPG "/monitor.jpg"
 #define FIREREST_OUTPUT_JPG "/output.jpg"
 #define FIREREST_PROCESS_FIRE "/process.fire"
+#define FIREREST_GCODE_FIRE "/gcode.fire"
 #define FIREREST_SAVED_PNG "/saved.png"
 #define FIREREST_SAVE_FIRE "/save.fire"
 
@@ -97,8 +106,13 @@ int cve_read(const char *path, char *buf, size_t size, off_t offset, struct fuse
 int cve_write(const char *path, const char *buf, size_t bufsize, off_t offset, struct fuse_file_info *fi);
 int cve_release(const char *path, struct fuse_file_info *fi);
 int cve_truncate(const char *path, off_t size);
-
-void firerest_config(const char *pJson);
+int cnc_getattr(const char *path, struct stat *stbuf);
+int cnc_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi);
+int cnc_open(const char *path, struct fuse_file_info *fi);
+int cnc_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi);
+int cnc_write(const char *path, const char *buf, size_t bufsize, off_t offset, struct fuse_file_info *fi);
+int cnc_release(const char *path, struct fuse_file_info *fi);
+int cnc_truncate(const char *path, off_t size);
 
 inline bool verifyOpenR_(const char *path, struct fuse_file_info *fi, int *pResult) {
   switch (fi->flags & 3) {
@@ -144,6 +158,7 @@ int firestep_init();
 void firestep_destroy();
 int firestep_write(const char *buf, size_t bufsize);
 const char * firestep_json();
+int tinyg_hash(const char *value);
 
 #ifdef __cplusplus
 //////////////////////////////////// C++ DECLARATIONS ////////////////////////////////////////////////////////
@@ -155,7 +170,6 @@ const char * firestep_json();
 
 double 	cve_seconds();
 void 	cve_process(const char *path, int *pResult);
-string 	cve_path(const char *pPath);
 class BackgroundWorker;
 
 typedef class CVE {
@@ -167,15 +181,57 @@ typedef class CVE {
   public: LIFOCache<SmartPointer<char> > src_process_fire;
   public: LIFOCache<SmartPointer<char> > src_firesight_json;
   public: LIFOCache<SmartPointer<char> > src_properties_json;
-  public: inline string getName() { return name; }
+  public: static string cve_path(const char *pPath);
   public: CVE(string name);
   public: ~CVE();
+  public: inline string getName() { return name; }
   public: int save(BackgroundWorker *pWorker);
   public: int process(BackgroundWorker *pWorker);
   public: inline bool isColor() { return _isColor; }
 } CVE, *CVEPtr;
 
-class CameraNode {
+typedef class DCE {
+  private: string name;
+  private: int serial_fd;
+  private: string serial_path;
+  private: string serial_stty;
+  private: pthread_t tidReader;
+  public: vector<string> serial_device_config;
+  private: char *jsonBuf;
+  private: int jsonLen;
+  private: int jsonDepth;
+  private: char *inbuf;
+  private: int inbuflen;
+  private: int inbufEmptyLine;
+  private: int serial_send_eol(const char *buf, size_t bufsize);
+  private: int serial_send(const char *data, size_t length);
+  private: int serial_read_char(int c);
+  private: static void * serial_reader(void *arg);
+  private: const char * read_json();
+
+  protected: virtual void send(SmartPointer<char> request, json_t*response);
+
+  // Common data
+  public: LIFOCache<SmartPointer<char> > snk_gcode_fire;
+  public: LIFOCache<SmartPointer<char> > src_gcode_fire;
+  //public: LIFOCache<SmartPointer<char> > src_properties_json;
+  
+  public: static int callSystem(char *cmdbuf);
+  public: static string dce_path(const char *pPath);
+  public: DCE(string name);
+  public: ~DCE();
+  public: void clear();
+  public: int serial_init();
+  public: inline string getName() { return name; }
+  public: int gcode(BackgroundWorker *pWorker);
+  public: inline string getSerialStty() { return serial_stty; }
+  public: inline void setSerialStty(const char * value) { serial_stty = value; }
+  public: inline string getSerialPath() { return serial_path; }
+  public: inline void setSerialPath(const char * value) { serial_path = value; }
+  public: inline vector<string> getSerialDeviceConfig() { return serial_device_config; }
+} DCE, *DCEPtr;
+
+typedef class CameraNode {
   private: double output_seconds; // time of last FireSight pipeline completion
   private: double monitor_duration; // number of seconds to show last output
 
@@ -195,21 +251,25 @@ class CameraNode {
   public: void setOutput(Mat image);
 
   public: void temp_set_output_seconds() { output_seconds = cve_seconds(); }
-};
+} CameraNode;
 
-class BackgroundWorker {
+typedef class BackgroundWorker {
   private: double idle_period; // minimum seconds between idle() execution
   private: std::map<string, CVEPtr> cveMap;
+  private: std::map<string, DCEPtr> dceMap;;
   private: double idle_seconds; // time of last idle() execution
   private: int async_save_fire();
   private: int async_process_fire();
+  private: int async_gcode_fire();
 
   public: CameraNode cameras[1];
 
   public: BackgroundWorker();
   public: ~BackgroundWorker();
-  public: CVE& cve(string path);
+  public: CVE& cve(string path, bool create=FALSE);
+  public: DCE& dce(string path, bool create=FALSE);
   public: vector<string> getCveNames();
+  public: vector<string> getDceNames();
   public: void clear();
   public: void process();
   public: inline void setIdlePeriod(double value) { idle_period = value; }
@@ -219,11 +279,11 @@ class BackgroundWorker {
   public: void processInit();
   public: int processLoop();
   public: void idle();
-};
+} BackgroundWorker;
 
 extern BackgroundWorker worker; // BackgroundWorker singleton background worker
 
-class JSONFileSystem {
+typedef class JSONFileSystem {
   private: std::map<string, json_t *> dirMap;
   private: std::map<string, json_t *> fileMap;
   private: json_t *resolve_file(const char *path);
@@ -240,7 +300,7 @@ class JSONFileSystem {
   public: bool isFile(const char *path);
   public: bool isDirectory(const char *path);
   public: int perms(const char *path);
-};
+} JSONFileSystem;
 
 typedef class FireREST {
   private: pthread_mutex_t processMutex;
@@ -248,14 +308,18 @@ typedef class FireREST {
   private: JSONFileSystem files;
   private: string config_camera(const char* cv_path, json_t *pCamera, const char *pCameraName, json_t *pCveMap);
   private: string config_cv(const char* root_path, json_t *pConfig);
-  private: void create_file(string path, int perm);
+  private: string config_cnc(const char* root_path, json_t *pConfig);
+  private: string config_cnc_serial(string dcePath, json_t *pSerial);
+  private: string config_dce(string dcePath, json_t *pConfig);
+  private: void create_resource(string path, int perm);
 
   public: FireREST();
   public: ~FireREST();
 
   public: int incrementProcessCount();
   public: int decrementProcessCount();
-  public: void configure(const char *pJson);
+  public: char * configure_path(const char *path);
+  public: void configure_json(const char *pJson);
   public: int perms(const char *path) { return files.perms(path); }
   public: bool isDirectory(const char *path) { return files.isDirectory(path); }
   public: bool isFile(const char *path) { return files.isFile(path); }
@@ -264,6 +328,7 @@ typedef class FireREST {
 } FireREST;
 
 extern FireREST firerest;
+
 
 #endif
 //////////////////////////////////// FIREFUSE_H ////////////////////////////////////////////////////////

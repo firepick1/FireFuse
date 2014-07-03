@@ -69,6 +69,22 @@ bool testString(const char * name, const char*expected, const char*actualValue) 
   return true;
 }
 
+bool testString(const char * name, SmartPointer<char> expected, const char*actual) {
+  char *expectedEnd = expected.data() + expected.size();
+  string expectedValue(expected.data(), expectedEnd);
+  if (strncmp(expectedValue.c_str(), actual, expected.size())) {
+    LOGTRACE3("TEST %s expected:\"%s\" actual:\"%s\"", name, expectedValue.c_str(), actual);
+    return false;
+  }
+  for (const char *s = actual + expected.size(); *s; s++) {
+    if (*s != ' ') {
+      LOGTRACE2("TEST %s expected:trailing-blanks actual:\"%s\"", name, s);
+      return false;
+    }
+  }
+  return true;
+}
+
 bool testString(const char * name, const char*expected, SmartPointer<char> actual) {
   char *actualEnd = actual.data() + actual.size();
   string actualValue(actual.data(), actualEnd);
@@ -85,13 +101,13 @@ bool testString(const char * name, const char*expected, SmartPointer<char> actua
   return true;
 }
 
-bool testFile(const char * title, const char * path, SmartPointer<char> &contents, const char *pWriteData = NULL) {
-  int perm = pWriteData ? 0666 : 0444;
+bool testFile(const char * title, const char * path, SmartPointer<char> &contents, const char *pWriteData=NULL, const char *pWriteResult=NULL) {
   struct fuse_file_info file_info;
   struct stat file_stat;
   int rc;
 
-  rc = cve_getattr(path, &file_stat);
+  //////////////// TEST READ /////////
+  rc = firefuse_getattr(path, &file_stat);
   LOGINFO4("TEST %s st_size:%ld perm:%o contents.size():%ld", title, file_stat.st_size, file_stat.st_mode & 0777, contents.size());
   assert(rc == 0);
   assert(file_stat.st_uid == getuid());
@@ -100,38 +116,69 @@ bool testFile(const char * title, const char * path, SmartPointer<char> &content
   assert(file_stat.st_atime == file_stat.st_ctime);
   assert(file_stat.st_atime);
   assert(file_stat.st_nlink == 1);
-  assert(file_stat.st_mode == (S_IFREG | perm));
-  assert(file_stat.st_size == contents.size());
+  assert(file_stat.st_mode==(S_IFREG|0666) || !pWriteData && file_stat.st_mode==(S_IFREG|0444));
   memset(&file_info, 0, sizeof(fuse_file_info));
   file_info.flags = O_RDONLY;
-  rc = cve_open(path, &file_info);
+  rc = firefuse_open(path, &file_info);
+  LOGINFO3("TEST %s firefuse_open(%s,O_RDONLY) -> %d", title, path, rc);
+  assert(rc == 0);
+
+  size_t bytes = file_stat.st_size+1;
+  char * readbuf = (char *) malloc(bytes);
+  assert(readbuf);
+  memset(readbuf, '!', bytes);
+  LOGTRACE2("readbuf[%ld] %c", bytes-1, readbuf[bytes-1]);
+  assert('!' == readbuf[bytes-1]);
+  rc = firefuse_read(path, readbuf, bytes-1, 0, &file_info);
+  assert('!' == readbuf[bytes-1]);
+  readbuf[bytes-1] = 0;
+  assert(testString("testFile()",  contents, readbuf));
+  assert(file_stat.st_size == contents.size());
+  free(readbuf);
+  rc = firefuse_release(path, &file_info);
   assert(rc == 0);
 
   if (pWriteData) {
     char buf[101];
     // TEST WRITE
+    memset(&file_info, 0, sizeof(fuse_file_info));
+    file_info.flags = O_WRONLY;
+    rc = firefuse_open(path, &file_info);
+    LOGINFO3("TEST %s firefuse_open(%s,O_WRONLY) -> %d", title, path, rc);
+    assert(rc == 0);
+    memset(buf, 0, 101);
     size_t len = strlen(pWriteData);
     assert(len < 100);	// test limitation
-    rc = cve_write(path, pWriteData, len, 0, &file_info);
+    rc = firefuse_write(path, pWriteData, len, 0, &file_info);
     assert(rc == len);
-    rc = cve_release(path, &file_info);
+    rc = firefuse_release(path, &file_info);
     assert(rc == 0);
 
     // VERIFY WRITE
-    file_info.flags = O_WRONLY;
-    rc = cve_open(path, &file_info);
+    memset(&file_info, 0, sizeof(fuse_file_info));
+    file_info.flags = O_RDONLY;
+    rc = firefuse_open(path, &file_info);
+    LOGINFO3("TEST %s firefuse_open(%s,O_RDONLY) -> %d", title, path, rc);
     assert(rc == 0);
     memset(buf, 0, 101);
-    rc = cve_getattr(path, &file_stat);
+    rc = firefuse_getattr(path, &file_stat);
     assert(rc == 0);
-    assert(file_stat.st_size == len);
-    rc = cve_read(path, buf, len, 0, &file_info);
-    assert(rc == len);
-    assert(0 == strcmp(buf, pWriteData));
+    if (pWriteResult) {
+      rc = firefuse_read(path, buf, strlen(pWriteResult), 0, &file_info);
+      LOGTRACE3("testFile(%s) verifyWrite expected:%s actual:%s", path, pWriteResult, buf);
+      assert(0 == strcmp(buf, pWriteResult));
+      assert(rc == strlen(pWriteResult));
+      assert(file_stat.st_size == strlen(pWriteResult));
+    } else {
+      assert(file_stat.st_size == len);
+      rc = firefuse_read(path, buf, len, 0, &file_info);
+      assert(rc == len);
+      assert(0 == strcmp(buf, pWriteData));
+    }
+    rc = firefuse_release(path, &file_info);
+    assert(rc == 0);
   }
 
-  rc = cve_release(path, &file_info);
-  assert(rc == 0);
 
 
   return true;
@@ -451,7 +498,7 @@ int testCamera() {
   assert(!worker.cameras[0].src_monitor_jpg.isFresh());
   assert(!worker.cameras[0].src_output_jpg.isFresh());
 
-  assert(testProcess(0200007));
+  assert(testProcess(02007));
   assert(!worker.cameras[0].src_camera_jpg.isFresh());
   assert(worker.cameras[0].src_camera_mat_gray.isFresh());
   assert(worker.cameras[0].src_camera_mat_bgr.isFresh());
@@ -482,7 +529,7 @@ int testCamera() {
   cout << "idle: " << worker.getIdlePeriod() << endl;
   assert(0.1d == worker.getIdlePeriod());
   usleep(100000);
-  assert(testProcess(0400000));
+  assert(testProcess(04000));
   assert(worker.cameras[0].src_camera_jpg.isFresh());
   assert(worker.cameras[0].src_camera_mat_gray.isFresh());
   assert(worker.cameras[0].src_camera_mat_bgr.isFresh());
@@ -492,7 +539,7 @@ int testCamera() {
   assert_headcam(jpg, 1);
   worker.setIdlePeriod(0);
 
-  assert(testProcess(0200000));
+  assert(testProcess(02000));
   assert(!worker.cameras[0].src_camera_jpg.isFresh());
   assert(worker.cameras[0].src_camera_mat_gray.isFresh());
   assert(worker.cameras[0].src_camera_mat_bgr.isFresh());
@@ -532,35 +579,28 @@ int testConfig() {
   cout << "testConfig() --------------------------" << endl;
   worker.clear();
   worker.processInit();
-  const char *config_json = \
-  "{ \"FireREST\":{\"title\":\"Raspberry Pi FireFUSE\",\"provider\":\"FireFUSE\", \"version\":{\"major\":0, \"minor\":6, \"patch\":0}},\n" \
-    "\"cv\":{\n" \
-      "\"cve_map\":{\n" \
-	"\"one\":{ \"firesight\": [ {\"op\":\"putText\", \"text\":\"one\"} ], \"properties\": { \"caps\":\"ONE\" } },\n" \
-	"\"two\":{ \"firesight\": [ {\"op\":\"putText\", \"text\":\"two\"} ], \"properties\": { \"caps\":\"TWO\" } }\n" \
-      "},\n" \
-      "\"camera_map\":{\n" \
-	"\"1\":{ \
-	  \"width\":400,\
-	  \"height\":400,\
-	  \"profile_map\":{ \"gray\":{ \"cve_names\":[ \"one\", \"two\" ] }, \"bgr\":{ \"cve_names\":[ \"one\", \"two\" ] }}}\n" \
-      "}\n" \
-    "}\n" \
-  "}\n"; 
 
   assert(testString("TEST fuse_root", "/dev/firefuse", fuse_root));
 
   /////////// config test
-  firerest_config(config_json);
+  char * configJson = firerest.configure_path("test/testconfig.json");
+  assert(configJson);
+  free(configJson);
   vector<string> cveNames = worker.getCveNames();
   assert(4 == cveNames.size());
   for (int i = 0; i < 4; i++) {
-    LOGINFO2("TEST config_json cveNames[%d] = %s", i, cveNames[i].c_str());
+    LOGINFO2("TEST configure_path cveNames[%d] = %s", i, cveNames[i].c_str());
   }
   assert(0==strcmp("/cv/1/bgr/cve/one", cveNames[0].c_str()));
   assert(0==strcmp("/cv/1/bgr/cve/two", cveNames[1].c_str()));
   assert(0==strcmp("/cv/1/gray/cve/one", cveNames[2].c_str()));
   assert(0==strcmp("/cv/1/gray/cve/two", cveNames[3].c_str()));
+  string caughtex;
+  try { worker.cve("/cv/1/gray/cve/one"); } catch (string ex) { caughtex = ex; }
+  assert(caughtex.empty());
+  try { worker.dce("/cnc/tinyg"); } catch (string ex) { caughtex = ex; }
+  assert(caughtex.empty());
+  assert(testString("TEST testConfig()", "mock", worker.dce("/cnc/tinyg").getSerialPath().c_str()));
   SmartPointer<char> one_json(worker.cve("/cv/1/gray/cve/one").src_firesight_json.get());
   assert(testString("firesight.json GET","[{\"op\":\"putText\",\"text\":\"one\"}]", one_json));
   assert(400 == cameraWidth);
@@ -577,10 +617,12 @@ int testConfig() {
   assert(&worker.cve(twoPath) == &worker.cve(syncTwo.c_str()));
 
   assert(is_cv_path("/dev/firefuse/cv"));
-  assert(is_cv_path("/dev/firefuse/sync"));
+  assert(!is_cv_path("/dev/firefuse/sync"));
   assert(is_cv_path("/cv"));
-  assert(is_cv_path("/sync"));
+  assert(!is_cv_path("/sync"));
   assert(is_cv_path("/sync/cv"));
+  assert(!is_cv_path("/cnc"));
+  assert(!is_cv_path("/sync/cnc"));
   assert(!firerest.isFile("/"));
   assert(firerest.isDirectory("/"));
   assert(!firerest.isFile("/cv"));
@@ -593,11 +635,15 @@ int testConfig() {
   assert(!firerest.isDirectory("/cv/1/monitor.jpg"));
   assert(!firerest.isFile("/cv/1/bgr/cve/one"));
   assert(firerest.isDirectory("/cv/1/bgr/cve/one"));
+  assert(!firerest.isFile("/cnc/tinyg"));
+  assert(firerest.isDirectory("/cnc/tinyg"));
+  assert(firerest.isFile("/cnc/tinyg/gcode.fire"));
+  assert(!firerest.isDirectory("/cnc/tinyg/gcode.fire"));
 
   cout << "testConfig() PASS" << endl;
   cout << endl;
   return 0;
-}
+} // testConfig()
 
 int testCve() {
   char buf[100];
@@ -606,19 +652,26 @@ int testCve() {
   worker.clear();
   worker.processInit();
 
-  //////////// cve_path
+  //////////// CVE::cve_path
   const char *expectedPath = "/cv/1/gray/cve/two";
-  string sResult = cve_path("abc/cv/1/gray/cve/two/properties.json");
-  LOGINFO1("TEST cve_path(abc/cv/1/gray/cve/two/properties.json) -> %s", sResult.c_str());
+  string sResult = CVE::cve_path("abc/cv/1/gray/cve/two/properties.json");
+  LOGINFO1("TEST CVE::cve_path(abc/cv/1/gray/cve/two/properties.json) -> %s", sResult.c_str());
   assert(0 == strcmp(expectedPath, sResult.c_str()));
-  sResult = cve_path(expectedPath);
-  LOGINFO1("TEST cve_path(/cv/1/gray/cve/two) -> %s", sResult.c_str());
+  sResult = CVE::cve_path(expectedPath);
+  LOGINFO1("TEST CVE::cve_path(/cv/1/gray/cve/two) -> %s", sResult.c_str());
   assert(0 == strcmp(expectedPath, sResult.c_str()));
   
   //////////// cveNames
   vector<string> cveNames = worker.getCveNames();
   assert(0 == cveNames.size());
   string firesightPath = "/cv/1/gray/cve/calc-offset/firesight.json";
+  string caughtex;
+  LOGTRACE("TEST cve ERROR");
+  try { worker.cve(firesightPath); } catch(string ex) { caughtex = ex; }
+  assert(!caughtex.empty());
+  caughtex = string();
+  try { worker.cve(firesightPath, TRUE); } catch(string ex) { caughtex = ex; }
+  assert(caughtex.empty());
   CVE& cve = worker.cve(firesightPath);
   cveNames = worker.getCveNames();
   assert(1 == cveNames.size());
@@ -651,7 +704,7 @@ int testCve() {
   assert(testString("save.fire GET", "{}",save_fire));
   assert(testNumber((size_t) 0, worker.cve(savePath).src_saved_png.peek().size()));
   assert(!worker.cve(savePath).src_save_fire.isFresh());
-  /*ASYNC*/ assert(testProcess(0100100)); // monitor + save
+  /*ASYNC*/ assert(testProcess(01020)); // monitor + save
   assert(worker.cve(savePath).src_save_fire.isFresh());
   assert(testNumber((size_t) 43249, worker.cameras[0].src_monitor_jpg.peek().size()));
   save_fire = worker.cve(savePath).src_save_fire.peek();
@@ -677,7 +730,7 @@ int testCve() {
   assert(testNumber((size_t)43249, worker.cameras[0].src_output_jpg.peek().size()));
   assert(testString("process.fire GET", "{}",worker.cve(processPath).src_process_fire.peek()));
   assert(!worker.cve(processPath).src_process_fire.isFresh());
-  /*ASYNC*/assert(testProcess(0100010)); // monitor + process + camera + mat_gray
+  /*ASYNC*/assert(testProcess(01010)); // monitor + process + camera + mat_gray
   assert(testNumber((size_t) 40734, worker.cameras[0].src_output_jpg.peek().size()));
   assert(testNumber((size_t) 40734, worker.cameras[0].src_monitor_jpg.peek().size()));
   /*ASYNC*/assert(testProcess(05)); // monitor + camera + mat_gray
@@ -688,7 +741,7 @@ int testCve() {
   cout << "testCve() PASS" << endl;
   cout << endl;
   return 0;
-}
+} // testCve
 
 int testFireREST() {
   cout << "testFireREST() --------------------" << endl;
@@ -779,6 +832,105 @@ int testFireREST() {
   return 0;
 }
 
+int testCnc() {
+  try {
+    char buf[100];
+    int rc;
+
+    cout << "testCnc() --------------------------" << endl;
+    worker.clear();
+    worker.processInit();
+
+    //////////// DCE::dce_path
+    const char *expectedPath = "/cnc/tinyg";
+    string sResult = DCE::dce_path("a/b/c/cnc/tinyg/gcode.fire");
+    assert(testString("TEST dce_path(1)", expectedPath, sResult.c_str()));
+    sResult = DCE::dce_path(expectedPath);
+    assert(testString("TEST dce_path(2)", expectedPath, sResult.c_str()));
+    assert(is_cnc_path(expectedPath));
+    assert(!is_cnc_path("/cv"));
+    assert(!is_cnc_path("/sync/cv"));
+    assert(!is_cnc_path("/"));
+    assert(!is_cnc_path("/a"));
+    assert(!is_cnc_path("/a/"));
+    assert(!is_cnc_path("/a/cn"));
+    assert(is_cnc_path("/a/cnc"));
+    assert(is_cnc_path("/a/cnc/"));
+    assert(is_cnc_path("/a/cnc/x"));
+    assert(is_cnc_path("/a/cnc/x/y/z"));
+    
+    //////////// dceNames
+    vector<string> dceNames = worker.getDceNames();
+    assert(0 == dceNames.size());
+    string gcodePath = "/cnc/tinyg/gcode.fire";
+    string caughtex;
+    LOGTRACE("TEST cnc ERROR");
+    try { worker.dce(gcodePath); } catch (string e) { caughtex = e; }
+    assert(!caughtex.empty());
+    caughtex = string();
+    try { worker.dce(gcodePath, TRUE); } catch (string e) { caughtex = e; }
+    assert(caughtex.empty());
+    DCE& dce = worker.dce(gcodePath);
+    dceNames = worker.getDceNames();
+    assert(1 == dceNames.size());
+    cout << "dceNames[0]: " << dceNames[0] << endl;
+    assert(testString("TEST dce_path(3)", "/cnc/tinyg", dceNames[0].c_str()));
+    assert(testString("TEST dce_path(4)", dceNames[0].c_str(), dce.getName().c_str()));
+
+    ///////////// gcode.fire
+    char * configJson = firerest.configure_path("test/testconfig-cnc.json");
+    assert(configJson);
+    free(configJson);
+    worker.dce(gcodePath).clear();
+    assert(!worker.dce(gcodePath).snk_gcode_fire.isFresh());
+    assert(worker.dce(gcodePath).src_gcode_fire.isFresh());
+    assert(testString("TEST gcode_fire.clear()", "{}", worker.dce(gcodePath).src_gcode_fire.get()));
+    string g0x1y2z3("G0X1Y2Z3");
+    worker.dce(gcodePath).snk_gcode_fire.post(SmartPointer<char>((char *)g0x1y2z3.c_str(), g0x1y2z3.size()));
+    assert(worker.dce(gcodePath).snk_gcode_fire.isFresh());
+    assert(!worker.dce(gcodePath).src_gcode_fire.isFresh());
+    /*ASYNC*/assert(testProcess(0100)); // gcode
+    assert(!worker.dce(gcodePath).snk_gcode_fire.isFresh());
+    assert(worker.dce(gcodePath).src_gcode_fire.isFresh());
+    const char *jsonResult = "{\"status\":\"DONE\",\"gcode\":\"G0X1Y2Z3\",\"response\":\"Mock response\"}";
+    assert(testString("TEST gcode_fire(G0X1Y2Z3)", jsonResult, worker.dce(gcodePath).src_gcode_fire.peek()));
+    SmartPointer<char> sp_gcode((char*)jsonResult, strlen(jsonResult));
+    vector<string> dc = worker.dce(gcodePath).getSerialDeviceConfig();
+    assert(testNumber((size_t) 2, dc.size()));
+    assert(testString("TEST gcode.fire serialDeviceConfig", "{\"jv\": 5, \"sv\": 2, \"tv\": 0}", dc[0].c_str()));
+    assert(testString("TEST gcode.fire serialDeviceConfig", "hello", dc[1].c_str()));
+    
+    //////////////// test write
+    worker.dce(gcodePath).snk_gcode_fire.post(SmartPointer<char>((char *)g0x1y2z3.c_str(), g0x1y2z3.size()));
+    assert(worker.dce(gcodePath).snk_gcode_fire.isFresh());
+    struct fuse_file_info file_info;
+    memset(&file_info, 0, sizeof(fuse_file_info));
+    file_info.flags = O_WRONLY;
+    rc = firefuse_open(gcodePath.c_str(), &file_info);
+    LOGINFO2("firefuse_open(%s,O_WRONLY) -> %d", gcodePath.c_str(), rc);
+    assert(rc == -EAGAIN);
+    assert(worker.dce(gcodePath).snk_gcode_fire.isFresh());
+    worker.dce(gcodePath).snk_gcode_fire.get();
+    assert(!worker.dce(gcodePath).snk_gcode_fire.isFresh());
+    const char *jsonResult2 = "{\"status\":\"ACTIVE\",\"gcode\":\"G0X3Y2Z1\"}";
+    testFile("gcode.fire", gcodePath.c_str(), sp_gcode, "G0X3Y2Z1", jsonResult2);
+    const char *jsonResult3 = "{\"status\":\"DONE\",\"gcode\":\"G0X3Y2Z1\",\"response\":\"Mock response\"}";
+    SmartPointer<char> jsonDone((char*) jsonResult3, strlen(jsonResult3));
+    /*ASYNC*/assert(testProcess(0100)); // gcode
+    testFile("gcode.fire", gcodePath.c_str(), jsonDone);
+
+    ////////////// TINYG
+    const char *s = "{\"r\":{\"f\":[1,60,5,[8401]}}"; 
+    assert(testNumber(8401L, (long) tinyg_hash(s)));
+
+    cout << "testCnc() PASS" << endl;
+    cout << endl;
+    return 0;
+  } catch (...) {
+    cout << "testCnc() FAILED" << endl;
+  }
+}
+
 int testSuite() {
   worker.setIdlePeriod(0);
   firelog_level(FIRELOG_TRACE);
@@ -791,8 +943,10 @@ int testSuite() {
       testSmartPointer_CopyData()==0 && 
       testLIFOCache()==0 &&
       testCve()==0 &&
+      testCnc()==0 &&
       TRUE) {
       cout << "ALL TESTS PASS!!!" << endl;
+
       return 0;
     } else {
       cout << "*** TEST(S) FAILED ***" << endl;

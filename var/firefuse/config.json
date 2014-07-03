@@ -1,4 +1,15 @@
 { "FireREST":{"title":"Raspberry Pi FireFUSE","provider":"FireFUSE", "version":{"major":0, "minor":6, "patch":0}},
+  "background-worker":{"idle-period":3000},
+  "cnc":{ 
+    "tinyg":{ 
+      "protocol":"gcode",
+      "serial": { "path":"/dev/ttyUSB0", "stty":"cs8 115200" },
+      "device-config": [
+	{"jv":1,"sv":0,"tv":0,"ee":0},
+	{"y":{"am":1,"vm":35000,"fr":40000,"tm":400,"jm":20000000000,"jh":40000000000,"jd":0.050,"sn":3,"sx":0,"sv":3000,"lv":1000,"lb":2,"zb":1}}
+      ]
+    }
+  },
   "cv":{
     "cve_map":{
       "calc-offset":{

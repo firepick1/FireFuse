@@ -50,24 +50,7 @@ static void * firefuse_init(struct fuse_conn_info *conn) {
   LOGINFO4("FireFUSE %d.%d.%d fuse_root:%s", FireFUSE_VERSION_MAJOR, FireFUSE_VERSION_MINOR, FireFUSE_VERSION_PATCH, fuse_root);
   LOGINFO2("PID%d UID%d", (int) getpid(), (int)getuid());
 
-  LOGINFO1("Loading FireREST configuration: %s", CONFIG_JSON);
-  FILE *fConfig = fopen(CONFIG_JSON, "r");
-  if (fConfig == 0) {
-    LOGERROR1("FATAL: Could not open configuration file: %s", CONFIG_JSON);
-    exit(-ENOENT);
-  }
-  fseek(fConfig, 0, SEEK_END);
-  size_t length = ftell(fConfig);
-  fseek(fConfig, 0, SEEK_SET);
-  pConfigJson = malloc(length + 1);
-  size_t bytesRead = fread(pConfigJson, 1, length, fConfig);
-  if (bytesRead != length) {
-    LOGERROR2("FATAL: Could not read configuration file: expected:%ldB actual:%ldB", length, bytesRead);
-    exit(-EIO);
-  }
-  pConfigJson[length] = 0;
-  fclose(fConfig);
-  firerest_config(pConfigJson);
+  pConfigJson = firerest_config(CONFIG_JSON);
 
   memset(echoBuf, 0, sizeof(echoBuf));
 
@@ -78,7 +61,7 @@ static void * firefuse_init(struct fuse_conn_info *conn) {
 
   LOGRC(rc, "pthread_create(&tidCamera...) -> ", pthread_create(&tidCamera, NULL, &firefuse_cameraThread, NULL));
 
-  firestep_init();
+  //firestep_init();
 
   return NULL; /* init */
 }
@@ -93,9 +76,12 @@ static void firefuse_destroy(void * initData) {
   }
 }
 
-static int firefuse_getattr(const char *path, struct stat *stbuf) {
+int firefuse_getattr(const char *path, struct stat *stbuf) {
   if (is_cv_path(path)) {
     return cve_getattr(path, stbuf);
+  }
+  if (is_cnc_path(path)) {
+    return cnc_getattr(path, stbuf);
   }
 
   int res = 0;
@@ -108,6 +94,10 @@ static int firefuse_getattr(const char *path, struct stat *stbuf) {
   stbuf->st_atime = stbuf->st_mtime = stbuf->st_ctime = time(NULL);
 
   if (strcmp(path, "/") == 0) {
+    stbuf->st_mode = S_IFDIR | 0755;
+    stbuf->st_nlink = 2;
+    stbuf->st_nlink = 1; // Safe default value
+  } else if (strcmp(path, FIREREST_SYNC) == 0) {
     stbuf->st_mode = S_IFDIR | 0755;
     stbuf->st_nlink = 2;
     stbuf->st_nlink = 1; // Safe default value
@@ -155,8 +145,11 @@ static int firefuse_getattr(const char *path, struct stat *stbuf) {
 static int firefuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
        off_t offset, struct fuse_file_info *fi)
 {
-  if (is_cv_path(path)) {
-    return cve_readdir(path, buf, filler, offset, fi);
+  LOGTRACE1("firefuse_readdir(%s)", path);
+  if (is_cv_path(path) ||
+      is_cnc_path(path) ||
+      0==strcmp(path, FIREREST_SYNC)) {
+    return firerest_readdir(path, buf, filler, offset, fi);
   }
 
   (void) offset;
@@ -174,6 +167,7 @@ static int firefuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
     filler(buf, ECHO_PATH + 1, NULL, 0);
     filler(buf, FIRESTEP_PATH + 1, NULL, 0);
     filler(buf, FIREREST_CV + 1, NULL, 0);
+    filler(buf, FIREREST_CNC + 1, NULL, 0);
     filler(buf, FIREREST_SYNC + 1, NULL, 0);
   } else {
     LOGERROR1("firefuse_readdir(%s) Unknown path", path);
@@ -183,9 +177,13 @@ static int firefuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
   return 0;
 }
 
-static int firefuse_open(const char *path, struct fuse_file_info *fi) {
+int firefuse_open(const char *path, struct fuse_file_info *fi) {
+  LOGTRACE1("firefuse_open(%s)", path);
   if (is_cv_path(path)) {
     return cve_open(path, fi);
+  }
+  if (is_cnc_path(path)) {
+    return cnc_open(path, fi);
   }
 
   int result = 0;
@@ -237,12 +235,15 @@ void firefuse_freeDataBuffer(const char *path, struct fuse_file_info *fi) {
   }
 }
 
-static int firefuse_release(const char *path, struct fuse_file_info *fi) {
+int firefuse_release(const char *path, struct fuse_file_info *fi) {
+  LOGTRACE1("firefuse_release(%s)", path);
   if (is_cv_path(path)) {
     return cve_release(path, fi);
   }
+  if (is_cnc_path(path)) {
+    return cnc_release(path, fi);
+  }
 
-  LOGTRACE1("firefuse_release %s", path);
   if (strcmp(path, STATUS_PATH) == 0) {
     // NOP
   } else if (strcmp(path, CONFIG_PATH) == 0) {
@@ -259,9 +260,17 @@ static int firefuse_release(const char *path, struct fuse_file_info *fi) {
   return 0;
 }
 
-static int firefuse_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
+int firefuse_read(const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
+  LOGTRACE1("firefuse_read(%s)", path);
   if (is_cv_path(path)) {
     int res = cve_read(path, buf, size, offset, fi);
+    if (res > 0) {
+      bytes_read += res;
+    }
+    return res;
+  }
+  if (is_cnc_path(path)) {
+    int res = cnc_read(path, buf, size, offset, fi);
     if (res > 0) {
       bytes_read += res;
     }
@@ -298,7 +307,8 @@ static int firefuse_read(const char *path, char *buf, size_t size, off_t offset,
   return sizeOut;
 }
 
-static int firefuse_write(const char *path, const char *buf, size_t bufsize, off_t offset, struct fuse_file_info *fi) {
+int firefuse_write(const char *path, const char *buf, size_t bufsize, off_t offset, struct fuse_file_info *fi) {
+  LOGTRACE1("firefuse_write(%s)", path);
   if (offset) {
     LOGERROR2("firefuse_write %s -> non-zero offset:%ld", path, (long) offset);
     return EINVAL;
@@ -309,6 +319,8 @@ static int firefuse_write(const char *path, const char *buf, size_t bufsize, off
   }
   if (is_cv_path(path)) {
     return cve_write(path, buf, bufsize, offset, fi);
+  } else if (is_cnc_path(path)) {
+    return cnc_write(path, buf, bufsize, offset, fi);
   } else if (strcmp(path, ECHO_PATH) == 0) {
     if (bufsize > MAX_ECHO) {
       sprintf(echoBuf, "firefuse_write %s -> string too long (%ld > %d bytes)", path, bufsize, MAX_ECHO);
@@ -353,10 +365,13 @@ static int firefuse_write(const char *path, const char *buf, size_t bufsize, off
   return bufsize;
 }
 
-static int firefuse_truncate(const char *path, off_t size)
-{
+static int firefuse_truncate(const char *path, off_t size) {
+  LOGTRACE1("firefuse_truncate(%s)", path);
   if (is_cv_path(path)) {
     return cve_truncate(path, size);
+  }
+  if (is_cnc_path(path)) {
+    return cnc_truncate(path, size);
   }
 
   (void) size;
@@ -369,12 +384,32 @@ static int firefuse_truncate(const char *path, off_t size)
   } else if (strcmp(path, FIRESTEP_PATH) == 0) {
     // NOP
   } else {
+    LOGERROR1("firefuse_truncate(%s) -> ENOENT", path);
     return -ENOENT;
   }
   LOGDEBUG1("firefuse_truncate %s", path);
   return 0;
 }
 
+bool firefuse_isFile(const char *value, const char * suffix) {
+  int suffixLen = strlen(suffix);
+  int valueLen = strlen(value);
+  if (suffixLen < valueLen) {
+    return strcmp(value + valueLen - suffixLen, suffix) == 0;
+  }
+  return FALSE;
+}
+
+int firefuse_getattr_file(const char *path, struct stat *stbuf, size_t length, int perm) {
+  memset(stbuf, 0, sizeof(struct stat));
+  stbuf->st_uid = getuid();
+  stbuf->st_gid = getgid();
+  stbuf->st_atime = stbuf->st_mtime = stbuf->st_ctime = time(NULL);
+  stbuf->st_nlink = 1;
+  stbuf->st_mode = S_IFREG | perm;
+  stbuf->st_size = length;
+  return 0;
+}
 
 static struct fuse_operations firefuse_oper = {
   .init    = firefuse_init,
@@ -388,7 +423,7 @@ static struct fuse_operations firefuse_oper = {
   .write    = firefuse_write,
 };
 
-int main(int argc, char *argv[]) {
+int firefuse_main(int argc, char *argv[]) {
   fuse_root = argv[argc-1];
   return fuse_main(argc, argv, &firefuse_oper, NULL);
 }
