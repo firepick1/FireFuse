@@ -1,4 +1,7 @@
 /dev/firefuse/
+/dev/firefuse/cnc/
+/dev/firefuse/cnc/tinyg/
+/dev/firefuse/cnc/tinyg/gcode.fire
 /dev/firefuse/config.json
 /dev/firefuse/cv/
 /dev/firefuse/cv/1/
@@ -39,6 +42,9 @@
 /dev/firefuse/holes
 /dev/firefuse/status
 /dev/firefuse/sync/
+/dev/firefuse/sync/cnc/
+/dev/firefuse/sync/cnc/tinyg/
+/dev/firefuse/sync/cnc/tinyg/gcode.fire
 /dev/firefuse/sync/cv/
 /dev/firefuse/sync/cv/1/
 /dev/firefuse/sync/cv/1/bgr/
