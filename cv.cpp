@@ -192,7 +192,7 @@ int CVE::process(BackgroundWorker *pWorker) {
 	const char * key;
 	json_t *pValue;
 	json_object_foreach(pProperties, key, pValue) {
-	  char *valueStr = json_dumps(pValue, JSON_PRESERVE_ORDER|JSON_COMPACT|JSON_INDENT(0));
+	  char *valueStr = json_dumps(pValue, JSON_PRESERVE_ORDER|JSON_COMPACT|JSON_INDENT(0)|JSON_ENCODE_ANY);
 	  LOGTRACE3("CVE::process(%s) argMap[%s]=\"%s\"", path, key, valueStr);
 	  argMap[key] = valueStr;
 	}
@@ -204,6 +204,7 @@ int CVE::process(BackgroundWorker *pWorker) {
     string savedPath(fuse_root);
     savedPath += name;
     savedPath += FIREREST_SAVED_PNG;
+    LOGTRACE3("CVE::process(%s) argMap[%s]=\"%s\"", path, "saved", savedPath.c_str());
     argMap["saved"] = savedPath.c_str();
 
     LOGTRACE1("cve_process(%s) process begin", path);
