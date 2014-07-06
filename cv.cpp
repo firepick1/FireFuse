@@ -174,6 +174,7 @@ int CVE::process(BackgroundWorker *pWorker) {
   SmartPointer<char> pipelineJson(src_firesight_json.get());
   char *pModelStr = NULL;
   SmartPointer<char> jsonResult;
+  vector<String> args;
   try {
     Pipeline pipeline(pipelineJson.data(), Pipeline::JSON);
     Mat image = _isColor ?
@@ -192,7 +193,16 @@ int CVE::process(BackgroundWorker *pWorker) {
 	const char * key;
 	json_t *pValue;
 	json_object_foreach(pProperties, key, pValue) {
-	  char *valueStr = json_dumps(pValue, JSON_PRESERVE_ORDER|JSON_COMPACT|JSON_INDENT(0)|JSON_ENCODE_ANY);
+	  char *valueStr = "(unknown)";
+	  if (json_is_string(pValue)) {
+	    valueStr = json_string_value(pValue);
+	  } else {
+	    char *s = json_dumps(pValue, JSON_PRESERVE_ORDER|JSON_COMPACT|JSON_INDENT(0)|JSON_ENCODE_ANY);
+	    string str(s);
+	    args.push_back(str); // garbage collection list
+	    valStr = str.c_str();
+	    free(s);
+	  }
 	  LOGTRACE3("CVE::process(%s) argMap[%s]=\"%s\"", path, key, valueStr);
 	  argMap[key] = valueStr;
 	}
