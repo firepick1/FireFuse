@@ -193,6 +193,7 @@ int CVE::process(BackgroundWorker *pWorker) {
 	json_t *pValue;
 	json_object_foreach(pProperties, key, pValue) {
 	  char *valueStr = json_dumps(pValue, JSON_PRESERVE_ORDER|JSON_COMPACT|JSON_INDENT(0));
+	  LOGTRACE3("CVE::process(%s) argMap[%s]=\"%s\"", path, key, valueStr);
 	  argMap[key] = valueStr;
 	}
       } else {
