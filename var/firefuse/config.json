@@ -1,15 +1,4 @@
-{ "FireREST":{"title":"Raspberry Pi FireFUSE","provider":"FireFUSE", "version":{"major":0, "minor":6, "patch":0}},
-  "background-worker":{"idle-period":3000},
-  "cnc":{ 
-    "tinyg":{ 
-      "protocol":"gcode",
-      "serial": { "path":"/dev/ttyUSB0", "stty":"cs8 115200" },
-      "device-config": [
-	{"jv":1,"sv":0,"tv":0,"ee":0},
-	{"y":{"am":1,"vm":35000,"fr":40000,"tm":400,"jm":20000000000,"jh":40000000000,"jd":0.050,"sn":3,"sx":0,"sv":3000,"lv":1000,"lb":2,"zb":1}}
-      ]
-    }
-  },
+{ "FireREST":{"title":"FireREST Reference Service","provider":"Demo", "version":{"major":0, "minor":9, "patch":0} },
   "cv":{
     "cve_map":{
       "calc-offset":{
@@ -19,6 +8,13 @@
 	  {"op":"drawRects", "model":"model", "color":"{{rectColor}}"}
 	],
 	"properties": { "roi":[350,50,100,100], "rectColor":[32,255,32], "xtol":32, "ytol":32, "threshold":0.7 }
+      },
+      "find-crash-dummy":{ 
+        "firesight": [
+	  {"op":"matchTemplate", "name":"fiducial", "corr":"{{corr}}", "template":"www/img/{{img}}"},
+	  {"op":"drawRects", "model":"fiducial", "color":"{{rectColor}}"}
+	],
+	"properties": { "corr":0.95, "rectColor":[32,255,32], "img":"bwwb.png" }
       },
       "locate-part":{
 	"firesight": [
@@ -37,9 +33,24 @@
         "width":800,
 	"height":200,
 	"profile_map":{
-	  "gray":{ "cve_names":[ "calc-offset", "locate-part" ] },
-	  "bgr":{ "cve_names":[ "calc-offset", "locate-part" ] }
+	  "gray":{ "cve_names":[ "calc-offset", "find-crash-dummy", "locate-part" ] },
+	  "bgr":{ "cve_names":[ "calc-offset", "find-crash-dummy", "locate-part" ] }
 	}
+      }
+    }
+  },
+  "cnc":{ 
+    "tinyg":{ 
+      "protocol":"gcode",
+      "axes":[
+	{"id":"X", "value":0, "jog":1, "resolution":0.001, "min":0, "max":300, "units":"mm", "steps":20, "enabled":true},
+	{"id":"Y", "value":0, "jog":1, "resolution":0.001, "min":0, "max":300, "units":"mm", "steps":20, "enabled":true},
+	{"id":"Z", "value":0, "jog":1, "resolution":0.001, "min":0, "max":300, "units":"mm", "steps":20, "enabled":true},
+	{"id":"A", "value":0, "jog":1, "resolution":0.001, "units":"degrees", "steps":10, "enabled":true}
+      ],
+      "serial": {
+        "path":"/dev/ttyUSB0",
+	"stty":"cs8 115200"
       }
     }
   }
