@@ -174,7 +174,7 @@ int CVE::process(BackgroundWorker *pWorker) {
   SmartPointer<char> pipelineJson(src_firesight_json.get());
   char *pModelStr = NULL;
   SmartPointer<char> jsonResult;
-  vector<String> args;
+  vector<void*> gc;
   try {
     Pipeline pipeline(pipelineJson.data(), Pipeline::JSON);
     Mat image = _isColor ?
@@ -193,15 +193,12 @@ int CVE::process(BackgroundWorker *pWorker) {
 	const char * key;
 	json_t *pValue;
 	json_object_foreach(pProperties, key, pValue) {
-	  char *valueStr = "(unknown)";
+	  const char *valueStr = "(unknown)";
 	  if (json_is_string(pValue)) {
 	    valueStr = json_string_value(pValue);
 	  } else {
-	    char *s = json_dumps(pValue, JSON_PRESERVE_ORDER|JSON_COMPACT|JSON_INDENT(0)|JSON_ENCODE_ANY);
-	    string str(s);
-	    args.push_back(str); // garbage collection list
-	    valStr = str.c_str();
-	    free(s);
+	    valueStr = json_dumps(pValue, JSON_PRESERVE_ORDER|JSON_COMPACT|JSON_INDENT(0)|JSON_ENCODE_ANY);
+	    gc.push_back((void *) valueStr); // garbage collection list
 	  }
 	  LOGTRACE3("CVE::process(%s) argMap[%s]=\"%s\"", path, key, valueStr);
 	  argMap[key] = valueStr;
@@ -220,14 +217,6 @@ int CVE::process(BackgroundWorker *pWorker) {
     LOGTRACE1("cve_process(%s) process begin", path);
     json_t *pModel = pipeline.process(image, argMap);
     LOGTRACE1("cve_process(%s) process end", path);
-
-    if (json_is_object(pProperties)) {
-      const char * key;
-      json_t *pValue;
-      json_object_foreach(pProperties, key, pValue) {
-	free((char *) argMap[key]);
-      }
-    }
     if (pProperties) {
       json_decref(pProperties);
     }
@@ -255,6 +244,7 @@ int CVE::process(BackgroundWorker *pWorker) {
     jsonResult = buildErrorMessage("cve_process(%s) UNKNOWN EXCEPTION: %s", path, "UNKOWN EXCEPTION");
   }
   src_process_fire.post(jsonResult);
+  for (int i = 0; i < gc.size(); i++) { free(gc[i]); }
   return result;
 }
 
