@@ -103,7 +103,7 @@ int cve_getattr(const char *path, struct stat *stbuf) {
   } else if (firefuse_isFile(path, FIREREST_MONITOR_JPG)) {
     res = firefuse_getattr_file(path, stbuf, worker.cameras[0].src_monitor_jpg.peek().size(), 0444);
   } else if (firefuse_isFile(path, FIREREST_SAVED_PNG)) {
-    res = firefuse_getattr_file(path, stbuf, worker.cve(path).src_saved_png.peek().size(), 0444);
+    res = firefuse_getattr_file(path, stbuf, worker.cve(path).src_saved_png.peek().size(), 0666);
   } else if (firefuse_isFile(path, FIREREST_SAVE_FIRE)) {
     size_t bytes = max(MIN_SAVE_SIZE, worker.cve(path).src_save_fire.peek().size());
     res = firefuse_getattr_file(path, stbuf, bytes, 0444);
@@ -255,6 +255,10 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
     if (verifyOpenRW(path, fi, &result)) {
       fi->fh = (uint64_t) (size_t) new SmartPointer<char>(worker.cve(path).src_properties_json.get());
     }
+  } else if (firefuse_isFile(path, FIREREST_SAVED_PNG)) {
+    if (verifyOpenRW(path, fi, &result)) {
+      fi->fh = (uint64_t) (size_t) new SmartPointer<char>(worker.cve(path).src_saved_png.get());
+    }
   } else if (verifyOpenR_(path, fi, &result)) {
     CameraNode &camera = worker.cameras[0];
     if (firefuse_isFile(path, FIREREST_PROCESS_FIRE)) {
@@ -288,8 +292,6 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
       fi->fh = (uint64_t) (size_t) new SmartPointer<char>(camera.src_monitor_jpg.get());
     } else if (firefuse_isFile(path, FIREREST_FIRESIGHT_JSON)) {
       fi->fh = (uint64_t) (size_t) new SmartPointer<char>(worker.cve(path).src_firesight_json.get());
-    } else if (firefuse_isFile(path, FIREREST_SAVED_PNG)) {
-      fi->fh = (uint64_t) (size_t) new SmartPointer<char>(worker.cve(path).src_saved_png.get());
     } else {
       result = -ENOENT;
     }
@@ -351,6 +353,8 @@ int cve_write(const char *path, const char *buf, size_t bufsize, off_t offset, s
   SmartPointer<char> data((char *) buf, bufsize);
   if (firefuse_isFile(path, FIREREST_PROPERTIES_JSON)) {
     worker.cve(path).src_properties_json.post(data);
+  } else if (firefuse_isFile(path, FIREREST_SAVED_PNG)) {
+    worker.cve(path).src_saved_png.post(data);
   } else {
     LOGERROR2("cve_write(%s,%ldB) ENOENT", path, bufsize);
     return -ENOENT;

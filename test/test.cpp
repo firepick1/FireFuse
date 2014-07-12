@@ -738,6 +738,12 @@ int testCve() {
   assert(worker.cve(processPath).src_process_fire.isFresh());
   assert(testString("process.fire processLoop", "{\"s1\":{}}", worker.cve(processPath).src_process_fire.peek()));
 
+  ///////////// saved.png test
+  string savedPath = "/cv/1/gray/cve/calc-offset/saved.png";
+  assert(testNumber((size_t) 72944, worker.cve(savedPath).src_saved_png.peek().size()));
+  worker.cve(savedPath).src_saved_png.post(SmartPointer<char>((char *) "hi", 2));
+  assert(testNumber((size_t) 2, worker.cve(savedPath).src_saved_png.peek().size()));
+
   cout << "testCve() PASS" << endl;
   cout << endl;
   return 0;
