@@ -309,19 +309,21 @@ int firefuse_read(const char *path, char *buf, size_t size, off_t offset, struct
 
 int firefuse_write(const char *path, const char *buf, size_t bufsize, off_t offset, struct fuse_file_info *fi) {
   LOGTRACE1("firefuse_write(%s)", path);
-  if (offset) {
-    LOGERROR2("firefuse_write %s -> non-zero offset:%ld", path, (long) offset);
-    return EINVAL;
-  }
   if (!buf) {
     LOGERROR1("firefuse_write %s -> null buffer", path);
     return EINVAL;
   }
   if (is_cv_path(path)) {
     return cve_write(path, buf, bufsize, offset, fi);
-  } else if (is_cnc_path(path)) {
+  } 
+  if (offset) {
+    LOGERROR2("firefuse_write %s -> non-zero offset:%ld", path, (long) offset);
+    return EINVAL;
+  } 
+  if (is_cnc_path(path)) {
     return cnc_write(path, buf, bufsize, offset, fi);
-  } else if (strcmp(path, ECHO_PATH) == 0) {
+  } 
+  if (strcmp(path, ECHO_PATH) == 0) {
     if (bufsize > MAX_ECHO) {
       sprintf(echoBuf, "firefuse_write %s -> string too long (%ld > %d bytes)", path, bufsize, MAX_ECHO);
       LOGERROR1("%s", echoBuf);

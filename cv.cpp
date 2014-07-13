@@ -27,6 +27,8 @@ using namespace firesight;
 
 typedef enum{UI_STILL, UI_VIDEO} UIMode;
 
+size_t max_saved_png_size = 3000000; // empirically chosen to handle 400x400 png images
+
 /**
  * Return canonical CVE path. E.g.:
  *   /dev/firefuse/sync/cv/1/gray/calc-offset/save.fire => /cv/1/gray/calc-offset
@@ -347,14 +349,25 @@ int cve_read(const char *path, char *buf, size_t size, off_t offset, struct fuse
 }
 
 int cve_write(const char *path, const char *buf, size_t bufsize, off_t offset, struct fuse_file_info *fi) {
-  assert(offset == 0);
   assert(buf != NULL);
   assert(bufsize >= 0);
-  SmartPointer<char> data((char *) buf, bufsize);
   if (firefuse_isFile(path, FIREREST_PROPERTIES_JSON)) {
+    assert(offset == 0);
+    SmartPointer<char> data((char *) buf, bufsize);
     worker.cve(path).src_properties_json.post(data);
   } else if (firefuse_isFile(path, FIREREST_SAVED_PNG)) {
-    worker.cve(path).src_saved_png.post(data);
+    if (offset == 0) {
+      SmartPointer<char> data((char *) NULL, max_saved_png_size);
+      worker.cve(path).src_saved_png.post(data);
+    }
+    SmartPointer<char> pSaved =  worker.cve(path).src_saved_png.peek();
+    if (bufsize + offset > pSaved.allocated_size()) {
+      LOGERROR1("cve_write(%s) data too large (ignoring)", path);
+    } else {
+      memcpy(pSaved.data(), buf, bufsize);
+      pSaved.setSize(offset+bufsize);
+      LOGTRACE3("cve_write(%s,%ldB) %ldB total", path, bufsize, pSaved.size());
+    }
   } else {
     LOGERROR2("cve_write(%s,%ldB) ENOENT", path, bufsize);
     return -ENOENT;

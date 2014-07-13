@@ -188,6 +188,7 @@ int testSmartPointer( ){
   cout << "testSmartPointer() ------------------------" << endl;
   SmartPointer<char> empty(NULL, 0);
   assert(0 == empty.size());
+  assert(0 == empty.allocated_size());
   assert(!empty.data());
   char *pOne = (char*)malloc(100);
   strcpy(pOne, "one");
@@ -226,11 +227,22 @@ int testSmartPointer( ){
     assert(0 == strcmp("two", (char*)two));
     assert(0 != strcmp((char *) one, (char *) two));
     one = two;
+    assert(one.allocated_size() == two.size());
+    assert(one.size() == two.allocated_size());
     assert(one.size() == two.size());
     assert(0 == strcmp((char *) one, (char *) two));
     assert(2 == one.getReferences());
     assert(1 == oneCopy.getReferences());
 
+    SmartPointer<char> abc((char*)"abc", 3);
+    assert(3 == abc.size());
+    abc.setSize(2);
+    assert(2 == abc.size());
+    try {
+      abc.setSize(4);
+    } catch (const char *e) {
+      assert(0==strcmp("SmartPointer::setSize() exceeds allocated size", e));
+    }
     SmartPointer<MockValue<int> > mock(pMock);
     assert(123 == mock->getValue());
     cout << "leaving nested block" << endl;

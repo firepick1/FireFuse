@@ -174,6 +174,7 @@ template <class T> class SmartPointer {
   public: enum { MANAGE, ALLOCATE };
   private: ReferencedPointer *pPointer;
   private: size_t length;
+  private: size_t allocated_length;
   private: inline void decref() { 
     if (pPointer) { 
       pPointer->decref(); 
@@ -220,16 +221,19 @@ template <class T> class SmartPointer {
       LOGTRACE2("SmartPointer(%0lx,%ld)", (ulong) aPtr, (ulong) count);
       pPointer = aPtr ? new ReferencedPointer(aPtr) : NULL;
     }
+    allocated_length = length;
   }
 
   public: inline SmartPointer() {
     pPointer = NULL;
     length = 0;
+    allocated_length = 0;
   }
 
   public: inline SmartPointer(const SmartPointer &that) {
     pPointer = that.pPointer;
     length = that.length;
+    allocated_length = that.allocated_length;
     incref();
   }
 
@@ -242,6 +246,7 @@ template <class T> class SmartPointer {
     decref();
     pPointer = that.pPointer;
     length = that.length;
+    allocated_length = that.allocated_length;
     return *this;
   }
 
@@ -257,6 +262,13 @@ template <class T> class SmartPointer {
   public: inline const T* operator->() const { return pPointer ? pPointer->data() : NULL; }
   public: inline operator T*() const { return pPointer ? pPointer->data() : NULL; }
   public: inline size_t size() const { return length; }
+  public: inline void setSize(size_t value) { 
+    if (length > allocated_length) {
+      throw "SmartPointer::setSize() exceeds allocated size";
+    }
+    length = value; 
+  }
+  public: inline size_t allocated_size() const { return allocated_length; }
 };
 
 #endif
