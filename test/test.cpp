@@ -235,9 +235,12 @@ int testSmartPointer( ){
     assert(1 == oneCopy.getReferences());
 
     SmartPointer<char> abc((char*)"abc", 3);
+    SmartPointer<char> abc2(abc);
     assert(3 == abc.size());
+    assert(3 == abc2.size());
     abc.setSize(2);
     assert(2 == abc.size());
+    assert(2 == abc2.size());
     try {
       abc.setSize(4);
     } catch (const char *e) {
