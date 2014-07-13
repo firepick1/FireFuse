@@ -138,15 +138,21 @@ template <class T> class SmartPointer {
   private: class ReferencedPointer {
     private: volatile int references;
     private: T* volatile ptr;
+    private: size_t length;
+    private: size_t allocated_length;
 
     public: inline ReferencedPointer() { 
-      ptr = NULL;
-      references = 0;
+      this->ptr = NULL;
+      this->references = 0;
+      this->length = 0;
+      this->allocated_length = 0;
     }
 
-    public: inline ReferencedPointer(T* aPtr) {
+    public: inline ReferencedPointer(T* aPtr, size_t length) {
       ptr = aPtr;
       references = 1;
+      this->length = length;
+      this->allocated_length = length;
       LOGTRACE1("ReferencedPointer(%0lx) managing allocated memory", (ulong) ptr);
     }
 
@@ -168,13 +174,19 @@ template <class T> class SmartPointer {
 
     public: inline void incref() { references++; }
     public: inline T* data() { return ptr; }
+    public: inline size_t size() { return length; }
+    public: inline size_t allocated_size() { return allocated_length; }
     public: inline int getReferences() const { return references; }
+    public: inline void setSize(size_t value) { 
+      if (length > allocated_length) {
+	throw "SmartPointer::ReferencedPointer::setSize() exceeds allocated size";
+      }
+      length = value; 
+    }
   };
 
   public: enum { MANAGE, ALLOCATE };
   private: ReferencedPointer *pPointer;
-  private: size_t length;
-  private: size_t allocated_length;
   private: inline void decref() { 
     if (pPointer) { 
       pPointer->decref(); 
@@ -203,7 +215,7 @@ template <class T> class SmartPointer {
    * @param blockPad block byte fill value (ALLOCATE)
    */
   public: inline SmartPointer(T* aPtr, size_t count=0, int flags=ALLOCATE, size_t blockSize=1, char blockPad=0) {
-    length = count * sizeof(T);
+    size_t length = count * sizeof(T);
     if (count && flags == ALLOCATE) {
       size_t blocks = (count*sizeof(T) + blockSize - 1)/blockSize;
       T* pData = (T*) calloc(blocks, blockSize);
@@ -215,25 +227,19 @@ template <class T> class SmartPointer {
 	memset(pData, blockPad, blockBytes);
       }
       LOGTRACE3("SmartPointer(%0lx,%ld) calloc:%0lx", (ulong) aPtr, (ulong) count, (ulong) pData);
-      pPointer = new ReferencedPointer(pData);
-      length = blockBytes;
+      pPointer = new ReferencedPointer(pData, blockBytes);
     } else {
       LOGTRACE2("SmartPointer(%0lx,%ld)", (ulong) aPtr, (ulong) count);
-      pPointer = aPtr ? new ReferencedPointer(aPtr) : NULL;
+      pPointer = aPtr ? new ReferencedPointer(aPtr, length) : NULL;
     }
-    allocated_length = length;
   }
 
   public: inline SmartPointer() {
     pPointer = NULL;
-    length = 0;
-    allocated_length = 0;
   }
 
   public: inline SmartPointer(const SmartPointer &that) {
     pPointer = that.pPointer;
-    length = that.length;
-    allocated_length = that.allocated_length;
     incref();
   }
 
@@ -245,8 +251,6 @@ template <class T> class SmartPointer {
     that.incref();
     decref();
     pPointer = that.pPointer;
-    length = that.length;
-    allocated_length = that.allocated_length;
     return *this;
   }
 
@@ -261,14 +265,14 @@ template <class T> class SmartPointer {
   public: inline T* operator->() { return pPointer ? pPointer->data() : NULL; }
   public: inline const T* operator->() const { return pPointer ? pPointer->data() : NULL; }
   public: inline operator T*() const { return pPointer ? pPointer->data() : NULL; }
-  public: inline size_t size() const { return length; }
+  public: inline size_t size() const { return pPointer ? pPointer->size() : 0; }
   public: inline void setSize(size_t value) { 
-    if (length > allocated_length) {
-      throw "SmartPointer::setSize() exceeds allocated size";
+    if (!pPointer) {
+      throw "cannot set size on NULL SmartPointer";
     }
-    length = value; 
+    pPointer->setSize(value); 
   }
-  public: inline size_t allocated_size() const { return allocated_length; }
+  public: inline size_t allocated_size() const { return pPointer ? pPointer->allocated_size() : 0; }
 };
 
 #endif

@@ -231,9 +231,9 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
 	SmartPointer<char> saved_png(worker.cve(path).src_saved_png.peek());
         if (saved_png.allocated_size() < max_saved_png_size) {
 	  SmartPointer<char> empty_buffer(NULL, max_saved_png_size);
+	  empty_buffer.setSize(0);
 	  worker.cve(path).src_saved_png.post(empty_buffer);
 	  saved_png = empty_buffer;
-	  saved_png.setSize(0);
 	  LOGTRACE3("cve_open(%s, O_WRONLY) allocated %ldB @ %lx", path, saved_png.allocated_size(), (size_t) saved_png.data());
 	} else {
 	  LOGTRACE3("cve_open(%s, O_WRONLY) reusing %ldB @ %lx", path, saved_png.allocated_size(), (size_t) saved_png.data());
