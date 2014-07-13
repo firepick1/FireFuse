@@ -126,38 +126,6 @@ int cve_getattr(const char *path, struct stat *stbuf) {
   return res;
 }
 
-static int cve_openVarFile(const char *path, struct fuse_file_info *fi) {
-  int result = 0;
-  char varPath[255];
-  snprintf(varPath, sizeof(varPath), "%s%s", FIREREST_VAR, path);
-  FILE *file = fopen(varPath, "rb");
-  if (!file) {
-    LOGERROR1("cve_openVarFile(%s) fopen failed", varPath);
-    return -ENOENT;
-  }
-
-  fseek(file, 0, SEEK_END);
-  size_t length = ftell(file);
-  fseek(file, 0, SEEK_SET);
-    
-  // TODO fi->fh = (uint64_t) (size_t) firefuse_allocDataBuffer(path, &result, NULL, length);
-  if (result == 0) {
-    FuseDataBuffer *pBuffer = (FuseDataBuffer *)(size_t) fi->fh;
-    size_t bytesRead = fread(pBuffer->pData, 1, length, file);
-    if (bytesRead != length) {
-      LOGERROR3("cve_openVarFile(%s) read failed %ld != MEMORY-FREE %ld)", path, (ulong) bytesRead, (ulong) length);
-      fi->fh = 0;
-      free(pBuffer);
-    }
-  } else {
-    result = -ENOMEM;
-  }
-  if (file) {
-    fclose(file);
-  }
-  return result;
-}
-
 static SmartPointer<char> buildErrorMessage(const char* fmt, const char *path, const char * ex) {
   LOGERROR2(fmt, path, ex);
   string errMsg = "{\"error\":\"";
@@ -259,7 +227,20 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
     }
   } else if (firefuse_isFile(path, FIREREST_SAVED_PNG)) {
     if (verifyOpenRW(path, fi, &result)) {
-      fi->fh = (uint64_t) (size_t) new SmartPointer<char>(worker.cve(path).src_saved_png.get());
+      if ((fi->flags & 3 ) == O_WRONLY) {
+	SmartPointer<char> saved_png(worker.cve(path).src_saved_png.peek());
+        if (saved_png.allocated_size() < max_saved_png_size) {
+	  SmartPointer<char> empty_buffer(NULL, max_saved_png_size);
+	  saved_png = empty_buffer;
+	  saved_png.setSize(0);
+	  LOGTRACE3("cve_open(%s, O_WRONLY) allocated %ldB @ %lx", path, saved_png.allocated_size(), (size_t) saved_png.data());
+	} else {
+	  LOGTRACE3("cve_open(%s, O_WRONLY) reusing %ldB @ %lx", path, saved_png.allocated_size(), (size_t) saved_png.data());
+	}
+	fi->fh = (uint64_t) (size_t) new SmartPointer<char>(saved_png);
+      } else {
+	fi->fh = (uint64_t) (size_t) new SmartPointer<char>(worker.cve(path).src_saved_png.get());
+      }
     }
   } else if (verifyOpenR_(path, fi, &result)) {
     CameraNode &camera = worker.cameras[0];
@@ -334,8 +315,8 @@ int cve_read(const char *path, char *buf, size_t size, off_t offset, struct fuse
       firefuse_isFile(path, FIREREST_FIRESIGHT_JSON) ||
       firefuse_isFile(path, FIREREST_PROPERTIES_JSON) ||
       FALSE) {
-    SmartPointer<char> *pJpg = (SmartPointer<char> *) fi->fh;
-    sizeOut = firefuse_readBuffer(buf, (char *)pJpg->data(), size, offset, pJpg->size());
+    SmartPointer<char> *pData = (SmartPointer<char> *) fi->fh;
+    sizeOut = firefuse_readBuffer(buf, (char *)pData->data(), size, offset, pData->size());
   } else if (fi->fh) { // data file
     FuseDataBuffer *pBuffer = (FuseDataBuffer *) (size_t) fi->fh;
     sizeOut = firefuse_readBuffer(buf, pBuffer->pData, size, offset, pBuffer->length);
@@ -356,13 +337,13 @@ int cve_write(const char *path, const char *buf, size_t bufsize, off_t offset, s
     SmartPointer<char> data((char *) buf, bufsize);
     worker.cve(path).src_properties_json.post(data);
   } else if (firefuse_isFile(path, FIREREST_SAVED_PNG)) {
-    SmartPointer<char> pSaved =  worker.cve(path).src_saved_png.peek();
-    if (bufsize + offset > pSaved.allocated_size()) {
-      LOGERROR1("cve_write(%s) data too large (ignoring)", path);
+    SmartPointer<char> * pSaved =  (SmartPointer<char> *) fi->fh;
+    if (bufsize + offset > pSaved->allocated_size()) {
+      LOGERROR1("cve_write(%s) data too large (truncated)", path);
     } else {
-      memcpy(pSaved.data()+offset, buf, bufsize);
-      pSaved.setSize(offset+bufsize);
-      LOGTRACE3("cve_write(%s,%ldB) %ldB total", path, bufsize, pSaved.size());
+      memcpy(pSaved->data()+offset, buf, bufsize);
+      pSaved->setSize(offset+bufsize);
+      LOGTRACE3("cve_write(%s,%ldB) %ldB total", path, bufsize, pSaved->size());
     }
   } else {
     LOGERROR2("cve_write(%s,%ldB) ENOENT", path, bufsize);
@@ -397,9 +378,7 @@ int cve_release(const char *path, struct fuse_file_info *fi) {
 int cve_truncate(const char *path, off_t size) {
   if (firefuse_isFile(path, FIREREST_SAVED_PNG)) {
     LOGTRACE2("cve_truncate(%s) %ldB", path, size);
-    SmartPointer<char> data((char *) NULL, max_saved_png_size);
-    data.setSize(size);
-    worker.cve(path).src_saved_png.post(data);
+    worker.cve(path).src_saved_png.peek().setSize(size);
   }
   return 0;
 }
