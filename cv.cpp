@@ -356,15 +356,11 @@ int cve_write(const char *path, const char *buf, size_t bufsize, off_t offset, s
     SmartPointer<char> data((char *) buf, bufsize);
     worker.cve(path).src_properties_json.post(data);
   } else if (firefuse_isFile(path, FIREREST_SAVED_PNG)) {
-    if (offset == 0) {
-      SmartPointer<char> data((char *) NULL, max_saved_png_size);
-      worker.cve(path).src_saved_png.post(data);
-    }
     SmartPointer<char> pSaved =  worker.cve(path).src_saved_png.peek();
     if (bufsize + offset > pSaved.allocated_size()) {
       LOGERROR1("cve_write(%s) data too large (ignoring)", path);
     } else {
-      memcpy(pSaved.data(), buf, bufsize);
+      memcpy(pSaved.data()+offset, buf, bufsize);
       pSaved.setSize(offset+bufsize);
       LOGTRACE3("cve_write(%s,%ldB) %ldB total", path, bufsize, pSaved.size());
     }
@@ -399,6 +395,12 @@ int cve_release(const char *path, struct fuse_file_info *fi) {
 }
 
 int cve_truncate(const char *path, off_t size) {
+  if (firefuse_isFile(path, FIREREST_SAVED_PNG)) {
+    LOGTRACE2("cve_truncate(%s) %ldB", path, size);
+    SmartPointer<char> data((char *) NULL, max_saved_png_size);
+    data.setSize(size);
+    worker.cve(path).src_saved_png.post(data);
+  }
   return 0;
 }
 

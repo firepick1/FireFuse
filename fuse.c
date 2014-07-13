@@ -368,7 +368,7 @@ int firefuse_write(const char *path, const char *buf, size_t bufsize, off_t offs
 }
 
 static int firefuse_truncate(const char *path, off_t size) {
-  LOGTRACE1("firefuse_truncate(%s)", path);
+  LOGTRACE2("firefuse_truncate(%s,%ld)", path, size);
   if (is_cv_path(path)) {
     return cve_truncate(path, size);
   }
