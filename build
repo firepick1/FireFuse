@@ -1,5 +1,8 @@
 #! /bin/bash
 
+echo "COMMAND	: build # FireFUSE"
+echo "DATE	: "`date`
+
 if [ "$SUDO_USER" != "" ]; then
   echo "ERROR	: This script will call sudo as required and must be run by non-root user"
   echo "TRY	:   . ./build"
