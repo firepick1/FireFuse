@@ -8,7 +8,7 @@ if [ "$SUDO_USER" != "" ]; then
 fi
 
 if [ -e CMakeFiles ] ; then 
-  echo removing existing makefiles
+  echo "STATUS	: removing existing makefiles"
   sudo rm -rf CMakeCache.txt CMakeFiles CMakeFiles.txt target cmake_install.cmake CPackConfig.cmake CPackSourceConfig.cmake
   mkdir target
 fi
@@ -19,7 +19,7 @@ if [ "$(arch)" != "armv6l" ] || [ "$(lsb_release -is)" != "Debian" ] ;then
   echo "=================================================================="
   exit -1
 fi
-echo "Raspberry Pi Debian confirmed for installation"
+echo "STATUS	: Raspberry Pi Debian confirmed for installation"
 
 cv="install"
  
@@ -111,11 +111,13 @@ if [ "$cv" == "make" ] ;then
     sudo make install
   popd
 elif [ -e /usr/lib/libopencv_core.so ]; then
-  echo "STATUS	: OpenCV found in /usr/lib:"
-  ls /usr/lib/libopencv_core.so.*
+  pushd /usr/lib
+  echo "STATUS	: OpenCV found in /usr/lib: "`ls libopencv_core.so.*`
+  popd
 elif [ -e /usr/local/lib/libopencv_core.so ]; then
-  echo "STATUS	: OpenCV found in /usr/local/lib:"
-  ls /usr/local/lib/libopencv_core.so.*
+  pushd /usr/local/lib
+  echo "STATUS	: OpenCV found in /usr/local/lib: "`ls libopencv_core.so.*`
+  popd
 else
   echo "INSTALL	: OPENCV C++ libraries"
   sudo apt-get install -y libopencv-dev
