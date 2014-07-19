@@ -78,14 +78,14 @@ if [ ! -e /usr/local/include/jansson.h ] ; then
   echo "INSTALL	: jansson ..."
   sudo apt-get -y install dh-autoreconf
   git clone git://github.com/akheron/jansson jannson
-  pushd jannson
+  pushd jannson > /dev/null
   autoreconf -i
   ./configure
   cmake .
   if [ $? -ne 0 ]; then echo "ERROR	: Installation failed"; exit -1; fi
   sudo make install
   if [ $? -ne 0 ]; then echo "ERROR	: Installation failed"; exit -1; fi
-  popd
+  popd > /dev/null
 fi
 echo "STATUS	: jansson installed"
 
@@ -103,7 +103,7 @@ if [ "$cv" == "make" ] ;then
     git clone https://github.com/firepick1/opencv -b 2.4
   fi
   mkdir opencv/build
-  pushd opencv/build
+  pushd opencv/build > /dev/null
     cmake \
       -D WITH_OPENEXR=OFF \
       -D CMAKE_BUILD_TYPE=DEBUG \
@@ -111,15 +111,11 @@ if [ "$cv" == "make" ] ;then
       ..
     make 
     sudo make install
-  popd
+  popd > /dev/null
 elif [ -e /usr/lib/libopencv_core.so ]; then
-  pushd /usr/lib
-  echo "STATUS	: OpenCV found in /usr/lib: "`ls libopencv_core.so.*`
-  popd
+  echo "STATUS	: OpenCV found: "`ls /usr/lib/libopencv_core.so.*`
 elif [ -e /usr/local/lib/libopencv_core.so ]; then
-  pushd /usr/local/lib
-  echo "STATUS	: OpenCV found in /usr/local/lib: "`ls libopencv_core.so.*`
-  popd
+  echo "STATUS	: OpenCV found: "`ls /usr/local/lib/libopencv_core.so.*`
 else
   echo "INSTALL	: OPENCV C++ libraries"
   sudo apt-get install -y libopencv-dev
@@ -134,33 +130,33 @@ if [ ! -e /usr/include/fuse.h ] ; then
 fi
 if [ ! -e /usr/lib/libfirepicam.so ]; then
   echo "INSTALL	: libfirepicam ..."
-  pushd ..
+  pushd .. > /dev/null
   git clone git://github.com/firepick1/FirePiCam
-  popd
-  pushd ../FirePiCam
+  popd > /dev/null
+  pushd ../FirePiCam > /dev/null
   sudo -E ./build
-  popd
+  popd > /dev/null
 fi
 if [ ! -e /usr/lib/lib_firesight.so ]; then
   echo "INSTALL	: FireSight ..."
   pushd ..
   git clone git://github.com/firepick1/FireSight
-  popd
-  pushd ../FireSight
+  popd > /dev/null
+  pushd ../FireSight > /dev/null
   . ./build
-  popd
+  popd > /dev/null
 fi
 if [ ! -e /opt/node ] ;then
   echo "INSTALL	: nodejs ..."
   sudo mkdir /opt/node
-  pushd /opt/node
+  pushd /opt/node > /dev/null
   sudo wget http://nodejs.org/dist/v0.10.22/node-v0.10.22-linux-arm-pi.tar.gz
   sudo tar xvzf node-*-linux-arm-pi.tar.gz
   sudo rm node-v0.10.22-linux-arm-pi.tar.gz
   sudo mv node*/* .
   sudo ex -s -c 'g/PATH/s/"$/:\/opt\/node\/bin"/' -c wq /etc/profile
   source /etc/profile
-  popd
+  popd > /dev/null
 fi
 
 # Agressively dismount /dev/firefuse
@@ -242,5 +238,7 @@ else
   exit -1
 fi
 
+echo "---------------------------------------"
+echo "DATE	: "`date`
 echo "VERSION	: "`grep FireFUSE version.h`
 echo "SUCCESS	: FireFUSE installation is complete!"
