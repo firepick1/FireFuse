@@ -198,6 +198,7 @@ typedef class DCE {
   private: pthread_t tidReader;
   public: vector<string> serial_device_config;
   private: char *jsonBuf;
+  private: int activeRequests;
   private: int jsonLen;
   private: int jsonDepth;
   private: char *inbuf;
@@ -206,6 +207,7 @@ typedef class DCE {
   private: int serial_send_eol(const char *buf, size_t bufsize);
   private: int serial_send(const char *data, size_t length);
   private: int serial_read_char(int c);
+  private: int update_serial_response(const char *serial_data);
   private: static void * serial_reader(void *arg);
   private: const char * read_json();
 

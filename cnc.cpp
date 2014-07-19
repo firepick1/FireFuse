@@ -148,6 +148,7 @@ void DCE::clear() {
   jsonDepth = 0;
   inbuflen = 0;
   inbufEmptyLine = 0;
+  activeRequests = 0;
 }
 
 int DCE::callSystem(char *cmdbuf) {
@@ -316,6 +317,22 @@ int DCE::gcode(BackgroundWorker *pWorker) {
   return 0;
 }
 
+int DCE::update_serial_response(const char *serial_data) {
+  json_t *response = json_object();
+  if (activeRequests > 0) {
+    json_object_set(response, "status", json_string("DONE"));
+    activeRequests--;
+  } else {
+    json_object_set(response, "status", json_string("STATUS"));
+  }
+  json_object_set(response, "response", json_string(serial_data));
+  char * responseStr = json_dumps(response, JSON_PRESERVE_ORDER|JSON_COMPACT|JSON_INDENT(0));
+  LOGDEBUG1("DCE::update_serial_response(%s)", responseStr);
+  src_gcode_fire.post(SmartPointer<char>(responseStr, strlen(responseStr), SmartPointer<char>::MANAGE));
+  json_decref(response);
+
+  return 0;
+}
 
 const char * DCE::read_json() {
   int wait = 0;
@@ -362,6 +379,7 @@ int DCE::serial_send(const char *buf, size_t bufsize) {
     logmsg[bufsize] = 0;
   }
   LOGINFO3("DCE::serial_send(%s) %ldB ckxor:%d", logmsg, bufsize, ckxor);
+  activeRequests++;
   size_t rc = write(serial_fd, buf, bufsize);
   if (rc == bufsize) {
     rc = serial_send_eol(buf, bufsize);
@@ -400,20 +418,21 @@ int DCE::serial_read_char(int c) {
     case EOF:
       inbuf[inbuflen] = 0;
       inbuflen = 0;
-      LOGERROR1("DCE::read_char(%s) [EOF]", inbuf);
+      LOGERROR1("DCE::serial_read_char(%s) [EOF]", inbuf);
       return 0;
     case '\n':
       inbuf[inbuflen] = 0;
       if (inbuflen) { // discard blank lines
         if (strncmp("{\"sr\"",inbuf, 5) == 0) {
-          LOGDEBUG2("DCE::read_char(%s) %dB", inbuf, inbuflen);
+          LOGDEBUG2("DCE::serial_read_char(%s) %dB", inbuf, inbuflen);
         } else {
-          LOGINFO2("DCE::read_char(%s) %dB", inbuf, inbuflen);
+          LOGINFO2("DCE::serial_read_char(%s) %dB", inbuf, inbuflen);
+	  update_serial_response(inbuf);
         }
       } else {
         inbufEmptyLine++;
         if (inbufEmptyLine % 1000 == 0) {
-          LOGWARN1("DCE::read_char() skipped %ld blank lines", (long) inbufEmptyLine);
+          LOGWARN1("DCE::serial_read_char() skipped %ld blank lines", (long) inbufEmptyLine);
         }
       }
       inbuflen = 0;
@@ -441,7 +460,7 @@ int DCE::serial_read_char(int c) {
         ADD_JSON(c);
         if (--jsonDepth < 0) {
 	  jsonDepth = 0;
-          LOGWARN2("DCE::read_char(%c) invalid JSON %s", (int) c, jsonBuf);
+          LOGWARN2("DCE::serial_read_char(%c) invalid JSON %s", (int) c, jsonBuf);
           //return 0;
         }
       } else {
@@ -449,17 +468,17 @@ int DCE::serial_read_char(int c) {
       }
       if (inbuflen >= INBUFMAX) {
         inbuf[INBUFMAX] = 0;
-        LOGERROR2("DCE::read_char(%c) overflow %s", (int) c, inbuf);
+        LOGERROR2("DCE::serial_read_char(%c) overflow %s", (int) c, inbuf);
         break;
       } else {
         inbuf[inbuflen] = c;
         inbuflen++;
-        LOGTRACE4("DCE::read_char(%x %c) %d %d", (int) c, (int) c, jsonDepth, jsonLen);
+        LOGTRACE4("DCE::serial_read_char(%x %c) %d %d", (int) c, (int) c, jsonDepth, jsonLen);
       }
       break;
     default:
       // discard unexpected character (probably wrong baud rate)
-      LOGTRACE2("DCE::read_char(%x ?)", (int) c, (int) c);
+      LOGTRACE2("DCE::serial_read_char(%x ?)", (int) c, (int) c);
       break;
   }
   return 1;
