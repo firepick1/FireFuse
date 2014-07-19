@@ -1,0 +1,6 @@
+{ "FireREST":{"title":"Raspberry Pi FireFUSE","provider":"FireFUSE", "version":{"major":0, "minor":6, "patch":0}},
+  "cnc":{ 
+    "tinygA":{ "protocol":"gcode", "serial": { "path":"mock", "stty":"cs8 115200" } },
+    "tinygB":{ "protocol":"gcode", "serial": { "path":"mock", "stty":"cs8 115200" } }
+  }
+}

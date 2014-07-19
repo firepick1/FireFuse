@@ -256,7 +256,8 @@ typedef class CameraNode {
 typedef class BackgroundWorker {
   private: double idle_period; // minimum seconds between idle() execution
   private: std::map<string, CVEPtr> cveMap;
-  private: std::map<string, DCEPtr> dceMap;;
+  private: std::map<string, DCEPtr> dceMap;
+  private: std::map<string, DCEPtr> serialMap;
   private: double idle_seconds; // time of last idle() execution
   private: int async_save_fire();
   private: int async_process_fire();
@@ -274,6 +275,8 @@ typedef class BackgroundWorker {
   public: void process();
   public: inline void setIdlePeriod(double value) { idle_period = value; }
   public: inline double getIdlePeriod() { return idle_period; }
+  public: inline DCEPtr getSerialDCE(string serialPath) { return serialMap[serialPath]; }
+  public: inline void setSerialDCE(string serialPath, DCEPtr pDce) { serialMap[serialPath] = pDce; }
 
   // TESTING ONLY
   public: void processInit();

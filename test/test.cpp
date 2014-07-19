@@ -660,6 +660,30 @@ int testConfig() {
   return 0;
 } // testConfig()
 
+int testSerial() {
+  cout << "testSerial() --------------------------" << endl;
+  worker.clear();
+  worker.processInit();
+
+  assert(testString("TEST fuse_root", "/dev/firefuse", fuse_root));
+
+  /////////// config test
+  const char *caughtEx = NULL;
+  char *configJson;
+  try {
+    configJson = firerest.configure_path("test/testserial.json");
+    assert(configJson);
+  } catch (const char * ex) {
+    caughtEx = ex;
+  }
+  assert(testString("TEST testSerial()", "FATAL\t: FireREST::config_cnc_serial() configuration conflict", caughtEx));
+  free(configJson);
+
+  cout << "testSerial() PASS" << endl;
+  cout << endl;
+  return 0;
+} // testSerial()
+
 int testCve() {
   char buf[100];
   /////////// process.fire test
@@ -959,6 +983,7 @@ int testSuite() {
     if (
       testFireREST() == 0 &&
       testConfig()==0 &&
+      testSerial()==0 &&
       testCamera()==0 &&
       testSmartPointer()==0 && 
       testSmartPointer_CopyData()==0 && 

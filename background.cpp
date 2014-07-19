@@ -202,6 +202,7 @@ void BackgroundWorker::clear() {
     delete it->second;
   }
   dceMap.clear();
+  serialMap.clear();
 }
 
 vector<string> BackgroundWorker::getCveNames() {

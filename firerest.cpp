@@ -363,9 +363,17 @@ string FireREST::config_cnc_serial(string dcePath, json_t *pSerial) {
     return errMsg;
   }
 
-  string path = config_string(pSerial, "path");
-  LOGINFO2("FireREST::config_cnc_serial(%s) path:%s", dcePath.c_str(), path.c_str());
-  dce.setSerialPath(path.c_str());
+  string serialPath = config_string(pSerial, "path");
+  LOGINFO2("FireREST::config_cnc_serial(%s) path:%s", dcePath.c_str(), serialPath.c_str());
+
+  DCEPtr pDceConflict = worker.getSerialDCE(serialPath);
+  if (pDceConflict && pDceConflict != &dce) {
+    LOGERROR3("FireREST::config_cnc_serial(%s) serial path conflict with dce(%s): %s", 
+      dcePath.c_str(), pDceConflict->getName().c_str(), serialPath.c_str());
+    throw "FATAL	: FireREST::config_cnc_serial() configuration conflict";
+  } 
+  worker.setSerialDCE(serialPath, &dce);
+  dce.setSerialPath(serialPath.c_str());
 
   string stty = config_string(pSerial, "stty", "115200 cs8");
   LOGINFO2("FireREST::config_cnc_serial(%s) stty %s", dcePath.c_str(), stty.c_str());
