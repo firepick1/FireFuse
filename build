@@ -1,5 +1,6 @@
 #! /bin/bash
 
+echo
 echo "COMMAND	: build # FireFUSE"
 echo "DATE	: "`date`
 
