@@ -158,7 +158,7 @@ int firestep_init();
 void firestep_destroy();
 int firestep_write(const char *buf, size_t bufsize);
 const char * firestep_json();
-int tinyg_hash(const char *value);
+int tinyg_hash(const char *value, size_t len);
 
 #ifdef __cplusplus
 //////////////////////////////////// C++ DECLARATIONS ////////////////////////////////////////////////////////
@@ -219,6 +219,7 @@ typedef class DCE {
   //public: LIFOCache<SmartPointer<char> > src_properties_json;
   
   public: static int callSystem(char *cmdbuf);
+  public: static vector<std::string> gcode_lines(const string &gcode);
   public: static string dce_path(const char *pPath);
   public: DCE(string name);
   public: ~DCE();

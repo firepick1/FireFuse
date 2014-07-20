@@ -298,20 +298,39 @@ void DCE::send(SmartPointer<char> request, json_t*response) {
   }
 }
 
+vector<string> DCE::gcode_lines(const string &gcode) {
+  vector<string> lines;
+  stringstream ss(gcode);
+  string line;
+  while (getline(ss, line)) {
+    if (line.empty()) {
+      continue; // skip blank lines
+    }
+    line.erase(line.begin(), find_if(line.begin(), line.end(), not1(ptr_fun<int, int>(isspace)))); // ltrim
+    lines.push_back(line);
+  }
+  return lines;
+}
+
 int DCE::gcode(BackgroundWorker *pWorker) {
   if (snk_gcode_fire.isFresh()) {
     SmartPointer<char> request = snk_gcode_fire.get();
-    json_t *response = json_object();
-    json_object_set(response, "status", json_string("ACTIVE"));
-    json_t *json_cmd = json_string(request.data(), request.size());
-    json_object_set(response, "gcode", json_cmd);
+    string gcode(request.data(), request.size());
+    vector<string> lines(gcode_lines(gcode));
 
-    send(request, response);
+    for (int i = 0; i < lines.size(); i++) {
+      json_t *response = json_object();
+      json_object_set(response, "status", json_string("ACTIVE"));
+      json_t *json_cmd = json_string(lines[i].c_str());
+      json_object_set(response, "gcode", json_cmd);
 
-    char * responseStr = json_dumps(response, JSON_PRESERVE_ORDER|JSON_COMPACT|JSON_INDENT(0));
-    LOGDEBUG2("DCE::gcode(%s) -> %s", json_string_value(json_cmd), responseStr);
-    src_gcode_fire.post(SmartPointer<char>(responseStr, strlen(responseStr), SmartPointer<char>::MANAGE));
-    json_decref(response);
+      send(request, response);
+
+      char * responseStr = json_dumps(response, JSON_PRESERVE_ORDER|JSON_COMPACT|JSON_INDENT(0));
+      LOGDEBUG2("DCE::gcode(%s) -> %s", json_string_value(json_cmd), responseStr);
+      src_gcode_fire.post(SmartPointer<char>(responseStr, strlen(responseStr), SmartPointer<char>::MANAGE));
+      json_decref(response);
+    }
   }
 
   return 0;
@@ -378,8 +397,8 @@ int DCE::serial_send(const char *buf, size_t bufsize) {
   } else {
     logmsg[bufsize] = 0;
   }
-  LOGINFO3("DCE::serial_send(%s) %ldB ckxor:%d", logmsg, bufsize, ckxor);
   activeRequests++;
+  LOGINFO4("DCE::serial_send(%s) %ldB ckxor:%d activeRequests:%d", logmsg, bufsize, tinyg_hash(buf, bufsize), activeRequests);
   size_t rc = write(serial_fd, buf, bufsize);
   if (rc == bufsize) {
     rc = serial_send_eol(buf, bufsize);
@@ -523,8 +542,7 @@ void * DCE::serial_reader(void *arg) {
 
 //////////////////////////// TINYG ////////////////
 
-int tinyg_hash(const char *value) {
-  size_t len = strlen(value);
+int tinyg_hash(const char *value, size_t len) {
   while (len > 0) {
     if (value[--len] == ',') {
       break;

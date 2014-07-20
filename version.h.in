@@ -12,6 +12,7 @@ extern "C" {
 #define FireFUSE_VERSION_MAJOR @FireFUSE_VERSION_MAJOR@
 #define FireFUSE_VERSION_MINOR @FireFUSE_VERSION_MINOR@
 #define FireFUSE_VERSION_PATCH @FireFUSE_VERSION_PATCH@
+#define FIREFUSE_GIT_COMMIT "{{FIREFUSE_GIT_COMMIT}}"
 
 //////////// GENERATED FILE (from version.h.in) /////////////////
 //////////// GENERATED FILE (from version.h.in) /////////////////

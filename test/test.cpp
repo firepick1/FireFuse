@@ -966,9 +966,38 @@ int testCnc() {
 
     ////////////// TINYG
     const char *s = "{\"r\":{\"f\":[1,60,5,[8401]}}"; 
-    assert(testNumber(8401L, (long) tinyg_hash(s)));
+    assert(testNumber(8401L, (long) tinyg_hash(s, strlen(s))));
 
     cout << "testCnc() PASS" << endl;
+    cout << endl;
+    return 0;
+  } catch (...) {
+    cout << "testCnc() FAILED" << endl;
+  }
+}
+
+int testSplit() {
+  try {
+    char buf[100];
+    int rc;
+
+    cout << "testSplit() --------------------------" << endl;
+    worker.clear();
+    worker.processInit();
+
+    vector<string> lines = DCE::gcode_lines("G0Y1\nG0Y2\n\nG0Y3");
+    assert(testString("TEST DCE::gcode_lines", "G0Y1", lines[0].c_str()));
+    assert(testString("TEST DCE::gcode_lines", "G0Y2", lines[1].c_str()));
+    assert(testString("TEST DCE::gcode_lines", "G0Y3", lines[2].c_str()));
+    assert(testNumber((size_t) 3, lines.size()));
+
+    lines = DCE::gcode_lines("  G0Y1\n  G0Y2\n\n  G0Y3\n");
+    assert(testString("TEST DCE::gcode_lines", "G0Y1", lines[0].c_str()));
+    assert(testString("TEST DCE::gcode_lines", "G0Y2", lines[1].c_str()));
+    assert(testString("TEST DCE::gcode_lines", "G0Y3", lines[2].c_str()));
+    assert(testNumber((size_t) 3, lines.size()));
+
+    cout << "testSplit() PASS" << endl;
     cout << endl;
     return 0;
   } catch (...) {
@@ -981,6 +1010,7 @@ int testSuite() {
   firelog_level(FIRELOG_TRACE);
   try {
     if (
+      testSplit()==0 &&
       testFireREST() == 0 &&
       testConfig()==0 &&
       testSerial()==0 &&

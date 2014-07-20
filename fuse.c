@@ -48,7 +48,7 @@ static void * firefuse_init(struct fuse_conn_info *conn) {
   firelog_init(FIRELOG_FILE, FIRELOG_INFO);
   //firelog_init(FIRELOG_FILE, FIRELOG_TRACE);
   LOGINFO4("FireFUSE %d.%d.%d fuse_root:%s", FireFUSE_VERSION_MAJOR, FireFUSE_VERSION_MINOR, FireFUSE_VERSION_PATCH, fuse_root);
-  LOGINFO2("PID%d UID%d", (int) getpid(), (int)getuid());
+  LOGINFO3("PID%d UID%d GIT%s", (int) getpid(), (int)getuid(), FIREFUSE_GIT_COMMIT);
 
   pConfigJson = firerest_config(CONFIG_JSON);
 

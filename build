@@ -184,6 +184,10 @@ fi
 echo "STATUS	: creating makefiles"
 cmake .
 
+COMMIT=`git log -1 | grep commit`
+echo "GIT	: $COMMIT"
+sed -i -e "s/{{FIREFUSE_GIT_COMMIT}}/$COMMIT/" version.h
+
 echo "STATUS	: building and installing FireFUSE..."
 make
 if [ $? -ne 0 ]; then
