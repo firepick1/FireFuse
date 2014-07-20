@@ -396,7 +396,7 @@ int DCE::serial_send(const char *buf, size_t bufsize) {
     logmsg[bufsize] = 0;
   }
   activeRequests++;
-  LOGINFO4("DCE::serial_send(%s) %ldB ckxor:%d activeRequests:%d", logmsg, bufsize, tinyg_hash(buf, bufsize), activeRequests);
+  LOGINFO4("DCE::serial_send(%s) %ldB ckxor:%d activeRequests:%d", logmsg, bufsize, ckxor, activeRequests);
   size_t rc = write(serial_fd, buf, bufsize);
   if (rc == bufsize) {
     rc = serial_send_eol(buf, bufsize);
@@ -443,8 +443,8 @@ int DCE::serial_read_char(int c) {
         if (strncmp("{\"sr\"",inbuf, 5) == 0) {
           LOGDEBUG2("DCE::serial_read_char(%s) %dB", inbuf, inbuflen);
         } else {
-          LOGINFO2("DCE::serial_read_char(%s) %dB", inbuf, inbuflen);
 	  update_serial_response(inbuf);
+          LOGINFO3("DCE::serial_read_char(%s) %dB activeRequests:%d", inbuf, inbuflen, activeRequests);
         }
       } else {
         inbufEmptyLine++;
