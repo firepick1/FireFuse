@@ -292,7 +292,7 @@ void DCE::send(string request, json_t*response) {
     json_object_set(response, "status", json_string("DONE"));
     json_object_set(response, "response", json_string("Mock response"));
   } else {
-    serial_send(request, request.size());
+    serial_send(request.c_str(), request.size());
   }
 }
 
