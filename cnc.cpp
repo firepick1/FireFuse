@@ -282,19 +282,17 @@ int DCE::serial_init(){
   return rc;
 }
 
-void DCE::send(SmartPointer<char> request, json_t*response) {
-  string data(request.data(), request.size());
-
+void DCE::send(string request, json_t*response) {
   if (serial_path.empty()) {
-    LOGWARN1("DCE::send(%s) serial_path has not been configured", data.c_str());
+    LOGWARN1("DCE::send(%s) serial_path has not been configured", request.c_str());
     json_object_set(response, "status", json_string("WARNING"));
     json_object_set(response, "response", json_string("Serial path not configured"));
   } else if (0==serial_path.compare("mock")) {
-    LOGTRACE2("DCE::send(%s) serial_path:%s", data.c_str(), serial_path.c_str());
+    LOGTRACE2("DCE::send(%s) serial_path:%s", request.c_str(), serial_path.c_str());
     json_object_set(response, "status", json_string("DONE"));
     json_object_set(response, "response", json_string("Mock response"));
   } else {
-    serial_send(request.data(), request.size());
+    serial_send(request, request.size());
   }
 }
 
@@ -324,7 +322,7 @@ int DCE::gcode(BackgroundWorker *pWorker) {
       json_t *json_cmd = json_string(lines[i].c_str());
       json_object_set(response, "gcode", json_cmd);
 
-      send(request, response);
+      send(lines[i], response);
 
       char * responseStr = json_dumps(response, JSON_PRESERVE_ORDER|JSON_COMPACT|JSON_INDENT(0));
       LOGDEBUG2("DCE::gcode(%s) -> %s", json_string_value(json_cmd), responseStr);

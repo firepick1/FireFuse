@@ -211,7 +211,7 @@ typedef class DCE {
   private: static void * serial_reader(void *arg);
   private: const char * read_json();
 
-  protected: virtual void send(SmartPointer<char> request, json_t*response);
+  protected: virtual void send(string request, json_t*response);
 
   // Common data
   public: LIFOCache<SmartPointer<char> > snk_gcode_fire;
