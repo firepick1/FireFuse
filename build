@@ -184,7 +184,7 @@ fi
 echo "STATUS	: creating makefiles"
 cmake .
 
-COMMIT=`git log -1 | grep commit`
+COMMIT=`git log -1 | grep commit | grep -o '[^ ]*$'`
 echo "GIT	: $COMMIT"
 sed -i -e "s/{{FIREFUSE_GIT_COMMIT}}/$COMMIT/" version.h
 
