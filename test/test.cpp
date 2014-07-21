@@ -1001,8 +1001,67 @@ int testSplit() {
     cout << endl;
     return 0;
   } catch (...) {
-    cout << "testCnc() FAILED" << endl;
+    cout << "testSplit() FAILED" << endl;
   }
+}
+
+int testSpiralSearch() {
+  try {
+    char buf[100];
+    int rc;
+
+    cout << "testSpiralSearch() --------------------------" << endl;
+
+    SpiralIterator four(4,4);
+    four.setScale(1,10);
+    assert(testNumber( 0l, (long)four.getX())); assert(testNumber( 0l, (long)four.getY())); 
+    assert(four.next()); assert(testNumber( 1l, (long)four.getX())); assert(testNumber( 0l, (long)four.getY())); 
+    assert(four.next()); assert(testNumber( 1l, (long)four.getX())); assert(testNumber( 10l, (long)four.getY())); 
+    assert(four.next()); assert(testNumber( 0l, (long)four.getX())); assert(testNumber( 10l, (long)four.getY())); 
+    assert(four.next()); assert(testNumber( -1l, (long)four.getX())); assert(testNumber( 10l, (long)four.getY())); 
+    assert(four.next()); assert(testNumber( -1l, (long)four.getX())); assert(testNumber( 0l, (long)four.getY())); 
+    assert(four.next()); assert(testNumber( -1l, (long)four.getX())); assert(testNumber( -10l, (long)four.getY())); 
+    assert(four.next()); assert(testNumber( 0l, (long)four.getX())); assert(testNumber( -10l, (long)four.getY())); 
+    assert(four.next()); assert(testNumber( 1l, (long)four.getX())); assert(testNumber( -10l, (long)four.getY())); 
+    assert(four.next()); assert(testNumber( 2l, (long)four.getX())); assert(testNumber( 0l, (long)four.getY())); 
+    assert(four.next()); assert(testNumber( 2l, (long)four.getX())); assert(testNumber( 10l, (long)four.getY())); 
+    assert(four.next()); assert(testNumber( 2l, (long)four.getX())); assert(testNumber( 20l, (long)four.getY())); 
+    assert(four.next()); assert(testNumber( 1l, (long)four.getX())); assert(testNumber( 20l, (long)four.getY())); 
+    assert(four.next()); assert(testNumber( 0l, (long)four.getX())); assert(testNumber( 20l, (long)four.getY())); 
+    assert(four.next()); assert(testNumber( -1l, (long)four.getX())); assert(testNumber( 20l, (long)four.getY())); 
+    assert(four.next()); assert(testNumber( -2l, (long)four.getX())); assert(testNumber( 20l, (long)four.getY())); 
+    assert(four.next()); assert(testNumber( -2l, (long)four.getX())); assert(testNumber( 10l, (long)four.getY())); 
+    assert(four.next()); assert(testNumber( -2l, (long)four.getX())); assert(testNumber( 0l, (long)four.getY())); 
+    assert(four.next()); assert(testNumber( -2l, (long)four.getX())); assert(testNumber( -10l, (long)four.getY())); 
+    assert(four.next()); assert(testNumber( -2l, (long)four.getX())); assert(testNumber( -20l, (long)four.getY())); 
+    assert(four.next()); assert(testNumber( -1l, (long)four.getX())); assert(testNumber( -20l, (long)four.getY())); 
+    assert(four.next()); assert(testNumber( 0l, (long)four.getX())); assert(testNumber( -20l, (long)four.getY())); 
+    assert(four.next()); assert(testNumber( 1l, (long)four.getX())); assert(testNumber( -20l, (long)four.getY())); 
+    assert(four.next()); assert(testNumber( 2l, (long)four.getX())); assert(testNumber( -20l, (long)four.getY())); 
+    assert(four.next()); assert(testNumber( 2l, (long)four.getX())); assert(testNumber( -10l, (long)four.getY())); 
+    assert(!four.next());
+
+    SpiralIterator fourX(3, 1);
+    fourX.setOffset(1, 10);
+    assert(testNumber( 0l, (long)fourX.getX())); assert(testNumber( 10l, (long)fourX.getY())); 
+    assert(fourX.next()); assert(testNumber( 1l, (long)fourX.getX())); assert(testNumber( 10l, (long)fourX.getY())); 
+    assert(fourX.next()); assert(testNumber( 2l, (long)fourX.getX())); assert(testNumber( 10l, (long)fourX.getY())); 
+    assert(!fourX.next());
+
+    SpiralIterator fourY(1, 3);
+    fourY.setOffset(10, 1);
+    assert(testNumber( 10l, (long)fourY.getX())); assert(testNumber( 0l, (long)fourY.getY())); 
+    assert(fourY.next()); assert(testNumber( 10l, (long)fourY.getX())); assert(testNumber( 1l, (long)fourY.getY())); 
+    assert(fourY.next()); assert(testNumber( 10l, (long)fourY.getX())); assert(testNumber( 2l, (long)fourY.getY())); 
+    assert(!fourY.next());
+
+    cout << "testSpiralSearch() PASS" << endl;
+    cout << endl;
+    return TRUE;
+  } catch (...) {
+    cout << "testSpiralSearch() FAILED" << endl;
+  }
+  return FALSE;
 }
 
 int testSuite() {
@@ -1020,6 +1079,7 @@ int testSuite() {
       testLIFOCache()==0 &&
       testCve()==0 &&
       testCnc()==0 &&
+      testSpiralSearch() &&
       TRUE) {
       cout << "ALL TESTS PASS!!!" << endl;
 

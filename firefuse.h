@@ -335,6 +335,29 @@ typedef class FireREST {
 
 extern FireREST firerest;
 
+typedef class SpiralIterator { // simpler than a C++ <iterator>
+  private: int x;
+  private: int y;
+  private: int mx;
+  private: int my;
+  private: int dx;
+  private: int dy;
+  private: int state;
+  private: int xMax;
+  private: int yMax;
+  private: float xScale;
+  private: float yScale;
+  private: float xOffset;
+  private: float yOffset;
+  private: void reset();
+
+  public: SpiralIterator(int xSteps=21, int ySteps=0); 
+  public: inline void setScale(float xScale, float yScale) { this->xScale = xScale; this->yScale = yScale; }
+  public: inline void setOffset(float xOffset, float yOffset) { this->xOffset = xOffset; this->yOffset = yOffset; }
+  public: inline float getX() { return x*xScale + xOffset; }
+  public: inline float getY() { return y*yScale + yOffset; }
+  public: bool next();
+} SpiralIterator;
 
 #endif
 //////////////////////////////////// FIREFUSE_H ////////////////////////////////////////////////////////
