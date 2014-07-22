@@ -171,6 +171,8 @@ int tinyg_hash(const char *value, size_t len);
 double 	cve_seconds();
 void 	cve_process(const char *path, int *pResult);
 class BackgroundWorker;
+string hexFromRFC4648(const char *rfc);
+string hexToRFC4648(const char *hex);
 
 typedef class CVE {
   private: string name;

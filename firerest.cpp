@@ -565,3 +565,102 @@ int firerest_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t 
 char * firerest_config(const char * path) {
   return firerest.configure_path(path);
 }
+
+static const char *RFC4648 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+static const char *HEX = "0123456789abcdef";
+
+string hexFromRFC4648(const char *rfc) {
+  assert(strlen(rfc) < 192); char buf[256];
+  char *sOut = buf;
+  const char *sIn = rfc;
+  while (*sIn == ' ') { sIn++; }
+  int bits = 0;
+  int i = 0;
+  for (; sIn[i] && sIn[i] != ' ' && sIn[i] != '='; i++) {
+    bits <<= 6;
+    switch (sIn[i]) {
+      case 'A': case 'B': case 'C': case 'D': case 'E': case 'F': case 'G': case 'H': case 'I': case 'J': case 'K': case 'L': case 'M':
+      case 'N': case 'O': case 'P': case 'Q': case 'R': case 'S': case 'T': case 'U': case 'V': case 'W': case 'X': case 'Y': case 'Z':
+        bits |= sIn[i] - 'A';
+	break;
+      case 'a': case 'b': case 'c': case 'd': case 'e': case 'f': case 'g': case 'h': case 'i': case 'j': case 'k': case 'l': case 'm':
+      case 'n': case 'o': case 'p': case 'q': case 'r': case 's': case 't': case 'u': case 'v': case 'w': case 'x': case 'y': case 'z':
+        bits |= sIn[i] - 'a' + 26;
+	break;
+      case '-': bits |= 62; break;
+      case '_': bits |= 63; break;
+      case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9':
+        bits |= sIn[i] - '0' + 52;
+	break;
+      default:
+	string error(sIn);
+	error.insert(i+1, ">?");
+	error.insert(i, "<");
+	return error;
+    }
+    if (i % 2 == 1) {
+      *sOut++ = HEX[bits >> 8];
+      *sOut++ = HEX[(bits >> 4) & 0xf];
+      if (sIn[i+1] == '=') { // two pad
+        // suppress hex code
+      } else {
+	*sOut++ = HEX[bits & 0xf]; 
+      }
+      bits = 0;
+    }
+  }
+  if ((i%2) == 1 && sIn[i] == '=') { // one pad
+    *sOut++ = HEX[bits >> 2];
+  }
+  *sOut++ = 0;
+
+  return string(buf);
+}
+
+string hexToRFC4648(const char *hex) {
+  assert(strlen(hex) < 256); char buf[256];
+  char *sOut = buf;
+  const char *sIn = hex;
+  while (*sIn == ' ') { sIn++; }
+  if (sIn[1] == 'x') { sIn += 2; }
+  int bits = 0;
+  int i = 0;
+  for (; sIn[i] && sIn[i] != ' '; i++) {
+    bits <<= 4;
+    switch (sIn[i]) {
+      case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9':
+        bits |= sIn[i] - '0';
+	break;
+      case 'a': case 'A': bits |= 0xa; break;
+      case 'b': case 'B': bits |= 0xb; break;
+      case 'c': case 'C': bits |= 0xc; break;
+      case 'd': case 'D': bits |= 0xd; break;
+      case 'e': case 'E': bits |= 0xe; break;
+      case 'f': case 'F': bits |= 0xf; break;
+      default:
+	string error(sIn);
+	error.insert(i+1, ">?");
+	error.insert(i, "<");
+	return error;
+    }
+    if (i % 3 == 2) {
+      *sOut++ = RFC4648[bits >> 6];
+      *sOut++ = RFC4648[bits & 0x3f];
+      bits = 0;
+    }
+  }
+  if (i % 3 == 1) {
+    *sOut++ = RFC4648[bits << 2];
+    *sOut++ = '=';
+  } else if (i % 3 == 2) {
+    bits <<= 4;
+    *sOut++ = RFC4648[bits >> 6];
+    *sOut++ = RFC4648[bits & 0x3f];
+    *sOut++ = '=';
+    *sOut++ = '=';
+  }
+  *sOut++ = 0;
+
+  return string(buf);
+}
+

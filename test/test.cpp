@@ -1064,11 +1064,34 @@ int testSpiralSearch() {
   return FALSE;
 }
 
+int testRFC4648() {
+  cout << "testRFC4648() -----------------------" << endl;
+
+  assert(testString("TEST RFC4648", "FPucA9l-", hexToRFC4648("14fb9c03d97e").c_str()));
+  assert(testString("TEST RFC4648", "FPucA9l-", hexToRFC4648("0x14fb9c03d97e").c_str()));
+  assert(testString("TEST RFC4648", "FPucA9l-", hexToRFC4648("   0x14fb9c03d97e").c_str()));
+  assert(testString("TEST RFC4648", "FPucA9l-", hexToRFC4648("   0x14fb9c03d97e   ").c_str()));
+  assert(testString("TEST RFC4648", "FPucA9k=", hexToRFC4648("14fb9c03d9").c_str()));
+  assert(testString("TEST RFC4648", "FPucAw==", hexToRFC4648("14fb9c03").c_str()));
+  assert(testString("TEST RFC4648", "3EpXBEKf6vdAORnCcb6Rk1tImGY=", hexToRFC4648("dc4a5704429feaf7403919c271be91935b489866").c_str()));
+
+  assert(testString("TEST RFC4648", "14fb9c03d97e", hexFromRFC4648("FPucA9l-").c_str()));
+  assert(testString("TEST RFC4648", "14fb9c03d97e", hexFromRFC4648("   FPucA9l-   ").c_str()));
+  assert(testString("TEST RFC4648", "14fb9c03d9", hexFromRFC4648("FPucA9k=").c_str()));
+  assert(testString("TEST RFC4648", "14fb9c03", hexFromRFC4648("FPucAw==").c_str()));
+  assert(testString("TEST RFC4648", "dc4a5704429feaf7403919c271be91935b489866", hexFromRFC4648("3EpXBEKf6vdAORnCcb6Rk1tImGY=").c_str()));
+
+  cout << "testRFC4648() PASS" << endl;
+
+  return 0;
+}
+
 int testSuite() {
   worker.setIdlePeriod(0);
   firelog_level(FIRELOG_TRACE);
   try {
     if (
+      testRFC4648()==0 &&
       testSplit()==0 &&
       testFireREST() == 0 &&
       testConfig()==0 &&
