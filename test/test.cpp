@@ -12,6 +12,13 @@
 #include "firefuse.h"
 #include "version.h"
 #include "FirePiCam.h"
+#include <assert.h>
+
+inline int fail(int rc) {
+  std::cout << "***ASSERT FAILED*** expected:0 actual:" << rc << std::endl;
+  return FALSE;
+}
+#define ASSERTZERO(exp) {int rc; assert(0==(rc=exp) || fail(rc));}
 
 template <class T> class MockValue {
 private:
@@ -1122,6 +1129,9 @@ int testSuite() {
   return -1;
 }
 
+
 int main(int argc, char *argv[]) {
+  //int x = 123;
+  //ASSERTZERO(x);
   return testSuite();
 }
