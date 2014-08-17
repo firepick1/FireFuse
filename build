@@ -70,10 +70,10 @@ fi
 echo "STATUS	: cmake installed"
 
 if [ "$(type -p lsb_release)" == "" ]; then
-  ccho "INSTALL	: lsb_release ..."
-  sudo apt-get install -y lsb_release
+  echo "INSTALL	: lsb-release ..."
+  sudo apt-get install -y lsb-release
 fi
-echo "STATUS	: lsb_release installed"
+echo "STATUS	: lsb-release installed"
 
 if [ ! -e /usr/local/include/jansson.h ] ; then
   echo "INSTALL	: jansson ..."
@@ -209,6 +209,7 @@ if [ -e /var/firefuse/cv ]; then
 fi
 echo initializing /var/firefuse
 if [ -e /var/firefuse/config.json ]; then
+  sudo mkdir -p /var/firefuse
   sudo mv -f /var/firefuse/config.json /var/firefuse/config.json.bak
   echo "INFO	: Saved old /var/firefuse/config.json as /var/firefuse/config.json.bak"
 fi
