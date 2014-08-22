@@ -17,7 +17,7 @@ core
 firefuse
 !var/firefuse
 firesight
-jannson
+jansson
 CMakeCache.txt
 install_manifest.txt
 CMakeFiles/*
@@ -25,3 +25,4 @@ CMakeFiles/*
 Makefile
 target
 version.h
+cam.jpg

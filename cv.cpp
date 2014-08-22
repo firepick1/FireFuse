@@ -99,7 +99,7 @@ int cve_getattr(const char *path, struct stat *stbuf) {
   int res = 0;
 
   if (firefuse_isFile(path, FIREREST_CAMERA_JPG)) {
-    res = firefuse_getattr_file(path, stbuf, worker.cameras[0].src_camera_jpg.peek().size(), 0444);
+    res = firefuse_getattr_file(path, stbuf, worker.cameras[0].src_camera_jpg.peek().size(), 0666);
   } else if (firefuse_isFile(path, FIREREST_OUTPUT_JPG)) {
     res = firefuse_getattr_file(path, stbuf, worker.cameras[0].src_output_jpg.peek().size(), 0444);
   } else if (firefuse_isFile(path, FIREREST_MONITOR_JPG)) {
@@ -220,10 +220,19 @@ int CVE::process(BackgroundWorker *pWorker) {
 
 int cve_open(const char *path, struct fuse_file_info *fi) {
   int result = 0;
+  CameraNode &camera = worker.cameras[0];
     
   if (firefuse_isFile(path, FIREREST_PROPERTIES_JSON)) {
     if (verifyOpenRW(path, fi, &result)) {
       fi->fh = (uint64_t) (size_t) new SmartPointer<char>(worker.cve(path).src_properties_json.get());
+    }
+  } else if (firefuse_isFile(path, FIREREST_CAMERA_JPG)) {
+    if (verifyOpenRW(path, fi, &result)) {
+      if (FireREST::isSync(path)) {
+	fi->fh = (uint64_t) (size_t) new SmartPointer<char>(camera.src_camera_jpg.get_sync());
+      } else {
+	fi->fh = (uint64_t) (size_t) new SmartPointer<char>(camera.src_camera_jpg.get());
+      }
     }
   } else if (firefuse_isFile(path, FIREREST_SAVED_PNG)) {
     if (verifyOpenRW(path, fi, &result)) {
@@ -234,9 +243,11 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
 	  empty_buffer.setSize(0);
 	  worker.cve(path).src_saved_png.post(empty_buffer);
 	  saved_png = empty_buffer;
-	  LOGTRACE3("cve_open(%s, O_WRONLY) allocated %ldB @ %lx", path, saved_png.allocated_size(), (size_t) saved_png.data());
+	  LOGTRACE3("cve_open(%s, O_WRONLY) allocated %ldB @ %lx", 
+	    path, saved_png.allocated_size(), (size_t) saved_png.data());
 	} else {
-	  LOGTRACE3("cve_open(%s, O_WRONLY) reusing %ldB @ %lx", path, saved_png.allocated_size(), (size_t) saved_png.data());
+	  LOGTRACE3("cve_open(%s, O_WRONLY) reusing %ldB @ %lx", 
+	    path, saved_png.allocated_size(), (size_t) saved_png.data());
 	}
 	fi->fh = (uint64_t) (size_t) new SmartPointer<char>(saved_png);
       } else {
@@ -244,7 +255,6 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
       }
     }
   } else if (verifyOpenR_(path, fi, &result)) {
-    CameraNode &camera = worker.cameras[0];
     if (firefuse_isFile(path, FIREREST_PROCESS_FIRE)) {
       if (FireREST::isSync(path)) {
 	int count = firerest.incrementProcessCount();
@@ -264,12 +274,6 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
 	camera.src_camera_jpg.get_sync();
       }
       fi->fh = (uint64_t) (size_t) new SmartPointer<char>(worker.cve(path).src_save_fire.get_sync());
-    } else if (firefuse_isFile(path, FIREREST_CAMERA_JPG)) {
-      if (FireREST::isSync(path)) {
-	fi->fh = (uint64_t) (size_t) new SmartPointer<char>(camera.src_camera_jpg.get_sync());
-      } else {
-	fi->fh = (uint64_t) (size_t) new SmartPointer<char>(camera.src_camera_jpg.get());
-      }
     } else if (firefuse_isFile(path, FIREREST_OUTPUT_JPG)) {
       fi->fh = (uint64_t) (size_t) new SmartPointer<char>(camera.src_output_jpg.get());
     } else if (firefuse_isFile(path, FIREREST_MONITOR_JPG)) {

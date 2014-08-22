@@ -1,0 +1,55 @@
+echo "COMMAND	: $0 		# benchmark raspistill with different parameters"
+echo "USAGE	:   $0 .1	# default time to sleep between ls of output file"
+echo "USAGE	:   $0 .2 -q 10	# sleep 200ms and pass the remaining parameters to raspistill"
+echo "HELP	: This script checks image acquisition speed of raspistill"
+echo "HELP	: by writing requesting an image capture followed by periodic"
+echo "HELP	: calls to ls that show when the image is actually acquired"
+
+s=$1
+if [ "$s" == "" ]; then 
+  s=.1; 
+else 
+  shift
+fi
+
+ls -l cam.jpg; 
+
+PID=`ps -ef | grep "raspistill -t" | grep -v grep | grep -o -E "[0-9]*" | head -1`
+if [ "$PID" == "" ]; then
+  echo "COMMAND	: raspistill -t 0 -s -o cam.jpg $* &"
+  raspistill -t 0 -s -o cam.jpg $* &
+  RC=$?; if [ $RC -ne 0 ]; then echo "ERROR	: $RC"; exit $RC; fi
+  PID=`ps -ef | grep "raspistill -t" | grep -v grep | grep -o -E "[0-9]*" | head -1`
+  if [ "$PID" == "" ]; then echo "ERROR	: No raspistill process"; exit -1; fi
+  kill -USR1 $PID
+  sleep 2
+fi
+
+ls -l cam.jpg; 
+
+t=0
+
+function ONE() {
+sleep 1
+	echo
+        ls -l cam.jpg
+	kill -USR1 $PID
+	t=$(($t+1)); sleep $s; echo $t `ls -l cam.jpg`
+	t=$(($t+1)); sleep $s; echo $t `ls -l cam.jpg`
+	t=$(($t+1)); sleep $s; echo $t `ls -l cam.jpg`
+	t=$(($t+1)); sleep $s; echo $t `ls -l cam.jpg`
+	t=$(($t+1)); sleep $s; echo $t `ls -l cam.jpg`
+	t=$(($t+1)); sleep $s; echo $t `ls -l cam.jpg`
+	t=$(($t+1)); sleep $s; echo $t `ls -l cam.jpg`
+	t=$(($t+1)); sleep $s; echo $t `ls -l cam.jpg`
+	t=$(($t+1)); sleep $s; echo $t `ls -l cam.jpg`
+	t=$(($t+1)); sleep $s; echo $t `ls -l cam.jpg`
+}
+
+ONE
+ONE
+ONE
+ONE
+
+echo "COMMAND	: kill $PID"
+kill $PID

@@ -15,16 +15,6 @@ if [ -e CMakeFiles ] ; then
   sudo rm -rf CMakeCache.txt CMakeFiles CMakeFiles.txt target cmake_install.cmake CPackConfig.cmake CPackSourceConfig.cmake
   mkdir target
 fi
-
-if [ "$(arch)" != "armv6l" ] || [ "$(lsb_release -is)" != "Debian" ] ;then
-  echo "========================== WARNING ==============================="
-  echo "FireFUSE is currently only supported on Raspberry Pi with Raspbian"
-  echo "=================================================================="
-  exit -1
-fi
-echo "STATUS	: Raspberry Pi Debian confirmed for installation"
-
-cv="install"
  
 function help() {
   echo "Build FireFUSE for Raspbian"
@@ -69,11 +59,22 @@ if [ "$(type -p cmake)" == "" ]; then
 fi
 echo "STATUS	: cmake installed"
 
+cv="install"
+
 if [ "$(type -p lsb_release)" == "" ]; then
   ccho "INSTALL	: lsb_release ..."
   sudo apt-get install -y lsb_release
+  RC=$?; if [ $RC -ne 0 ]; then
+    echo "FAILED	: RC=$RC "; 
+    echo "TRY	: Debian Linux is required";
+    exit -1;
+  fi
 fi
 echo "STATUS	: lsb_release installed"
+
+if [ "$(lsb_release -is)" != "Debian" ] ;then
+  echo "WARNING	: Only Debian Linux is supported";
+fi
 
 if [ ! -e /usr/local/include/jansson.h ] ; then
   echo "INSTALL	: jansson ..."
@@ -129,15 +130,7 @@ if [ ! -e /usr/include/fuse.h ] ; then
   echo "/usr/local/lib" > /etc/ld.so.conf.d/firefuse.conf
   sudo ldconfig
 fi
-if [ ! -e /usr/lib/libfirepicam.so ]; then
-  echo "INSTALL	: libfirepicam ..."
-  pushd .. > /dev/null
-  git clone git://github.com/firepick1/FirePiCam
-  popd > /dev/null
-  pushd ../FirePiCam > /dev/null
-  sudo -E ./build
-  popd > /dev/null
-fi
+
 if [ ! -e /usr/lib/lib_firesight.so ]; then
   echo "INSTALL	: FireSight ..."
   pushd ..
@@ -147,18 +140,43 @@ if [ ! -e /usr/lib/lib_firesight.so ]; then
   . ./build
   popd > /dev/null
 fi
-if [ ! -e /opt/node ] ;then
-  echo "INSTALL	: nodejs ..."
-  sudo mkdir /opt/node
-  pushd /opt/node > /dev/null
-  sudo wget http://nodejs.org/dist/v0.10.22/node-v0.10.22-linux-arm-pi.tar.gz
-  sudo tar xvzf node-*-linux-arm-pi.tar.gz
-  sudo rm node-v0.10.22-linux-arm-pi.tar.gz
-  sudo mv node*/* .
-  sudo ex -s -c 'g/PATH/s/"$/:\/opt\/node\/bin"/' -c wq /etc/profile
-  source /etc/profile
+
+echo "STATUS	: creating makefiles"
+cmake .
+
+if [ "$(arch)" != "armv6l" ] ;then
+  echo "----------------------------"
+  echo "WARNING	: FireFUSE is only partially supported on this computer."
+  echo "TRY	: Build FireFUSE with Rasbian on Raspberry Pi"
+  echo "TRY	: On this machine, you can test FireFUSE with mock adapters:"
+  echo "TRY	:   make testfirefuse"
+  echo "TRY	:   target/testfirefuse"
+  exit -1
+fi
+echo "STATUS	: Raspberry Pi Debian confirmed for installation"
+
+if [ ! -e /usr/lib/libfirepicam.so ]; then
+  echo "INSTALL	: libfirepicam ..."
+  pushd .. > /dev/null
+  git clone git://github.com/firepick1/FirePiCam
+  popd > /dev/null
+  pushd ../FirePiCam > /dev/null
+  sudo -E ./build
   popd > /dev/null
 fi
+
+#if [ ! -e /opt/node ] ;then
+#  echo "INSTALL	: nodejs ..."
+#  sudo mkdir /opt/node
+#  pushd /opt/node > /dev/null
+#  sudo wget http://nodejs.org/dist/v0.10.22/node-v0.10.22-linux-arm-pi.tar.gz
+#  sudo tar xvzf node-*-linux-arm-pi.tar.gz
+#  sudo rm node-v0.10.22-linux-arm-pi.tar.gz
+#  sudo mv node*/* .
+#  sudo ex -s -c 'g/PATH/s/"$/:\/opt\/node\/bin"/' -c wq /etc/profile
+#  source /etc/profile
+#  popd > /dev/null
+#fi
 
 # Agressively dismount /dev/firefuse
 echo "STATUS	: unmounting /dev/firefuse..."
@@ -180,9 +198,6 @@ if [ ! -e /dev/firefuse ]; then
   echo "STATUS	: mkdir /dev/firefuse "
   sudo mkdir /dev/firefuse 
 fi
-
-echo "STATUS	: creating makefiles"
-cmake .
 
 COMMIT=`git log -1 | grep commit | grep -o '[^ ]*$'`
 echo "GIT	: $COMMIT"
