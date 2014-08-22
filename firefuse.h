@@ -223,7 +223,6 @@ typedef class DCE {
   public: LIFOCache<SmartPointer<char> > src_gcode_fire;
   //public: LIFOCache<SmartPointer<char> > src_properties_json;
   
-  public: static int callSystem(char *cmdbuf);
   public: static vector<std::string> gcode_lines(const string &gcode);
   public: static string dce_path(const char *pPath);
   public: DCE(string name);
@@ -275,6 +274,7 @@ typedef class BackgroundWorker {
 
   public: BackgroundWorker();
   public: ~BackgroundWorker();
+  public: static int callSystem(char *cmdbuf);
   public: CVE& cve(string path, bool create=FALSE);
   public: DCE& dce(string path, bool create=FALSE);
   public: vector<string> getCveNames();

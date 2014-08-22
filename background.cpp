@@ -193,6 +193,29 @@ BackgroundWorker::BackgroundWorker() {
 BackgroundWorker::~BackgroundWorker() {
 }
 
+int BackgroundWorker::callSystem(char *cmdbuf) {
+  int rc = 0;
+  rc = system(cmdbuf);
+  if (rc == -1) {
+    LOGERROR2("BackgroundWorker::callSystem(%s) -> %d", cmdbuf, rc);
+    return rc;
+  }
+  if (WIFEXITED(rc)) {
+    if (WEXITSTATUS(rc)) {
+      LOGERROR2("BackgroundWorker::callSystem(%s) -> EXIT %d", cmdbuf, WEXITSTATUS(rc));
+      return rc;
+    }
+  } else if (WIFSTOPPED(rc)) {
+      LOGERROR2("BackgroundWorker::callSystem(%s) -> STOPPED %d", cmdbuf, WSTOPSIG(rc));
+      return rc;
+  } else if (WIFSIGNALED(rc)) {
+      LOGERROR2("BackgroundWorker::callSystem(%s) -> SIGNALED %d", cmdbuf, WTERMSIG(rc));
+      return rc;
+  }
+  LOGINFO1("BackgroundWorker::callSystem(%s) OK", cmdbuf);
+  return 0;
+}
+
 void BackgroundWorker::clear() {
   for (std::map<string,CVEPtr>::iterator it=cveMap.begin(); it!=cveMap.end(); ++it){
     delete it->second;

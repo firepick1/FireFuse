@@ -151,29 +151,6 @@ void DCE::clear() {
   activeRequests = 0;
 }
 
-int DCE::callSystem(char *cmdbuf) {
-  int rc = 0;
-  rc = system(cmdbuf);
-  if (rc == -1) {
-    LOGERROR2("DCE::callSystem(%s) -> %d", cmdbuf, rc);
-    return rc;
-  }
-  if (WIFEXITED(rc)) {
-    if (WEXITSTATUS(rc)) {
-      LOGERROR2("DCE::callSystem(%s) -> EXIT %d", cmdbuf, WEXITSTATUS(rc));
-      return rc;
-    }
-  } else if (WIFSTOPPED(rc)) {
-      LOGERROR2("DCE::callSystem(%s) -> STOPPED %d", cmdbuf, WSTOPSIG(rc));
-      return rc;
-  } else if (WIFSIGNALED(rc)) {
-      LOGERROR2("DCE::callSystem(%s) -> SIGNALED %d", cmdbuf, WTERMSIG(rc));
-      return rc;
-  }
-  LOGINFO1("DCE::callSystem(%s) OK", cmdbuf);
-  return 0;
-}
-
 /**
  * Return canonical DCE path. E.g.:
  *   /dev/firefuse/sync/cnc/tinyg/gcode.fire => /cnc/tinyg
@@ -238,10 +215,10 @@ int DCE::serial_init(){
     } else {
       snprintf(cmdbuf, sizeof(cmdbuf), "stty 0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0 -F %s", path);
       LOGDEBUG2("DCE::serial_init(%s) %s (first call may fail)", path, cmdbuf);
-      rc = DCE::callSystem(cmdbuf);
+      rc = BackgroundWorker::callSystem(cmdbuf);
       if (rc) {
 	LOGINFO3("DCE::serial_init(%s) %s -> %d RETRYING...", path, cmdbuf, rc);
-	rc = DCE::callSystem(cmdbuf);
+	rc = BackgroundWorker::callSystem(cmdbuf);
       }
       if (rc) { 
 	LOGERROR2("DCE::serial_init(%s) clear serial port failed -> %d", path, rc);
@@ -250,7 +227,7 @@ int DCE::serial_init(){
 
       snprintf(cmdbuf, sizeof(cmdbuf), "stty %s -F %s", serial_stty.c_str(), path);
       LOGINFO2("DCE::serial_init(%s) %s", path, cmdbuf);
-      rc = DCE::callSystem(cmdbuf);
+      rc = BackgroundWorker::callSystem(cmdbuf);
       if (rc) { 
 	LOGERROR3("DCE::serial_init(%s) %s -> %d", path, cmdbuf, rc);
 	return rc; 

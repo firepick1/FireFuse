@@ -74,11 +74,11 @@ int firestep_init(){
     char cmdbuf[CMDMAX+1];
 
     sprintf(cmdbuf, "stty 115200 -F %s", path);
-    rc = DCE::callSystem(cmdbuf);
+    rc = BackgroundWorker::callSystem(cmdbuf);
     if (rc) { return rc; }
 
     sprintf(cmdbuf, "stty 1400:4:1cb2:a00:3:1c:7f:15:4:1:1:0:11:13:1a:0:12:f:17:16:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0:0 -F %s", path);
-    rc = DCE::callSystem(cmdbuf);
+    rc = BackgroundWorker::callSystem(cmdbuf);
     if (rc) { return rc; }
 
     fdwTinyG = fdrTinyG = open(path, O_RDWR | O_ASYNC | O_NONBLOCK);
