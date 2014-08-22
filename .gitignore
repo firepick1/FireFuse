@@ -26,3 +26,5 @@ Makefile
 target
 version.h
 cam.jpg
+foo
+foo.*

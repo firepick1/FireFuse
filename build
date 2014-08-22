@@ -243,6 +243,11 @@ if [ $? -ne 0 ]; then
   exit -1
 fi
 
+echo "COMMAND	: sudo cp raspistill.sh /usr/local/bin/raspistill.sh"
+sudo cp raspistill.sh /usr/local/bin/raspistill.sh
+RC=$?
+if [ $RC -ne 0 ]; then echo "ERROR	: $RC"; exit $RC; fi
+
 if [ -e /dev/firefuse/status ]; then
   if [ ! -e /etc/rc5.d/S01mountfirefuse.sh ]; then
     sudo ./postinst
