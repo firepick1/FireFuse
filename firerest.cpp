@@ -1,4 +1,5 @@
-#include <string.h>
+#include <string>
+#include <stdio.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <dirent.h>
@@ -19,6 +20,8 @@ const char * fuse_root  = "/dev/firefuse";
 
 int cameraWidth = 800;
 int cameraHeight = 200;
+string cameraSourceName = "raspistill";
+string cameraSourceConfig = "";
 
 FireREST firerest;
 
@@ -213,9 +216,33 @@ string FireREST::config_camera(const char*cv_path, json_t *pCamera, const char *
   if (json_is_integer(pHeight)) {
     cameraHeight = json_integer_value(pHeight);
   }
-  LOGINFO1("FireREST::config_camera(%s)", cameraPath.c_str());
+  LOGINFO3("FireREST::config_camera(%s) %dx%d", cameraPath.c_str(), cameraWidth, cameraHeight);
 
-  create_resource(cameraPath + "/camera.jpg", 0444);
+  json_t *pSource = json_object_get(pCamera, "source");
+  if (json_is_object(pSource)) {
+    json_t *pSourceName = json_object_get(pSource, "name");
+    json_t *pSourceConfig = json_object_get(pSource, "config");
+    if (json_is_string(pSourceName)) {
+      cameraSourceName = json_string_value(pSourceName);
+    }
+    assert(strcmp("raspistill", cameraSourceName.c_str()) == 0);
+    if (cameraSourceName.compare("raspistill") == 0) {
+      if (json_is_string(pSourceConfig)) {
+	cameraSourceConfig = json_string_value(pSourceConfig);
+	if (cameraSourceConfig.size() == 0) {
+	  cameraSourceConfig = "-t 0 -q 65 -bm -s -o /dev/firefuse/cv/1/camera.jpg";
+	}
+      }
+      char buf[256];
+      snprintf(buf, sizeof(buf), "%s -w %d -h %d", 
+        cameraSourceConfig.c_str(), cameraWidth, cameraHeight);
+      cameraSourceConfig = buf;
+    }
+  }
+  LOGINFO3("FireREST::config_camera(%s) source:%s %s", 
+    cameraPath.c_str(), cameraSourceName.c_str(), cameraSourceConfig.c_str());
+
+  create_resource(cameraPath + "/camera.jpg", 0666);
   create_resource(cameraPath + "/output.jpg", 0444);
   create_resource(cameraPath + "/monitor.jpg", 0444);
 
@@ -560,7 +587,6 @@ int firerest_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t 
 
   return 0;
 }
-
 
 char * firerest_config(const char * path) {
   return firerest.configure_path(path);

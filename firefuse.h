@@ -40,8 +40,6 @@ typedef struct {
 extern const char * fuse_root;
 extern FuseDataBuffer headcam_image;     // perpetually changing image
 extern FuseDataBuffer headcam_image_fstat;  // image at time of most recent fstat()
-extern int cameraWidth; // config.json provided camera width
-extern int cameraHeight; // config.json provided camera height
 
 extern FuseDataBuffer* firefuse_allocImage(const char *path, int *pResult);
 extern FuseDataBuffer* firefuse_allocDataBuffer(const char *path, int *pResult, const char *pData, size_t length);
@@ -167,6 +165,11 @@ int tinyg_hash(const char *value, size_t len);
 #include <vector>
 #include <map>
 #include <string.h>
+
+extern int cameraWidth; // config.json provided camera width
+extern int cameraHeight; // config.json provided camera height
+extern string cameraSourceName; // config.json provided camera source name
+extern string cameraSourceConfig; // config.json provided camera souce config
 
 double 	cve_seconds();
 void 	cve_process(const char *path, int *pResult);

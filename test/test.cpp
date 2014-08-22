@@ -625,8 +625,12 @@ int testConfig() {
   assert(testString("TEST testConfig()", "mock", worker.dce("/cnc/tinyg").getSerialPath().c_str()));
   SmartPointer<char> one_json(worker.cve("/cv/1/gray/cve/one").src_firesight_json.get());
   assert(testString("firesight.json GET","[{\"op\":\"putText\",\"text\":\"one\"}]", one_json));
-  assert(400 == cameraWidth);
-  assert(400 == cameraHeight);
+  assert(200 == cameraWidth);
+  assert(800 == cameraHeight);
+  assert(testString("config.json cameraSourceName", "raspistill", cameraSourceName.c_str()));
+  assert(testString("config.json cameraSourceConfig",
+	  "-t 0 -q 45 -bm -s -o /dev/firefuse/cv/1/camera/jpg -w 200 -h 800", 
+	  cameraSourceConfig.c_str()));
 
   //////////////// properties test
   const char * twoPath = "/cv/1/bgr/cve/two/properties.json";
