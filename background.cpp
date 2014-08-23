@@ -89,17 +89,18 @@ void CameraNode::init() {
   char heightBuf[20];
   snprintf(widthBuf, sizeof(widthBuf), "%d", cameraWidth);
   snprintf(heightBuf, sizeof(heightBuf), "%d", cameraHeight);
+  const char *raspistill_sh = "/usr/local/bin/raspistill.sh";
   bool isRaspistill  = cameraSourceName.compare("raspistill") == 0;
   if (isRaspistill) {
     struct stat buffer;   
-    if (0 != stat("/usr/bin/raspistill", &buffer)) {
-      LOGWARN("CameraNode::init() raspistill camera source is unavailable:/usr/bin/raspistill");
+    if (0 != stat(raspistill_sh, &buffer)) {
+      LOGWARN1("CameraNode::init() raspistill camera source is unavailable:%s", raspistill_sh);
       isRaspistill = FALSE;
     }
   }
   if (isRaspistill) {
     char cmd[255];
-    snprintf(cmd, sizeof(cmd), "/usr/bin/raspistill %s &", cameraSourceConfig.c_str());
+    snprintf(cmd, sizeof(cmd), "%s %s", raspistill_sh, cameraSourceConfig.c_str());
     LOGINFO1("CameraNode::init() %s", cmd);
     ASSERTZERO(BackgroundWorker::callSystem(cmd));
     const char *path_pid = "/var/firefuse/raspistill.PID";
