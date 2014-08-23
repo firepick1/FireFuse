@@ -64,6 +64,32 @@ int background_worker() {
   return 0;
 }
 
+/**
+ * Return allocated memory with contents 
+ */
+SmartPointer<char> loadFile(const char *path, int suffixBytes) {
+    LOGINFO1("loadFile(%s)", path);
+    FILE *file = fopen(path, "r");
+    if (file == 0) {
+      LOGERROR1("loadFile() fopen(%s) failed", path);
+      ASSERTZERO(-ENOENT);
+    }
+    fseek(file, 0, SEEK_END);
+    size_t length = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    SmartPointer<char> result(NULL, length+suffixBytes);
+    assert(result);
+    LOGINFO2("loadFile(%s) fread(%ld)", path, (long)length);
+    size_t bytesRead = fread(result.data(), 1, length, file);
+    if (bytesRead != length) {
+      LOGERROR2("loadFile(), fread failed expected:%ldB actual%ldB", length, bytesRead);
+      exit(-EIO);
+    }
+    LOGINFO2("loadFile(%s) loaded %ldB", path, (long) bytesRead);
+    fclose(file);
+    return result;
+}
+
 /////////////////////////// CameraNode ///////////////////////////////////
 
 CameraNode::CameraNode() {
@@ -119,7 +145,7 @@ void CameraNode::init() {
     fseek(fpid, 0, SEEK_SET);
     char pidbuf[255];
     assert(length < sizeof(pidbuf)-1);
-    LOGINFO2("CameraNode::init() fread(%s, %d)", path_pid, length);
+    LOGINFO2("CameraNode::init() fread(%s, %ld)", path_pid, length);
     size_t bytesRead = fread(pidbuf, 1, length, fpid);
     if (bytesRead != length) {
       LOGERROR2("CameraNode::init(), fread failed expected:%ldB actual%ldB", length, bytesRead);

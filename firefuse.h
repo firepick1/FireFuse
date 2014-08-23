@@ -4,7 +4,7 @@
 extern "C" {
 #endif
 
-//////////////////////////////////// C DECLARATIONS ////////////////////////////////////////////////////////
+//////////////////////////////// C DECLARATIONS ////////////////////////////////
 #define FUSE_USE_VERSION 26
 #include <fuse.h>
 #include <FireLog.h>
@@ -159,7 +159,7 @@ const char * firestep_json();
 int tinyg_hash(const char *value, size_t len);
 
 #ifdef __cplusplus
-//////////////////////////////////// C++ DECLARATIONS ////////////////////////////////////////////////////////
+//////////////////////////////// C++ DECLARATIONS ///////////////////////////////////////////////////
 } // __cplusplus
 #include "LIFOCache.hpp"
 #include <vector>
@@ -176,6 +176,7 @@ void 	cve_process(const char *path, int *pResult);
 class BackgroundWorker;
 string hexFromRFC4648(const char *rfc);
 string hexToRFC4648(const char *hex);
+SmartPointer<char> loadFile(const char *path, int suffixBytes=0);
 
 inline int fail(int rc) {
   std::cout << "***ASSERT FAILED*** expected:0 actual:" << rc << std::endl;

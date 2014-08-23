@@ -1091,11 +1091,35 @@ int testRFC4648() {
   return 0;
 }
 
-int testSuite() {
+int testRaspistill() {
+  cout << "testRaspistill() -----------------------" << endl;
+
+  SmartPointer<char> noimage = loadFile("/var/firefuse/no-image.jpg");
+  assert(testNumber(10694l, (long) noimage.size()));
+  uchar *pData = (uchar *) noimage.data();
+  assert(testNumber(255l, (long) pData[0]));
+  assert(testNumber(216l, (long) pData[1]));
+  assert(testNumber(255l, (long) pData[2]));
+
+  SmartPointer<char> noimage1 = loadFile("/var/firefuse/no-image.jpg", 1);
+  assert(testNumber(10695l, (long) noimage1.size()));
+  uchar *pData1 = (uchar *) noimage1.data();
+  assert(testNumber(255l, (long) pData1[0]));
+  assert(testNumber(216l, (long) pData1[1]));
+  assert(testNumber(255l, (long) pData1[2]));
+  assert(testNumber(0l, (long) pData1[10694]));
+
+  cout << "testRaspistill() PASS" << endl;
+
+  return 0;
+}
+
+int main(int argc, char *argv[]) { 
   worker.setIdlePeriod(0);
   firelog_level(FIRELOG_TRACE);
   try {
     if (
+      testRaspistill()==0 &&
       testRFC4648()==0 &&
       testSplit()==0 &&
       testFireREST() == 0 &&
@@ -1125,11 +1149,4 @@ int testSuite() {
     cout << "UNKNOWN EXCEPTION"<< endl;
   }
   return -1;
-}
-
-
-int main(int argc, char *argv[]) {
-  //int x = 123;
-  //ASSERTZERO(x);
-  return testSuite();
-}
+} // main

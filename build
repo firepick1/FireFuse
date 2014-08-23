@@ -144,6 +144,19 @@ fi
 echo "STATUS	: creating makefiles"
 cmake .
 
+if [ -e /var/firefuse/cv ]; then
+  sudo rm -rf /var/firefuse/cv
+  sudo rm -rf /var/firefuse/sync/cv
+fi
+sudo mkdir -p /var/firefuse
+echo initializing /var/firefuse
+if [ -e /var/firefuse/config.json ]; then
+  sudo mv -f /var/firefuse/config.json /var/firefuse/config.json.bak
+  echo "INFO	: Saved old /var/firefuse/config.json as /var/firefuse/config.json.bak"
+fi
+sudo cp var/firefuse/config.json /var/firefuse/
+sudo cp var/no-image.jpg /var/firefuse/no-image.jpg
+
 if [ "$(arch)" != "armv6l" ] ;then
   echo "----------------------------"
   echo "WARNING	: FireFUSE is only partially supported on this computer."
@@ -229,17 +242,6 @@ if [ $? -ne 0 ]; then
   exit -1
 fi
 echo "STATUS	: FireFUSE installed"
-
-if [ -e /var/firefuse/cv ]; then
-  sudo rm -rf /var/firefuse/cv
-  sudo rm -rf /var/firefuse/sync/cv
-fi
-echo initializing /var/firefuse
-if [ -e /var/firefuse/config.json ]; then
-  sudo mv -f /var/firefuse/config.json /var/firefuse/config.json.bak
-  echo "INFO	: Saved old /var/firefuse/config.json as /var/firefuse/config.json.bak"
-fi
-sudo cp var/firefuse/config.json /var/firefuse/
 
 echo "STATUS	: Mounting the multi-threaded firefuse file system on /dev/firefuse"
 echo "COMMAND	: target/firefuse -o allow_other /dev/firefuse"
