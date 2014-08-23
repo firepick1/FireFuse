@@ -485,7 +485,7 @@ static void assert_headcam(SmartPointer<char> jpg, int headcam) {
   cout << message << endl;
   switch (headcam) {
     case 0:
-      assert(129579 == jpg.size());
+      assert(testNumber(129579l, (long) jpg.size()));
       assert(0xdc == (uchar)jpg.data()[1520]);
       break;
     case 1:
@@ -621,10 +621,8 @@ int testConfig() {
   assert(testString("firesight.json GET","[{\"op\":\"putText\",\"text\":\"one\"}]", one_json));
   assert(200 == cameraWidth);
   assert(800 == cameraHeight);
-  assert(testString("config.json cameraSourceName", "raspistill", cameraSourceName.c_str()));
-  assert(testString("config.json cameraSourceConfig",
-	  "-t 0 -q 45 -bm -s -o /dev/firefuse/cv/1/camera/jpg -w 200 -h 800", 
-	  cameraSourceConfig.c_str()));
+  assert(testString("config.json cameraSourceName", "firepicam", cameraSourceName.c_str()));
+  assert(testString("config.json cameraSourceConfig", "", cameraSourceConfig.c_str()));
 
   //////////////// properties test
   const char * twoPath = "/cv/1/bgr/cve/two/properties.json";
@@ -1108,6 +1106,39 @@ int testRaspistill() {
   assert(testNumber(216l, (long) pData1[1]));
   assert(testNumber(255l, (long) pData1[2]));
   assert(testNumber(0l, (long) pData1[10694]));
+
+  worker.clear();
+  worker.processInit();
+
+  assert(testString("TEST fuse_root", "/dev/firefuse", fuse_root));
+
+  /////////// config test
+  char * configJson = firerest.configure_path("test/testconfig-raspistill.json");
+  assert(configJson);
+  free(configJson);
+  vector<string> cveNames = worker.getCveNames();
+  assert(4 == cveNames.size());
+  for (int i = 0; i < 4; i++) {
+    LOGINFO2("TEST configure_path cveNames[%d] = %s", i, cveNames[i].c_str());
+  }
+  assert(0==strcmp("/cv/1/bgr/cve/one", cveNames[0].c_str()));
+  assert(0==strcmp("/cv/1/bgr/cve/two", cveNames[1].c_str()));
+  assert(0==strcmp("/cv/1/gray/cve/one", cveNames[2].c_str()));
+  assert(0==strcmp("/cv/1/gray/cve/two", cveNames[3].c_str()));
+  string caughtex;
+  try { worker.cve("/cv/1/gray/cve/one"); } catch (string ex) { caughtex = ex; }
+  assert(caughtex.empty());
+  try { worker.dce("/cnc/tinyg"); } catch (string ex) { caughtex = ex; }
+  assert(caughtex.empty());
+  assert(testString("TEST testConfig()", "mock", worker.dce("/cnc/tinyg").getSerialPath().c_str()));
+  SmartPointer<char> one_json(worker.cve("/cv/1/gray/cve/one").src_firesight_json.get());
+  assert(testString("firesight.json GET","[{\"op\":\"putText\",\"text\":\"one\"}]", one_json));
+  assert(200 == cameraWidth);
+  assert(800 == cameraHeight);
+  assert(testString("config.json cameraSourceName", "raspistill", cameraSourceName.c_str()));
+  assert(testString("config.json cameraSourceConfig",
+	  "-t 0 -q 45 -bm -s -o /dev/firefuse/cv/1/camera/jpg -w 200 -h 800", 
+	  cameraSourceConfig.c_str()));
 
   cout << "testRaspistill() PASS" << endl;
 

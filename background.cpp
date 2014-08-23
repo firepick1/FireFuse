@@ -122,6 +122,7 @@ void CameraNode::init() {
     if (0 != stat(raspistill_sh, &buffer)) {
       LOGWARN1("CameraNode::init() raspistill camera source is unavailable:%s", raspistill_sh);
       isRaspistill = FALSE;
+      raspistillPID = -ENOENT;
     }
   }
   if (isRaspistill) {
@@ -176,12 +177,13 @@ int CameraNode::async_update_camera_jpg() {
     LOGTRACE("async_update_camera_jpg() acquiring image");
     src_camera_jpg.get(); // discard current
     
-    JPG_Buffer buffer;
-    buffer.pData = NULL;
-    buffer.length = 0;
+    SmartPointer<char> jpg;
     if (raspistillPID) {
-      // TODO
+      jpg = loadFile("/var/firefuse/no-image.jpg");
     } else {
+      JPG_Buffer buffer;
+      buffer.pData = NULL;
+      buffer.length = 0;
       int status = firepicam_acquireImage(&buffer);
       if (status != 0) {
 	LOGERROR1("async_update_camera_jpg() firepicam_acquireImage() => %d", status);
@@ -189,9 +191,9 @@ int CameraNode::async_update_camera_jpg() {
       } 
       assert(buffer.pData);
       assert(buffer.length);
+      jpg = SmartPointer<char>((char *)buffer.pData, buffer.length);
     }
 
-    SmartPointer<char> jpg((char *)buffer.pData, buffer.length);
     src_camera_jpg.post(jpg);
     if (src_camera_mat_bgr.isFresh() && src_camera_mat_gray.isFresh()) {
       // proactively update all decoded images to eliminate post-idle refresh lag
@@ -297,6 +299,7 @@ int BackgroundWorker::callSystem(char *cmdbuf) {
 }
 
 void BackgroundWorker::clear() {
+  raspistillPID = 0;
   for (std::map<string,CVEPtr>::iterator it=cveMap.begin(); it!=cveMap.end(); ++it){
     delete it->second;
   }

@@ -20,8 +20,8 @@ const char * fuse_root  = "/dev/firefuse";
 
 int cameraWidth = 800;
 int cameraHeight = 200;
-string cameraSourceName = "raspistill";
-string cameraSourceConfig = "";
+string cameraSourceName;
+string cameraSourceConfig;
 
 FireREST firerest;
 
@@ -218,6 +218,8 @@ string FireREST::config_camera(const char*cv_path, json_t *pCamera, const char *
   }
   LOGINFO3("FireREST::config_camera(%s) %dx%d", cameraPath.c_str(), cameraWidth, cameraHeight);
 
+  cameraSourceName = "firepicam";
+  cameraSourceConfig = "";
   json_t *pSource = json_object_get(pCamera, "source");
   if (json_is_object(pSource)) {
     json_t *pSourceName = json_object_get(pSource, "name");
@@ -225,7 +227,6 @@ string FireREST::config_camera(const char*cv_path, json_t *pCamera, const char *
     if (json_is_string(pSourceName)) {
       cameraSourceName = json_string_value(pSourceName);
     }
-    //assert(strcmp("raspistill", cameraSourceName.c_str()) == 0);
     if (cameraSourceName.compare("raspistill") == 0) {
       if (json_is_string(pSourceConfig)) {
 	cameraSourceConfig = json_string_value(pSourceConfig);
