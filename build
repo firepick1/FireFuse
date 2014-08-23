@@ -178,6 +178,15 @@ fi
 #  popd > /dev/null
 #fi
 
+ps -ef | grep raspistill | grep -v grep | grep -v 'raspistill.sh' 
+RC=$?
+if [ $RC -eq 0 ]; then 
+  STILL_PID=`ps -ef | grep raspistill | grep -v grep | grep -v 'raspistill.sh' | grep -o -E "[0-9]+" | head -1`
+  echo "STATUS	: shutting down raspistill"
+  echo "COMMAND	: kill $STILL_PID"
+  exit -114; 
+fi
+
 # Agressively dismount /dev/firefuse
 echo "STATUS	: unmounting /dev/firefuse..."
 sudo fusermount -uq /dev/firefuse 

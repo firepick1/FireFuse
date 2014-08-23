@@ -225,7 +225,7 @@ string FireREST::config_camera(const char*cv_path, json_t *pCamera, const char *
     if (json_is_string(pSourceName)) {
       cameraSourceName = json_string_value(pSourceName);
     }
-    assert(strcmp("raspistill", cameraSourceName.c_str()) == 0);
+    //assert(strcmp("raspistill", cameraSourceName.c_str()) == 0);
     if (cameraSourceName.compare("raspistill") == 0) {
       if (json_is_string(pSourceConfig)) {
 	cameraSourceConfig = json_string_value(pSourceConfig);
