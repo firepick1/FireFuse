@@ -99,7 +99,7 @@ void CameraNode::init() {
   }
   if (isRaspistill) {
     char cmd[255];
-    snprintf(cmd, sizeof(cmd), "/usr/bin/raspistill %s", cameraSourceConfig.c_str());
+    snprintf(cmd, sizeof(cmd), "/usr/bin/raspistill %s &", cameraSourceConfig.c_str());
     LOGINFO1("CameraNode::init() %s", cmd);
     ASSERTZERO(BackgroundWorker::callSystem(cmd));
     const char *path_pid = "/var/firefuse/raspistill.PID";
