@@ -104,22 +104,29 @@ void CameraNode::init() {
     LOGINFO1("CameraNode::init() %s", cmd);
     ASSERTZERO(BackgroundWorker::callSystem(cmd));
     const char *path_pid = "/var/firefuse/raspistill.PID";
+
+    LOGINFO1("CameraNode::init() fopen(%s)", path_pid);
     FILE *fpid = fopen(path_pid, "r");
     if (fpid == 0) {
       LOGERROR1("CameraNode::init() fopen(%s) failed", path_pid);
       ASSERTZERO(-ENOENT);
     }
+    LOGINFO1("CameraNode::init() fseek(%s, SEEK_END)", path_pid);
     fseek(fpid, 0, SEEK_END);
+    LOGINFO1("CameraNode::init() ftell(%s)", path_pid);
     size_t length = ftell(fpid);
+    LOGINFO1("CameraNode::init() fseek(%s)", path_pid);
     fseek(fpid, 0, SEEK_SET);
     char pidbuf[255];
     assert(length < sizeof(pidbuf)-1);
+    LOGINFO2("CameraNode::init() fread(%s, %d)", path_pid, length);
     size_t bytesRead = fread(pidbuf, 1, length, fpid);
     if (bytesRead != length) {
       LOGERROR2("CameraNode::init(), fread failed expected:%ldB actual%ldB", length, bytesRead);
       exit(-EIO);
     }
     pidbuf[length] = 0;
+    LOGINFO1("CameraNode::init() fclose(%s)", path_pid);
     fclose(fpid);
     ASSERTZERO(sscanf(pidbuf,"%d", &raspistillPID));
     LOGINFO1("CameraNode::init() raspistill PID:%d", raspistillPID);
