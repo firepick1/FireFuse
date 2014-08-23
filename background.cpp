@@ -17,6 +17,8 @@
 using namespace cv;
 using namespace firesight;
 
+int raspistillPID;
+
 #define STATUS_BUFFER_SIZE 1024
 static char status_buffer[STATUS_BUFFER_SIZE];
 
@@ -67,30 +69,70 @@ int background_worker() {
 CameraNode::CameraNode() {
   output_seconds = 0;
   monitor_duration = 3;
+  raspistillPID = 0;
 }
 
 CameraNode::~CameraNode() {
-  firepicam_destroy(0);
+  if (raspistillPID) {
+    char cmd[255];
+    snprintf(cmd, sizeof(cmd), "kill %d", raspistillPID);
+    LOGINFO1("CameraNode::~CameraNode() shutting down raspistill: %s", cmd);
+    ASSERTZERO(BackgroundWorker::callSystem(cmd));
+  } else {
+    firepicam_destroy(0);
+  }
 }
 
 void CameraNode::init() {
+  int status = 0;
   char widthBuf[20];
   char heightBuf[20];
   snprintf(widthBuf, sizeof(widthBuf), "%d", cameraWidth);
   snprintf(heightBuf, sizeof(heightBuf), "%d", cameraHeight);
-  const char *argv[] = {
-    "CameraNode",
-    "-w", 
-    widthBuf,
-    "-h",
-    heightBuf
-  };
-  int status = firepicam_create(5, argv);
-  if (status != 0) {
-    LOGERROR1("CameraNode::init() could not initialize camera firepicam_create() -> %d", status);
-    throw "Could not initialize camera";
+  bool isRaspistill  = cameraSourceName.compare("raspistill") == 0;
+  if (isRaspistill) {
+    struct stat buffer;   
+    if (0 != stat("/usr/bin/raspistill", &buffer)) {
+      LOGWARN("CameraNode::init() raspistill camera source is unavailable:/usr/bin/raspistill");
+      isRaspistill = FALSE;
+    }
   }
-  LOGINFO3("CameraNode::init() %dx%d -> %d", cameraWidth, cameraHeight, status);
+  if (isRaspistill) {
+    char cmd[255];
+    snprintf(cmd, sizeof(cmd), "/usr/bin/raspistill %s", cameraSourceConfig.c_str());
+    LOGINFO1("CameraNode::init() %s", cmd);
+    ASSERTZERO(BackgroundWorker::callSystem(cmd));
+    const char *path_pid = "/var/firefuse/raspistill.PID";
+    FILE *fpid = fopen(path_pid, "r");
+    if (fpid == 0) {
+      LOGERROR1("CameraNode::init() fopen(%s) failed", path_pid);
+      ASSERTZERO(-ENOENT);
+    }
+    fseek(fpid, 0, SEEK_END);
+    size_t length = ftell(fpid);
+    fseek(fpid, 0, SEEK_SET);
+    char pidbuf[255];
+    assert(length < sizeof(pidbuf)-1);
+    size_t bytesRead = fread(pidbuf, 1, length, fpid);
+    if (bytesRead != length) {
+      LOGERROR2("CameraNode::init(), fread failed expected:%ldB actual%ldB", length, bytesRead);
+      exit(-EIO);
+    }
+    pidbuf[length] = 0;
+    fclose(fpid);
+    ASSERTZERO(sscanf(pidbuf,"%d", &raspistillPID));
+    LOGINFO1("CameraNode::init() raspistill PID:%d", raspistillPID);
+  } else { // FirePiCam
+    const char *argv[] = {
+      "CameraNode",
+      "-w", 
+      widthBuf,
+      "-h",
+      heightBuf
+    };
+    ASSERTZERO(firepicam_create(5, argv));
+    LOGINFO2("CameraNode::init() %dx%d", cameraWidth, cameraHeight);
+  }
 }
 
 int CameraNode::async_update_camera_jpg() {
@@ -103,13 +145,17 @@ int CameraNode::async_update_camera_jpg() {
     JPG_Buffer buffer;
     buffer.pData = NULL;
     buffer.length = 0;
-    int status = firepicam_acquireImage(&buffer);
-    if (status != 0) {
-      LOGERROR1("async_update_camera_jpg() firepicam_acquireImage() => %d", status);
-      throw "could not acquire image";
-    } 
-    assert(buffer.pData);
-    assert(buffer.length);
+    if (raspistillPID) {
+      // TODO
+    } else {
+      int status = firepicam_acquireImage(&buffer);
+      if (status != 0) {
+	LOGERROR1("async_update_camera_jpg() firepicam_acquireImage() => %d", status);
+	throw "could not acquire image";
+      } 
+      assert(buffer.pData);
+      assert(buffer.length);
+    }
 
     SmartPointer<char> jpg((char *)buffer.pData, buffer.length);
     src_camera_jpg.post(jpg);

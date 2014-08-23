@@ -177,6 +177,12 @@ class BackgroundWorker;
 string hexFromRFC4648(const char *rfc);
 string hexToRFC4648(const char *hex);
 
+inline int fail(int rc) {
+  std::cout << "***ASSERT FAILED*** expected:0 actual:" << rc << std::endl;
+  return FALSE;
+}
+#define ASSERTZERO(exp) {int rc; assert(0==(rc=exp) || fail(rc));}
+
 typedef class CVE {
   private: string name;
   private: bool _isColor;

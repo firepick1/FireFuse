@@ -14,12 +14,6 @@
 #include "FirePiCam.h"
 #include <assert.h>
 
-inline int fail(int rc) {
-  std::cout << "***ASSERT FAILED*** expected:0 actual:" << rc << std::endl;
-  return FALSE;
-}
-#define ASSERTZERO(exp) {int rc; assert(0==(rc=exp) || fail(rc));}
-
 template <class T> class MockValue {
 private:
   T value;
