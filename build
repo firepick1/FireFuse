@@ -186,7 +186,7 @@ if [ $RC -eq 0 ]; then
   echo "COMMAND	: sudo kill $STILL_PID"
   sudo kill $STILL_PID
   RC=$?
-  if [ $RC -eq 0 ]; then echo "ERROR	: $RC"; exit $RC; fi
+  if [ $RC -ne 0 ]; then echo "ERROR	: $RC"; exit $RC; fi
 fi
 
 # Agressively dismount /dev/firefuse
