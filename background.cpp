@@ -128,7 +128,7 @@ void CameraNode::init() {
     pidbuf[length] = 0;
     LOGINFO1("CameraNode::init() fclose(%s)", path_pid);
     fclose(fpid);
-    ASSERTZERO(sscanf(pidbuf,"%d", &raspistillPID));
+    sscanf(pidbuf,"%d", &raspistillPID);
     LOGINFO1("CameraNode::init() raspistill PID:%d", raspistillPID);
   } else { // FirePiCam
     const char *argv[] = {
