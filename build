@@ -183,8 +183,10 @@ RC=$?
 if [ $RC -eq 0 ]; then 
   STILL_PID=`ps -ef | grep raspistill | grep -v grep | grep -v 'raspistill.sh' | grep -o -E "[0-9]+" | head -1`
   echo "STATUS	: shutting down raspistill"
-  echo "COMMAND	: kill $STILL_PID"
-  exit -114; 
+  echo "COMMAND	: sudo kill $STILL_PID"
+  sudo kill $STILL_PID
+  RC=$?
+  if [ $RC -eq 0 ]; then echo "ERROR	: $RC"; exit $RC; fi
 fi
 
 # Agressively dismount /dev/firefuse
