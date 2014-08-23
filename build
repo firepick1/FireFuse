@@ -181,6 +181,7 @@ fi
 ps -ef | grep raspistill | grep -v grep | grep -v 'raspistill.sh' 
 RC=$?
 if [ $RC -eq 0 ]; then 
+  echo "STATUS	: checking for raspistill..."
   STILL_PID=`ps -ef | grep raspistill | grep -v grep | grep -v 'raspistill.sh' | grep -o -E "[0-9]+" | head -1`
   echo "STATUS	: shutting down raspistill"
   echo "COMMAND	: sudo kill $STILL_PID"
