@@ -248,6 +248,7 @@ typedef class DCE {
 typedef class CameraNode {
   private: double output_seconds; // time of last FireSight pipeline completion
   private: double monitor_duration; // number of seconds to show last output
+  private: int raspistillPID;
 
   // Common data
   public: LIFOCache<SmartPointer<char> > src_camera_jpg;
@@ -260,12 +261,16 @@ typedef class CameraNode {
   public: CameraNode();
   public: ~CameraNode();
   public: void init();
+  public: void clear();
   public: int async_update_camera_jpg();
+  public: int update_camera_jpg(SmartPointer<char> jpg, int processed=0);
   public: int async_update_monitor_jpg();
   public: void setOutput(Mat image);
 
   public: void temp_set_output_seconds() { output_seconds = cve_seconds(); }
 } CameraNode;
+
+#define MAX_CAMERAS 1 /* TODO: Make code actually work for multiple cameras */
 
 typedef class BackgroundWorker {
   private: double idle_period; // minimum seconds between idle() execution
@@ -277,7 +282,7 @@ typedef class BackgroundWorker {
   private: int async_process_fire();
   private: int async_gcode_fire();
 
-  public: CameraNode cameras[1];
+  public: CameraNode cameras[MAX_CAMERAS];
 
   public: BackgroundWorker();
   public: ~BackgroundWorker();

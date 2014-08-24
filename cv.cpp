@@ -344,7 +344,7 @@ int cve_write(const char *path, const char *buf, size_t bufsize, off_t offset, s
   } else if (firefuse_isFile(path, FIREREST_CAMERA_JPG)) {
     assert(offset == 0);
     SmartPointer<char> data((char *) buf, bufsize);
-    worker.cameras[0].src_camera_jpg.post(data);
+    worker.cameras[0].update_camera_jpg(data);
   } else if (firefuse_isFile(path, FIREREST_SAVED_PNG)) {
     SmartPointer<char> * pSaved =  (SmartPointer<char> *) fi->fh;
     if (bufsize + offset > pSaved->allocated_size()) {

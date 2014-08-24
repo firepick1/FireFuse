@@ -17,8 +17,6 @@
 using namespace cv;
 using namespace firesight;
 
-int raspistillPID;
-
 #define STATUS_BUFFER_SIZE 1024
 static char status_buffer[STATUS_BUFFER_SIZE];
 
@@ -95,7 +93,7 @@ SmartPointer<char> loadFile(const char *path, int suffixBytes) {
 CameraNode::CameraNode() {
   output_seconds = 0;
   monitor_duration = 3;
-  raspistillPID = 0;
+  clear();
 }
 
 CameraNode::~CameraNode() {
@@ -109,6 +107,10 @@ CameraNode::~CameraNode() {
   }
 }
 
+void CameraNode::clear() {
+  raspistillPID = 0;
+}
+
 void CameraNode::init() {
   int status = 0;
   char widthBuf[20];
@@ -119,8 +121,12 @@ void CameraNode::init() {
   bool isRaspistill  = cameraSourceName.compare("raspistill") == 0;
   if (isRaspistill) {
     struct stat buffer;   
-    if (0 != stat(raspistill_sh, &buffer)) {
-      LOGWARN1("CameraNode::init() raspistill camera source is unavailable:%s", raspistill_sh);
+    if (0 == stat(raspistill_sh, &buffer)) {
+      SmartPointer<char> jpg = loadFile("/var/firefuse/no-image.jpg");
+      update_camera_jpg(jpg);
+    } else {
+      LOGWARN1("CameraNode::init() raspistill camera source is unavailable:%s", 
+        raspistill_sh);
       isRaspistill = FALSE;
       raspistillPID = -ENOENT;
     }
@@ -149,7 +155,8 @@ void CameraNode::init() {
     LOGINFO2("CameraNode::init() fread(%s, %ld)", path_pid, length);
     size_t bytesRead = fread(pidbuf, 1, length, fpid);
     if (bytesRead != length) {
-      LOGERROR2("CameraNode::init(), fread failed expected:%ldB actual%ldB", length, bytesRead);
+      LOGERROR2("CameraNode::init(), fread failed expected:%ldB actual%ldB", 
+        length, bytesRead);
       exit(-EIO);
     }
     pidbuf[length] = 0;
@@ -172,14 +179,20 @@ void CameraNode::init() {
 
 int CameraNode::async_update_camera_jpg() {
   int processed = 0;
-  if (!src_camera_jpg.isFresh() || !src_camera_mat_bgr.isFresh() || !src_camera_mat_gray.isFresh()) {
+  if (!src_camera_jpg.isFresh() || 
+      !src_camera_mat_bgr.isFresh() || 
+      !src_camera_mat_gray.isFresh()) {
     processed |= 01;
     LOGTRACE("async_update_camera_jpg() acquiring image");
     src_camera_jpg.get(); // discard current
     
     SmartPointer<char> jpg;
     if (raspistillPID) {
-      jpg = loadFile("/var/firefuse/no-image.jpg");
+      if (raspistillPID > 0) {
+	// send signal to raspistill
+      } else {
+        // raspistill is configured but unavailable
+      }
     } else {
       JPG_Buffer buffer;
       buffer.pData = NULL;
@@ -192,31 +205,39 @@ int CameraNode::async_update_camera_jpg() {
       assert(buffer.pData);
       assert(buffer.length);
       jpg = SmartPointer<char>((char *)buffer.pData, buffer.length);
+      processed = update_camera_jpg(jpg, processed);
     }
+  }
 
-    src_camera_jpg.post(jpg);
-    if (src_camera_mat_bgr.isFresh() && src_camera_mat_gray.isFresh()) {
-      // proactively update all decoded images to eliminate post-idle refresh lag
-      src_camera_mat_bgr.get(); // discard current
-      src_camera_mat_gray.get(); // discard current
-    } else {
-      // To eliminate unnecessary conversion we will only update active Mat
-    }
-    LOGDEBUG3("async_update_camera_jpg() src_camera_jpg.post(%ldB) %0lx [0]:%0x", (ulong) jpg.size(), (ulong) jpg.data(), (int) *jpg.data());
+  return processed;
+}
 
-    std::vector<uchar> vJPG((uchar *)jpg.data(), (uchar *)jpg.data() + jpg.size());
-    if (!src_camera_mat_bgr.isFresh()) {
-      processed |= 02;
-      Mat image = imdecode(vJPG, CV_LOAD_IMAGE_COLOR); 
-      src_camera_mat_bgr.post(image);
-      LOGTRACE2("async_update_camera_jpg() src_camera_mat_bgr.post(%dx%d)", image.rows, image.cols);
-    }
-    if (!src_camera_mat_gray.isFresh()) {
-      processed |= 04;
-      Mat image = imdecode(vJPG, CV_LOAD_IMAGE_GRAYSCALE); 
-      src_camera_mat_gray.post(image);
-      LOGTRACE2("async_update_camera_jpg() src_camera_mat_gray.post(%dx%d)", image.rows, image.cols);
-    }
+int CameraNode::update_camera_jpg(SmartPointer<char> jpg, int processed) {
+  src_camera_jpg.post(jpg);
+  if (src_camera_mat_bgr.isFresh() && src_camera_mat_gray.isFresh()) {
+    // proactively update all decoded images to eliminate post-idle refresh lag
+    src_camera_mat_bgr.get(); // discard current
+    src_camera_mat_gray.get(); // discard current
+  } else {
+    // To eliminate unnecessary conversion we will only update active Mat
+  }
+  LOGDEBUG3("async_update_camera_jpg() src_camera_jpg.post(%ldB) %0lx [0]:%0x", 
+    (ulong) jpg.size(), (ulong) jpg.data(), (int) *jpg.data());
+
+  std::vector<uchar> vJPG((uchar *)jpg.data(), (uchar *)jpg.data() + jpg.size());
+  if (!src_camera_mat_bgr.isFresh()) {
+    processed |= 02;
+    Mat image = imdecode(vJPG, CV_LOAD_IMAGE_COLOR); 
+    src_camera_mat_bgr.post(image);
+    LOGTRACE2("async_update_camera_jpg() src_camera_mat_bgr.post(%dx%d)", 
+      image.rows, image.cols);
+  }
+  if (!src_camera_mat_gray.isFresh()) {
+    processed |= 04;
+    Mat image = imdecode(vJPG, CV_LOAD_IMAGE_GRAYSCALE); 
+    src_camera_mat_gray.post(image);
+    LOGTRACE2("async_update_camera_jpg() src_camera_mat_gray.post(%dx%d)", 
+      image.rows, image.cols);
   }
 
   return processed;
@@ -299,13 +320,15 @@ int BackgroundWorker::callSystem(char *cmdbuf) {
 }
 
 void BackgroundWorker::clear() {
-  raspistillPID = 0;
   for (std::map<string,CVEPtr>::iterator it=cveMap.begin(); it!=cveMap.end(); ++it){
     delete it->second;
   }
   cveMap.clear();
   for (std::map<string,DCEPtr>::iterator it=dceMap.begin(); it!=dceMap.end(); ++it){
     delete it->second;
+  }
+  for (int i=0; i < MAX_CAMERAS; i++) {
+    cameras[i].clear();
   }
   dceMap.clear();
   serialMap.clear();
