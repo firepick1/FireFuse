@@ -105,6 +105,7 @@ int cve_read(const char *path, char *buf, size_t size, off_t offset, struct fuse
 int cve_write(const char *path, const char *buf, size_t bufsize, off_t offset, struct fuse_file_info *fi);
 int cve_release(const char *path, struct fuse_file_info *fi);
 int cve_truncate(const char *path, off_t size);
+int cve_rename(const char *path1, const char * path2);
 int cnc_getattr(const char *path, struct stat *stbuf);
 int cnc_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi);
 int cnc_open(const char *path, struct fuse_file_info *fi);

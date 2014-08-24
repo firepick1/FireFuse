@@ -95,6 +95,21 @@ static string camera_profile(const char * path) {
   return result;
 }
 
+int cve_rename(const char *path1, const char *path2) {
+  int res = 0;
+
+  if ((firefuse_isFile(path1, FIREREST_CAMERA_JPG) || firefuse_isFile(path1, FIREREST_CAMERA_JPG_TILDE)) 
+      &&
+      (firefuse_isFile(path2, FIREREST_CAMERA_JPG) || firefuse_isFile(path2, FIREREST_CAMERA_JPG_TILDE))) {
+    // for raspistill we simply ignore the rename of camera.jpg~ to camera.jpg
+    LOGDEBUG2("cve_rename(%s, %s)", path1, path2);
+  } else {
+    res = -EPERM;
+  }
+
+  return res;
+}
+
 int cve_getattr(const char *path, struct stat *stbuf) {
   int res = 0;
 

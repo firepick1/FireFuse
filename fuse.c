@@ -393,6 +393,13 @@ static int firefuse_truncate(const char *path, off_t size) {
   return 0;
 }
 
+static int firefuse_rename(const char *path1, const char *path2) {
+  if (is_cv_path(path1) && is_cv_path(path2)) {
+    return cve_rename(path1, path2);
+  }
+  return -ENOENT;
+}
+
 bool firefuse_isFile(const char *value, const char * suffix) {
   int suffixLen = strlen(suffix);
   int valueLen = strlen(value);
@@ -413,6 +420,7 @@ int firefuse_getattr_file(const char *path, struct stat *stbuf, size_t length, i
   return 0;
 }
 
+
 static struct fuse_operations firefuse_oper = {
   .init    = firefuse_init,
   .destroy  = firefuse_destroy,
@@ -423,6 +431,7 @@ static struct fuse_operations firefuse_oper = {
   .read    = firefuse_read,
   .truncate  = firefuse_truncate,
   .write    = firefuse_write,
+  .rename = firefuse_rename,
 };
 
 int firefuse_main(int argc, char *argv[]) {
