@@ -1,8 +1,8 @@
 #!/bin/bash
 
-if [ "$1" == "--log" ]; then
+if [ "$1" == "--launch" ]; then
   shift
-  $0 $* |& tee /var/log/raspistill.sh.log
+  $0 $* |& tee /var/log/raspistill.sh.log &
   exit $?
 fi
 
