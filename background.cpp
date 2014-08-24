@@ -133,7 +133,7 @@ void CameraNode::init() {
   }
   if (isRaspistill) {
     char cmd[255];
-    snprintf(cmd, sizeof(cmd), "/bin/bash -c '%s %s |& tee /var/log/raspistill.log'", 
+    snprintf(cmd, sizeof(cmd), "/bin/bash -c '%s %s |& tee /var/log/raspistill.sh.log'", 
       raspistill_sh, cameraSourceConfig.c_str());
     LOGINFO1("CameraNode::init() %s", cmd);
     ASSERTZERO(BackgroundWorker::callSystem(cmd));

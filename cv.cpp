@@ -99,8 +99,8 @@ int cve_getattr(const char *path, struct stat *stbuf) {
   int res = 0;
 
   if (firefuse_isFile(path, FIREREST_CAMERA_JPG) || firefuse_isFile(path, FIREREST_CAMERA_JPG_TILDE)) {
-    res = firefuse_getattr_file(path, stbuf, 
-      worker.cameras[0].src_camera_jpg.peek().size(), 0666);
+    res = firefuse_getattr_file(path, stbuf, worker.cameras[0].src_camera_jpg.peek().size(), 0666);
+    LOGDEBUG2("cve_getattr(%s) %ldB", path, stbuf->st_size);
   } else if (firefuse_isFile(path, FIREREST_PROPERTIES_JSON)) {
     res = firefuse_getattr_file(path, stbuf, worker.cve(path).src_properties_json.peek().size(), 0666);
   } else if (firefuse_isFile(path, FIREREST_OUTPUT_JPG)) {
@@ -234,6 +234,7 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
       } else {
 	fi->fh = (uint64_t) (size_t) new SmartPointer<char>(camera.src_camera_jpg.get());
       }
+      LOGDEBUG2("cve_open(%s) %ldB", path, (long) camera.src_camera_jpg.peek().size());
     }
   } else if (firefuse_isFile(path, FIREREST_SAVED_PNG)) {
     if (verifyOpenRW(path, fi, &result)) {
@@ -347,6 +348,7 @@ int cve_write(const char *path, const char *buf, size_t bufsize, off_t offset, s
     assert(offset == 0);
     SmartPointer<char> data((char *) buf, bufsize);
     worker.cameras[0].update_camera_jpg(data);
+    LOGDEBUG2("cve_write(%s) %ldB", path, (long) bufsize);
   } else if (firefuse_isFile(path, FIREREST_SAVED_PNG)) {
     SmartPointer<char> * pSaved =  (SmartPointer<char> *) fi->fh;
     if (bufsize + offset > pSaved->allocated_size()) {
