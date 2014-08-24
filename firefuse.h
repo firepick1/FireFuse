@@ -80,6 +80,7 @@ static inline int firefuse_readBuffer(char *pDst, const char *pSrc, size_t size,
 #define FIREREST_GRAY "/gray"
 #define FIREREST_BGR "/bgr"
 #define FIREREST_CAMERA_JPG "/camera.jpg"
+#define FIREREST_CAMERA_JPG_TILDE "/camera.jpg~"
 #define FIREREST_CV "/cv"
 #define FIREREST_SYNC "/sync"
 #define FIREREST_CVE "/cve"
