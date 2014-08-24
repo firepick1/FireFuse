@@ -561,7 +561,7 @@ int firerest_getattr_default(const char *path, struct stat *stbuf) {
     stbuf->st_size = 4096;
     res = 0;
   } else {
-    LOGERROR1("cve_getattr(%s) ENOENT", path);
+    LOGERROR1("firerest_getattr_default(%s) ENOENT", path);
     res = -ENOENT;
   }
   return res;
