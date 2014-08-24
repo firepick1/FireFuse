@@ -1,5 +1,11 @@
 #!/bin/bash
 
+if [ "$1" == "--log" ]; then
+  $0 $* |& tee /var/log/raspistill.sh.log
+  exit $?
+fi
+
+
 echo "COMMAND	: $0 # raspistill background launcher"
 echo "ARGS	: $*"
 echo "EUID	: $EUID"
