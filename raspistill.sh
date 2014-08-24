@@ -8,21 +8,22 @@ echo "UID	: $UID"
 if [ $EUID -ne 0 ]; then echo "ERROR	: script must be run as root"; exit -1; fi
 
 echo "STATUS	: verifying raspistill availability"
-ps -ef | grep raspistill | grep -v grep | grep -v 'raspistill.sh'
+PID=`ps -ef | grep raspistill | grep -v grep | grep -v 'raspistill.sh' | grep -o -E "[0-9]+" | head -1`
 RC=$?
-if [ $RC -eq 0 ]; then echo "ERROR	: raspistill is already running"; exit -114; fi
+if [ $RC -eq 0 ]; then 
+  echo "STATUS	: raspistill is already running"; 
+else
+  LASTPID=$!
+  echo "LASTPID	: $LASTPID"
 
-LASTPID=$!
-echo "LASTPID	: $LASTPID"
-
-echo "COMMAND	: /usr/bin/raspistill $*&"
-/usr/bin/raspistill $*&
-PID=$!
-RC=$?
+  echo "COMMAND	: /usr/bin/raspistill $*&"
+  /usr/bin/raspistill $*&
+  PID=$!
+  RC=$?
+  if [ $RC -ne 0 ]; then echo "ERROR	: raspistill failed with error $RC"; exit $RC; fi
+  if [ "$LASTPID" == "$PID" ]; then echo "ERROR	: raspistill PID is unavailable"; exit -1; fi
+fi
 echo "PID	: $PID"
-
-if [ $RC -ne 0 ]; then echo "ERROR	: raspistill failed with error $RC"; exit $RC; fi
-if [ "$LASTPID" == "$PID" ]; then echo "ERROR	: raspistill PID is unavailable"; exit -1; fi
 
 mkdir -p /var/firefuse
 echo "COMMAND	: echo $PID > /var/firefuse/raspistill.PID"
