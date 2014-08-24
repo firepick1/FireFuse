@@ -1,6 +1,7 @@
 #!/bin/bash
 
 if [ "$1" == "--log" ]; then
+  shift
   $0 $* |& tee /var/log/raspistill.sh.log
   exit $?
 fi
