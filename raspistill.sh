@@ -9,10 +9,8 @@ if [ $EUID -ne 0 ]; then echo "ERROR	: script must be run as root"; exit -1; fi
 
 echo "STATUS	: verifying raspistill availability"
 PID=`ps -ef | grep raspistill | grep -v grep | grep -v 'raspistill.sh' | grep -o -E "[0-9]+" | head -1`
-RC=$?
-if [ $RC -eq 0 ]; then 
-  echo "STATUS	: raspistill is already running"; 
-else
+if [ "$PID" == "" ]; then 
+  echo "STATUS	: launching raspistill for background image capture triggered by SIGUSR1"
   LASTPID=$!
   echo "LASTPID	: $LASTPID"
 
@@ -22,6 +20,8 @@ else
   RC=$?
   if [ $RC -ne 0 ]; then echo "ERROR	: raspistill failed with error $RC"; exit $RC; fi
   if [ "$LASTPID" == "$PID" ]; then echo "ERROR	: raspistill PID is unavailable"; exit -1; fi
+else
+  echo "STATUS	: raspistill is already running"; 
 fi
 echo "PID	: $PID"
 
