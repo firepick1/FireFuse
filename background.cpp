@@ -196,8 +196,15 @@ int CameraNode::async_update_camera_jpg() {
 	LOGDEBUG1("async_update_camera_jpg() SIGUSR1 -> %d", raspistillPID);
         int rc = kill(raspistillPID, SIGUSR1); 
 	if (rc != 0) {
-	  LOGERROR2("CameraNode::async_update_camera_jpg() SIGUSR1 %d failed:%d", 
-	    raspistillPID, rc);
+	  const char *details;
+	  switch (errno) {
+	    case EPERM: details = "EPERM"; break;
+	    case ESRCH: details = "ESRCH"; break;
+	    case EINVAL: details = "EINVAL"; break;
+	    default: details = "UNKNOWN ERROR"; break;
+	  }
+	  LOGERROR3("CameraNode::async_update_camera_jpg() SIGUSR1->%d: %s %d", 
+	    raspistillPID, details, errno);
 	  exit(-EIO);
 	}
       } else {

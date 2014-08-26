@@ -250,7 +250,7 @@ echo "GIT	: $COMMIT"
 sed -i -e "s/{{FIREFUSE_GIT_COMMIT}}/$COMMIT/" version.h
 
 echo "STATUS	: building and installing FireFUSE..."
-make
+make firefuse
 if [ $? -ne 0 ]; then
   echo "FAILED	: make"
   echo "TRY	: correct make errors and retry"

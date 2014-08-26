@@ -187,7 +187,7 @@ inline int fail(int rc, const char *msg="") {
   return FALSE;
 }
 #define ASSERTZERO(exp) {int rc; assert(0==(rc=exp) || fail(rc,"expected:0"));}
-#define ASSERT(exp,msg) {int rc=exp; if (!rc) {fail(rc,msg);} }
+#define ASSERT(exp,msg) {int rc=exp; assert(rc || fail(rc,msg));}
 
 typedef class CVE {
   private: string name;

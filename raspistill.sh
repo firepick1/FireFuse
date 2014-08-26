@@ -4,7 +4,7 @@ sudo rm -f /var/firefuse/raspistill.PID
 
 if [ "$1" == "--launch" ]; then
   shift
-  exec $0 $* |& tee /var/log/raspistill.sh.log 
+  exec $0 $* > /var/log/raspistill.sh.log 2>&1
 else
   echo "COMMAND	: $0 # raspistill background launcher"
   echo "ARGS	: $*"
@@ -18,15 +18,12 @@ else
   PID=`ps -eo pid,comm | grep -E "raspistill$" | grep -o -E "[0-9]+"`
   if [ "$PID" == "" ]; then 
     echo "STATUS	: launching raspistill for SIGUSR1 image capture"
-    LASTPID=$!
-    echo "LASTPID	: $LASTPID"
-
-    echo "COMMAND	: /usr/bin/raspistill $*&"
-    nohup /usr/bin/raspistill $* >& /var/log/raspistill.log &
-    PID=$!
+    echo "COMMAND	: /usr/bin/raspistill $* > /var/log/raspistill.log 2>&1 &"
+    /usr/bin/raspistill $* > /var/log/raspistill.log 2>&1 &
     RC=$?
     if [ $RC -ne 0 ]; then echo "ERROR	: raspistill failed with error $RC"; exit $RC; fi
-    if [ "$LASTPID" == "$PID" ]; then echo "ERROR	: raspistill PID is unavailable"; exit -1; fi
+    PID=`ps -eo pid,comm | grep -E "raspistill$" | grep -o -E "[0-9]+"`
+    if [ "" == "$PID" ]; then echo "ERROR	: raspistill PID is unavailable"; exit -1; fi
   else
     echo "STATUS	: raspistill is already running"; 
   fi
