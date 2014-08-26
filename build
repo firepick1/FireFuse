@@ -10,6 +10,22 @@ if [ "$SUDO_USER" != "" ]; then
   exit -1
 fi
 
+PI_VER=`uname -a | grep -o -E "#[0-9]+" | grep -o -E "[0-9]+"`
+echo "PI_VER	: $PI_VER"
+if [ $PI_VER -le 703 ]; then
+  echo "RPI	: firmware out of date"
+  echo "COMMAND	: sudo apt-get update"
+  sudo apt-get update
+  echo "COMMAND	: sudo apt-get install -y rpi-update"
+  sudo apt-get install -y rpi-update
+  echo "COMMAND	: sudo apt-get upgrade -y"
+  sudo apt-get upgrade -y
+  echo "COMMAND : sudo rpi-update"
+  sudo rpi-update
+else 
+  echo "RPI	: firmware up to date"
+fi
+
 if [ -e CMakeFiles ] ; then 
   echo "STATUS	: removing existing makefiles"
   sudo rm -rf CMakeCache.txt CMakeFiles CMakeFiles.txt target cmake_install.cmake CPackConfig.cmake CPackSourceConfig.cmake

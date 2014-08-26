@@ -167,6 +167,7 @@ int tinyg_hash(const char *value, size_t len);
 #include <vector>
 #include <map>
 #include <string.h>
+#include <signal.h>
 
 extern int cameraWidth; // config.json provided camera width
 extern int cameraHeight; // config.json provided camera height
@@ -180,11 +181,13 @@ string hexFromRFC4648(const char *rfc);
 string hexToRFC4648(const char *hex);
 SmartPointer<char> loadFile(const char *path, int suffixBytes=0);
 
-inline int fail(int rc) {
-  std::cout << "***ASSERT FAILED*** expected:0 actual:" << rc << std::endl;
+inline int fail(int rc, const char *msg="") {
+  LOGERROR2("ASSERT(%d) FAILED. %s", rc, msg);
+  std::cout << "ASSERT(" << rc << ") FAILED. " << msg << std::endl;
   return FALSE;
 }
-#define ASSERTZERO(exp) {int rc; assert(0==(rc=exp) || fail(rc));}
+#define ASSERTZERO(exp) {int rc; assert(0==(rc=exp) || fail(rc,"expected:0"));}
+#define ASSERT(exp,msg) {int rc=exp; if (!rc) {fail(rc,msg);} }
 
 typedef class CVE {
   private: string name;
@@ -250,7 +253,7 @@ typedef class DCE {
 typedef class CameraNode {
   private: double output_seconds; // time of last FireSight pipeline completion
   private: double monitor_duration; // number of seconds to show last output
-  private: int raspistillPID;
+  private: pid_t raspistillPID;
 
   // Common data
   public: LIFOCache<SmartPointer<char> > src_camera_jpg;

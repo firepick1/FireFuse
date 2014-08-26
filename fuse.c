@@ -236,7 +236,7 @@ void firefuse_freeDataBuffer(const char *path, struct fuse_file_info *fi) {
 }
 
 int firefuse_release(const char *path, struct fuse_file_info *fi) {
-  LOGTRACE1("firefuse_release(%s)", path);
+  LOGDEBUG1("firefuse_release(%s)", path);
   if (is_cv_path(path)) {
     return cve_release(path, fi);
   }
@@ -394,9 +394,11 @@ static int firefuse_truncate(const char *path, off_t size) {
 }
 
 static int firefuse_rename(const char *path1, const char *path2) {
+  LOGDEBUG2("firefuse_rename(%s,%s)", path1, path2);
   if (is_cv_path(path1) && is_cv_path(path2)) {
     return cve_rename(path1, path2);
   }
+  LOGERROR2("firefuse_rename(%s,%s) -> -ENOENT", path1, path2);
   return -ENOENT;
 }
 

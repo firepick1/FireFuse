@@ -98,10 +98,10 @@ CameraNode::CameraNode() {
 
 CameraNode::~CameraNode() {
   if (raspistillPID) {
-    char cmd[255];
-    snprintf(cmd, sizeof(cmd), "kill %d", raspistillPID);
-    LOGINFO1("CameraNode::~CameraNode() shutting down raspistill: %s", cmd);
-    ASSERTZERO(BackgroundWorker::callSystem(cmd));
+    if (raspistillPID > 0) {
+      LOGINFO1("CameraNode::~CameraNode() shutting down raspistill PID:%d", raspistillPID);
+      ASSERTZERO(kill(raspistillPID, SIGKILL));
+    }
   } else {
     firepicam_destroy(0);
   }
@@ -184,12 +184,22 @@ int CameraNode::async_update_camera_jpg() {
       !src_camera_mat_gray.isFresh()) {
     processed |= 01;
     LOGTRACE("async_update_camera_jpg() acquiring image");
-    src_camera_jpg.get(); // discard current
     
-    SmartPointer<char> jpg;
+    SmartPointer<char> jpg = src_camera_jpg.get(); // discard current
     if (raspistillPID) {
+      // repost picture to clear update need--raspistill will overwrite
+      src_camera_jpg.post(src_camera_jpg.peek());
+      src_camera_mat_bgr.post(src_camera_mat_bgr.peek());
+      src_camera_mat_gray.post(src_camera_mat_gray.peek());
+
       if (raspistillPID > 0) {
-	// send signal to raspistill
+	LOGDEBUG1("async_update_camera_jpg() SIGUSR1 -> %d", raspistillPID);
+        int rc = kill(raspistillPID, SIGUSR1); 
+	if (rc != 0) {
+	  LOGERROR2("CameraNode::async_update_camera_jpg() SIGUSR1 %d failed:%d", 
+	    raspistillPID, rc);
+	  exit(-EIO);
+	}
       } else {
         // raspistill is configured but unavailable
       }

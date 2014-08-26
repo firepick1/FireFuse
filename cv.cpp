@@ -27,7 +27,7 @@ using namespace firesight;
 
 typedef enum{UI_STILL, UI_VIDEO} UIMode;
 
-size_t max_saved_png_size = 3000000; // empirically chosen to handle 400x400 png images
+size_t MAX_SAVED_IMAGE = 3000000; // empirically chosen to handle 400x400 png images
 
 /**
  * Return canonical CVE path. E.g.:
@@ -104,6 +104,7 @@ int cve_rename(const char *path1, const char *path2) {
     // for raspistill we simply ignore the rename of camera.jpg~ to camera.jpg
     LOGDEBUG2("cve_rename(%s, %s)", path1, path2);
   } else {
+    LOGERROR2("cve_rename(%s, %s) -> -EPERM", path1, path2);
     res = -EPERM;
   }
 
@@ -244,10 +245,26 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
     }
   } else if (firefuse_isFile(path, FIREREST_CAMERA_JPG) || firefuse_isFile(path, FIREREST_CAMERA_JPG_TILDE)) {
     if (verifyOpenRW(path, fi, &result)) {
-      if (FireREST::isSync(path)) {
-	fi->fh = (uint64_t) (size_t) new SmartPointer<char>(camera.src_camera_jpg.get_sync());
-      } else {
-	fi->fh = (uint64_t) (size_t) new SmartPointer<char>(camera.src_camera_jpg.get());
+      if ((fi->flags & 3 ) == O_WRONLY) {
+	SmartPointer<char> camera_jpg(camera.src_camera_jpg.peek());
+        if (camera_jpg.allocated_size() < MAX_SAVED_IMAGE) {
+	  SmartPointer<char> empty_buffer(NULL, MAX_SAVED_IMAGE);
+	  empty_buffer.setSize(0);
+	  camera.src_camera_jpg.post(empty_buffer);
+	  camera_jpg = empty_buffer;
+	  LOGTRACE3("cve_open(%s, O_WRONLY) allocated %ldB @ %lx", 
+	    path, camera_jpg.allocated_size(), (size_t) camera_jpg.data());
+	} else {
+	  LOGTRACE3("cve_open(%s, O_WRONLY) reusing %ldB @ %lx", 
+	    path, camera_jpg.allocated_size(), (size_t) camera_jpg.data());
+	}
+	fi->fh = (uint64_t) (size_t) new SmartPointer<char>(camera_jpg);
+      } else { // O_RDONLY
+	if (FireREST::isSync(path)) {
+	  fi->fh = (uint64_t) (size_t) new SmartPointer<char>(camera.src_camera_jpg.get_sync());
+	} else {
+	  fi->fh = (uint64_t) (size_t) new SmartPointer<char>(camera.src_camera_jpg.get());
+	}
       }
       LOGDEBUG2("cve_open(%s) %ldB", path, (long) camera.src_camera_jpg.peek().size());
     }
@@ -255,8 +272,8 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
     if (verifyOpenRW(path, fi, &result)) {
       if ((fi->flags & 3 ) == O_WRONLY) {
 	SmartPointer<char> saved_png(worker.cve(path).src_saved_png.peek());
-        if (saved_png.allocated_size() < max_saved_png_size) {
-	  SmartPointer<char> empty_buffer(NULL, max_saved_png_size);
+        if (saved_png.allocated_size() < MAX_SAVED_IMAGE) {
+	  SmartPointer<char> empty_buffer(NULL, MAX_SAVED_IMAGE);
 	  empty_buffer.setSize(0);
 	  worker.cve(path).src_saved_png.post(empty_buffer);
 	  saved_png = empty_buffer;
@@ -353,25 +370,29 @@ int cve_read(const char *path, char *buf, size_t size, off_t offset, struct fuse
 }
 
 int cve_write(const char *path, const char *buf, size_t bufsize, off_t offset, struct fuse_file_info *fi) {
-  assert(buf != NULL);
-  assert(bufsize >= 0);
+  ASSERT(buf!=NULL, "cve_write:buf");
+  ASSERT(bufsize >= 0, "cve_write:bufsize");
   if (firefuse_isFile(path, FIREREST_PROPERTIES_JSON)) {
-    assert(offset == 0);
+    ASSERT(offset == 0, "cve_write:offset");
     SmartPointer<char> data((char *) buf, bufsize);
     worker.cve(path).src_properties_json.post(data);
   } else if (firefuse_isFile(path, FIREREST_CAMERA_JPG) || firefuse_isFile(path, FIREREST_CAMERA_JPG_TILDE)) {
-    assert(offset == 0);
-    SmartPointer<char> data((char *) buf, bufsize);
-    worker.cameras[0].update_camera_jpg(data);
-    LOGDEBUG2("cve_write(%s) %ldB", path, (long) bufsize);
-  } else if (firefuse_isFile(path, FIREREST_SAVED_PNG)) {
-    SmartPointer<char> * pSaved =  (SmartPointer<char> *) fi->fh;
-    if (bufsize + offset > pSaved->allocated_size()) {
+    SmartPointer<char> * pImage =  (SmartPointer<char> *) fi->fh;
+    if (bufsize + offset > pImage->allocated_size()) {
       LOGERROR1("cve_write(%s) data too large (truncated)", path);
     } else {
-      memcpy(pSaved->data()+offset, buf, bufsize);
-      pSaved->setSize(offset+bufsize);
-      LOGTRACE3("cve_write(%s,%ldB) %ldB total", path, bufsize, pSaved->size());
+      memcpy(pImage->data()+offset, buf, bufsize);
+      pImage->setSize(offset+bufsize);
+      LOGTRACE3("cve_write(%s,%ldB) %ldB total", path, bufsize, pImage->size());
+    }
+  } else if (firefuse_isFile(path, FIREREST_SAVED_PNG)) {
+    SmartPointer<char> * pImage =  (SmartPointer<char> *) fi->fh;
+    if (bufsize + offset > pImage->allocated_size()) {
+      LOGERROR1("cve_write(%s) data too large (truncated)", path);
+    } else {
+      memcpy(pImage->data()+offset, buf, bufsize);
+      pImage->setSize(offset+bufsize);
+      LOGTRACE3("cve_write(%s,%ldB) %ldB total", path, bufsize, pImage->size());
     }
   } else {
     LOGERROR2("cve_write(%s,%ldB) ENOENT", path, bufsize);
@@ -382,7 +403,7 @@ int cve_write(const char *path, const char *buf, size_t bufsize, off_t offset, s
 }
 
 int cve_release(const char *path, struct fuse_file_info *fi) {
-  LOGTRACE1("cve_release(%s)", path);
+  LOGDEBUG1("cve_release(%s)", path);
   if (firefuse_isFile(path, FIREREST_PROCESS_FIRE)) {
     if (fi->fh) { delete (SmartPointer<char> *) fi->fh; }
   } else if (firefuse_isFile(path, FIREREST_MONITOR_JPG)) {
