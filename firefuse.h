@@ -174,7 +174,6 @@ extern int cameraHeight; // config.json provided camera height
 extern string cameraSourceName; // config.json provided camera source name
 extern string cameraSourceConfig; // config.json provided camera souce config
 
-double 	cve_seconds();
 void 	cve_process(const char *path, int *pResult);
 class BackgroundWorker;
 string hexFromRFC4648(const char *rfc);
@@ -251,6 +250,8 @@ typedef class DCE {
 } DCE, *DCEPtr;
 
 typedef class CameraNode {
+  private: double camera_update_seconds; // minimum time between updates
+  private: double camera_seconds; // time of last camera update
   private: double output_seconds; // time of last FireSight pipeline completion
   private: double monitor_duration; // number of seconds to show last output
   private: pid_t raspistillPID;
@@ -271,8 +272,6 @@ typedef class CameraNode {
   public: int update_camera_jpg(SmartPointer<char> jpg, int processed=0);
   public: int async_update_monitor_jpg();
   public: void setOutput(Mat image);
-
-  public: void temp_set_output_seconds() { output_seconds = cve_seconds(); }
 } CameraNode;
 
 #define MAX_CAMERAS 1 /* TODO: Make code actually work for multiple cameras */
@@ -288,6 +287,7 @@ typedef class BackgroundWorker {
   private: int async_gcode_fire();
 
   public: CameraNode cameras[MAX_CAMERAS];
+  public: static double seconds();
 
   public: BackgroundWorker();
   public: ~BackgroundWorker();

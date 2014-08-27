@@ -76,6 +76,11 @@ static void firefuse_destroy(void * initData) {
   }
 }
 
+int firefuse_unlink(const char *path) {
+  LOGDEBUG1("firefuse_unlink(%s)", path);
+  return 0;
+}
+
 int firefuse_getattr(const char *path, struct stat *stbuf) {
   if (is_cv_path(path)) {
     return cve_getattr(path, stbuf);
@@ -177,14 +182,19 @@ static int firefuse_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
   return 0;
 }
 
+int firefuse_create(const char *path, mode_t mode, struct fuse_file_info *fi) {
+  LOGDEBUG2("firefuse_create(%s,%o)", path, mode);
+  return 0;
+}
+
 int firefuse_open(const char *path, struct fuse_file_info *fi) {
-  LOGTRACE1("firefuse_open(%s)", path);
   if (is_cv_path(path)) {
     return cve_open(path, fi);
   }
   if (is_cnc_path(path)) {
     return cnc_open(path, fi);
   }
+  LOGDEBUG1("firefuse_open(%s)", path);
 
   int result = 0;
   
@@ -236,7 +246,7 @@ void firefuse_freeDataBuffer(const char *path, struct fuse_file_info *fi) {
 }
 
 int firefuse_release(const char *path, struct fuse_file_info *fi) {
-  LOGDEBUG1("firefuse_release(%s)", path);
+  LOGTRACE1("firefuse_release(%s)", path);
   if (is_cv_path(path)) {
     return cve_release(path, fi);
   }
@@ -394,7 +404,7 @@ static int firefuse_truncate(const char *path, off_t size) {
 }
 
 static int firefuse_rename(const char *path1, const char *path2) {
-  LOGDEBUG2("firefuse_rename(%s,%s)", path1, path2);
+  LOGTRACE2("firefuse_rename(%s,%s)", path1, path2);
   if (is_cv_path(path1) && is_cv_path(path2)) {
     return cve_rename(path1, path2);
   }
@@ -428,10 +438,12 @@ static struct fuse_operations firefuse_oper = {
   .destroy  = firefuse_destroy,
   .getattr  = firefuse_getattr,
   .readdir  = firefuse_readdir,
+  .create = firefuse_create,
   .open    = firefuse_open,
   .release  = firefuse_release,
   .read    = firefuse_read,
   .truncate  = firefuse_truncate,
+  .unlink = firefuse_unlink,
   .write    = firefuse_write,
   .rename = firefuse_rename,
 };

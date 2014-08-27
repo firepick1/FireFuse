@@ -154,7 +154,7 @@ static SmartPointer<char> buildErrorMessage(const char* fmt, const char *path, c
 int CVE::process(BackgroundWorker *pWorker) {
   int result = 0;
 
-  double sStart = cve_seconds();
+  double sStart = BackgroundWorker::seconds();
   LOGTRACE1("cve_process(%s) init", name.c_str());
   string pathBuf(name);
   const char *path = pathBuf.c_str(); 
@@ -215,7 +215,7 @@ int CVE::process(BackgroundWorker *pWorker) {
     free(pModelStr);
     json_decref(pModel);
     pWorker->cameras[0].setOutput(image);
-    double sElapsed = cve_seconds() - sStart;
+    double sElapsed = BackgroundWorker::seconds() - sStart;
     LOGDEBUG3("cve_process(%s) -> JSON %ldB %0.3fs", path, modelLen, sElapsed);
   } catch (const char * ex) {
     jsonResult = buildErrorMessage("cve_process(%s) EXCEPTION: %s", path, ex);
@@ -246,27 +246,25 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
   } else if (firefuse_isFile(path, FIREREST_CAMERA_JPG) || firefuse_isFile(path, FIREREST_CAMERA_JPG_TILDE)) {
     if (verifyOpenRW(path, fi, &result)) {
       if ((fi->flags & 3 ) == O_WRONLY) {
-	SmartPointer<char> camera_jpg(camera.src_camera_jpg.peek());
-        if (camera_jpg.allocated_size() < MAX_SAVED_IMAGE) {
+	//SmartPointer<char> camera_jpg(camera.src_camera_jpg.peek());
+        //if (camera_jpg.allocated_size() < MAX_SAVED_IMAGE) {
 	  SmartPointer<char> empty_buffer(NULL, MAX_SAVED_IMAGE);
 	  empty_buffer.setSize(0);
-	  camera.src_camera_jpg.post(empty_buffer);
-	  camera_jpg = empty_buffer;
-	  LOGTRACE3("cve_open(%s, O_WRONLY) allocated %ldB @ %lx", 
-	    path, camera_jpg.allocated_size(), (size_t) camera_jpg.data());
-	} else {
-	  LOGTRACE3("cve_open(%s, O_WRONLY) reusing %ldB @ %lx", 
-	    path, camera_jpg.allocated_size(), (size_t) camera_jpg.data());
-	}
-	fi->fh = (uint64_t) (size_t) new SmartPointer<char>(camera_jpg);
+	  fi->fh = (uint64_t) (size_t) new SmartPointer<char>(empty_buffer);
+	//} else {
+	//  LOGTRACE3("cve_open(%s, O_WRONLY) reusing %ldB @ %lx", 
+	//    path, camera_jpg.allocated_size(), (size_t) camera_jpg.data());
+	//  fi->fh = (uint64_t) (size_t) new SmartPointer<char>(camera_jpg);
+	//}
+	LOGDEBUG2("cve_open(%s, O_WRONLY) new:@%lx", path, (size_t) empty_buffer.data());
       } else { // O_RDONLY
 	if (FireREST::isSync(path)) {
 	  fi->fh = (uint64_t) (size_t) new SmartPointer<char>(camera.src_camera_jpg.get_sync());
 	} else {
 	  fi->fh = (uint64_t) (size_t) new SmartPointer<char>(camera.src_camera_jpg.get());
 	}
+	LOGDEBUG2("cve_open(%s,O_RDONLY) %ldB", path, (long) camera.src_camera_jpg.peek().size());
       }
-      LOGDEBUG2("cve_open(%s) %ldB", path, (long) camera.src_camera_jpg.peek().size());
     }
   } else if (firefuse_isFile(path, FIREREST_SAVED_PNG)) {
     if (verifyOpenRW(path, fi, &result)) {
@@ -403,23 +401,32 @@ int cve_write(const char *path, const char *buf, size_t bufsize, off_t offset, s
 }
 
 int cve_release(const char *path, struct fuse_file_info *fi) {
-  LOGDEBUG1("cve_release(%s)", path);
-  if (firefuse_isFile(path, FIREREST_PROCESS_FIRE)) {
-    if (fi->fh) { delete (SmartPointer<char> *) fi->fh; }
-  } else if (firefuse_isFile(path, FIREREST_MONITOR_JPG)) {
-    if (fi->fh) { delete (SmartPointer<char> *) fi->fh; }
-  } else if (firefuse_isFile(path, FIREREST_SAVED_PNG)) {
-    if (fi->fh) { delete (SmartPointer<char> *) fi->fh; }
-  } else if (firefuse_isFile(path, FIREREST_OUTPUT_JPG)) {
-    if (fi->fh) { delete (SmartPointer<char> *) fi->fh; }
-  } else if (firefuse_isFile(path, FIREREST_FIRESIGHT_JSON)) {
-    if (fi->fh) { delete (SmartPointer<char> *) fi->fh; }
-  } else if (firefuse_isFile(path, FIREREST_PROPERTIES_JSON)) {
-    if (fi->fh) { delete (SmartPointer<char> *) fi->fh; }
-  } else if (firefuse_isFile(path, FIREREST_CAMERA_JPG) || firefuse_isFile(path, FIREREST_CAMERA_JPG_TILDE)) {
-    if (fi->fh) { delete (SmartPointer<char> *) fi->fh; }
-  } else if (firefuse_isFile(path, FIREREST_SAVE_FIRE)) {
-    if (fi->fh) { delete (SmartPointer<char> *) fi->fh; }
+  if (!fi->fh) {
+    LOGDEBUG1("cve_release(%s) NULL", path);
+    return 0;
+  }
+  SmartPointer<char> *pSP = (SmartPointer<char> *) fi->fh;
+  if (firefuse_isFile(path, FIREREST_CAMERA_JPG) || 
+      firefuse_isFile(path, FIREREST_CAMERA_JPG_TILDE)) {
+    if ((fi->flags & 3 ) == O_WRONLY) {
+      worker.cameras[0].src_camera_jpg.post(*pSP);
+      LOGDEBUG3("cve_release(%s,%lx) %ldB->camera_jpg", path, (size_t)pSP->data(), pSP->size());
+    } else {
+      LOGDEBUG3("cve_release(%s,%lx) %ldB", path, (size_t)pSP->data(), pSP->size());
+    }
+    delete pSP;
+  } else if (
+      firefuse_isFile(path, FIREREST_PROCESS_FIRE) ||
+      firefuse_isFile(path, FIREREST_MONITOR_JPG) ||
+      firefuse_isFile(path, FIREREST_SAVED_PNG) ||
+      firefuse_isFile(path, FIREREST_OUTPUT_JPG) ||
+      firefuse_isFile(path, FIREREST_FIRESIGHT_JSON) ||
+      firefuse_isFile(path, FIREREST_PROPERTIES_JSON) ||
+      firefuse_isFile(path, FIREREST_SAVE_FIRE)) {
+    LOGDEBUG3("cve_release(%s,%lx) %ldB", path, (size_t)pSP->data(), pSP->size());
+    delete pSP;
+  } else {
+    LOGWARN1("cve_release(%s) UNEXPECTED PATH", path);
   }
   return 0;
 }
@@ -430,12 +437,6 @@ int cve_truncate(const char *path, off_t size) {
     worker.cve(path).src_saved_png.peek().setSize(size);
   }
   return 0;
-}
-
-double cve_seconds() {
-  int64 ticks = getTickCount();
-  double ticksPerSecond = getTickFrequency();
-  double seconds = ticks/ticksPerSecond;
 }
 
 CVE::CVE(string name) {
@@ -453,7 +454,7 @@ CVE::~CVE() {
 
 
 int CVE::save(BackgroundWorker *pWorker) {
-  double sStart = cve_seconds();
+  double sStart = BackgroundWorker::seconds();
   string errMsg;
 
   Mat image = _isColor ?
@@ -472,7 +473,7 @@ int CVE::save(BackgroundWorker *pWorker) {
     putText(image, "Saved", Point(7, image.rows-6), FONT_HERSHEY_SIMPLEX, 2, Scalar(0,0,0), 3);
     putText(image, "Saved", Point(5, image.rows-8), FONT_HERSHEY_SIMPLEX, 2, Scalar(255,255,255), 3);
     pWorker->cameras[0].setOutput(image);
-    LOGTRACE4("CVE::save(%s) %s image saved (%ldB) %0.3fs", name.c_str(), _isColor ? "color" : "gray", bytes, cve_seconds() - sStart);
+    LOGTRACE4("CVE::save(%s) %s image saved (%ldB) %0.3fs", name.c_str(), _isColor ? "color" : "gray", bytes, BackgroundWorker::seconds() - sStart);
   } else {
     errMsg = "CVE::save(";
     errMsg.append(name);
@@ -489,7 +490,7 @@ int CVE::save(BackgroundWorker *pWorker) {
   size_t jsonBytes = max(MIN_SAVE_SIZE, (size_t) strlen(jsonBuf));
   SmartPointer<char> json(jsonBuf, strlen(jsonBuf), SmartPointer<char>::ALLOCATE, jsonBytes, ' ');
   src_save_fire.post(json);
-  double sElapsed = cve_seconds() - sStart;
+  double sElapsed = BackgroundWorker::seconds() - sStart;
   LOGDEBUG3("CVE::save(%s) -> %ldB %0.3fs", name.c_str(), (ulong) json.size(), sElapsed);
 
   return errMsg.empty() ? 0 : -ENOENT;

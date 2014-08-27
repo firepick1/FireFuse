@@ -10,6 +10,13 @@ if [ "$SUDO_USER" != "" ]; then
   exit -1
 fi
 
+echo "STATUS	: removing existing firefuse"
+sudo rm -f /usr/local/bin/firefuse
+sudo rm -f /usr/local/bin/raspistill.sh
+sudo rm -f /var/log/firefuse.log
+sudo rm -f /var/log/raspistill.log
+sudo rm -f /var/log/raspistill.sh.log
+
 PI_VER=`uname -a | grep -o -E "#[0-9]+" | grep -o -E "[0-9]+"`
 echo "PI_VER	: $PI_VER"
 if [ $PI_VER -le 703 ]; then
@@ -257,6 +264,7 @@ if [ $? -ne 0 ]; then
   exit -1
 fi
 
+sync;sync
 sudo make install
 if [ $? -ne 0 ]; then
   echo "FAILED	: FireFUSE installation failed"
@@ -293,6 +301,7 @@ else
   exit -1
 fi
 
+sync;sync
 echo "---------------------------------------"
 echo "DATE	: "`date`
 echo "VERSION	: "`grep FireFUSE version.h`

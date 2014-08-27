@@ -93,6 +93,7 @@ SmartPointer<char> loadFile(const char *path, int suffixBytes) {
 CameraNode::CameraNode() {
   output_seconds = 0;
   monitor_duration = 3;
+  camera_update_seconds = 1;
   clear();
 }
 
@@ -179,21 +180,20 @@ void CameraNode::init() {
 
 int CameraNode::async_update_camera_jpg() {
   int processed = 0;
-  if (!src_camera_jpg.isFresh() || 
-      !src_camera_mat_bgr.isFresh() || 
-      !src_camera_mat_gray.isFresh()) {
+  double now = BackgroundWorker::seconds();
+  double elapsed = now - camera_seconds;
+  if (elapsed >= camera_update_seconds &&
+      ( !src_camera_jpg.isFresh() || 
+	!src_camera_mat_bgr.isFresh() || 
+	!src_camera_mat_gray.isFresh())) {
+    camera_seconds = now;
     processed |= 01;
     LOGTRACE("async_update_camera_jpg() acquiring image");
     
     SmartPointer<char> jpg = src_camera_jpg.get(); // discard current
     if (raspistillPID) {
-      // repost picture to clear update need--raspistill will overwrite
-      src_camera_jpg.post(src_camera_jpg.peek());
-      src_camera_mat_bgr.post(src_camera_mat_bgr.peek());
-      src_camera_mat_gray.post(src_camera_mat_gray.peek());
-
       if (raspistillPID > 0) {
-	LOGDEBUG1("async_update_camera_jpg() SIGUSR1 -> %d", raspistillPID);
+	LOGDEBUG1("async_update_camera_jpg() SIGUSR1 -> PID%d", raspistillPID);
         int rc = kill(raspistillPID, SIGUSR1); 
 	if (rc != 0) {
 	  const char *details;
@@ -266,7 +266,7 @@ void CameraNode::setOutput(Mat image) {
     return; // no interest
   }
   LOGTRACE2("CameraNode::setOutput(%dx%d)", image.rows, image.cols);
-  output_seconds = cve_seconds();
+  output_seconds = BackgroundWorker::seconds();
   vector<uchar> jpgBuf;
   vector<int> param = vector<int>(2);
   param[0] = CV_IMWRITE_PNG_COMPRESSION;
@@ -287,7 +287,7 @@ int CameraNode::async_update_monitor_jpg() {
 
   const char *fmt;
   SmartPointer<char> jpg;
-  if (cve_seconds() - output_seconds < monitor_duration) {
+  if (BackgroundWorker::seconds() - output_seconds < monitor_duration) {
     jpg = src_output_jpg.get();
     processed |= 01000;
     fmt = "async_update_monitor_jpg() src_output_jpg.get(%ldB) %0lx [0]:%0lx";
@@ -306,7 +306,7 @@ int CameraNode::async_update_monitor_jpg() {
 /////////////////////////// BackgroundWorker ///////////////////////////////////
 
 BackgroundWorker::BackgroundWorker() {
-  idle_seconds = cve_seconds();
+  idle_seconds = BackgroundWorker::seconds();
   idle_period = 15;
 }
 
@@ -421,9 +421,9 @@ CVE& BackgroundWorker::cve(string path, bool create) {
 
 void BackgroundWorker::idle() {
   LOGTRACE("BackgroundWorker::idle()");
-  idle_seconds = cve_seconds();
+  idle_seconds = BackgroundWorker::seconds();
   SmartPointer<char> discard = cameras[0].src_monitor_jpg.get();
-  idle_seconds = cve_seconds();
+  idle_seconds = BackgroundWorker::seconds();
   LOGINFO2("BackgroundWorker::idle() src_monitor_jpg.get() -> %ldB@%0lx discarded", (ulong) discard.size(), (ulong) discard.data());
 }
 
@@ -473,6 +473,12 @@ int BackgroundWorker::async_save_fire() {
   return processed;
 }
 
+double BackgroundWorker::seconds() {
+  int64 ticks = getTickCount();
+  double ticksPerSecond = getTickFrequency();
+  double seconds = ticks/ticksPerSecond;
+}
+
 int BackgroundWorker::processLoop() {
   int processed = 0;
   processed |= async_gcode_fire();
@@ -481,7 +487,7 @@ int BackgroundWorker::processLoop() {
   processed |= async_process_fire();  
   processed |= cameras[0].async_update_monitor_jpg();
 
-  if (idle_period && processed == 0 && (cve_seconds() - idle_seconds >= idle_period)) {
+  if (idle_period && processed == 0 && (BackgroundWorker::seconds() - idle_seconds >= idle_period)) {
     idle();
     processed |= 04000;
   } 
