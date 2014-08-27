@@ -209,7 +209,7 @@ int CameraNode::update_camera_jpg(SmartPointer<char> jpg, int processed) {
   } else {
     // To eliminate unnecessary conversion we will only update active Mat
   }
-  LOGDEBUG3("async_update_camera_jpg() src_camera_jpg.post(%ldB) %0lx [0]:%0x", 
+  LOGDEBUG3("CameraNode::update_camera_jpg() src_camera_jpg.post(%ldB) %0lx [0]:%0x", 
     (ulong) jpg.size(), (ulong) jpg.data(), (int) *jpg.data());
 
   std::vector<uchar> vJPG((uchar *)jpg.data(), (uchar *)jpg.data() + jpg.size());
@@ -217,14 +217,14 @@ int CameraNode::update_camera_jpg(SmartPointer<char> jpg, int processed) {
     processed |= 02;
     Mat image = imdecode(vJPG, CV_LOAD_IMAGE_COLOR); 
     src_camera_mat_bgr.post(image);
-    LOGTRACE2("async_update_camera_jpg() src_camera_mat_bgr.post(%dx%d)", 
+    LOGTRACE2("CameraNode::update_camera_jpg() src_camera_mat_bgr.post(%dx%d)", 
       image.rows, image.cols);
   }
   if (!src_camera_mat_gray.isFresh()) {
     processed |= 04;
     Mat image = imdecode(vJPG, CV_LOAD_IMAGE_GRAYSCALE); 
     src_camera_mat_gray.post(image);
-    LOGTRACE2("async_update_camera_jpg() src_camera_mat_gray.post(%dx%d)", 
+    LOGTRACE2("CameraNode::update_camera_jpg() src_camera_mat_gray.post(%dx%d)", 
       image.rows, image.cols);
   }
 
@@ -269,7 +269,8 @@ int CameraNode::async_update_monitor_jpg() {
   }
   src_monitor_jpg.post(jpg);
 
-  LOGDEBUG3(fmt, jpg.size(), jpg.data(), (int) *jpg.data());
+  char *pData = jpg.data();
+  LOGDEBUG3(fmt, jpg.size(), pData, (int) (pData ? *pData : 0));
 
   return processed;
 }
