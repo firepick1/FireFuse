@@ -10,7 +10,6 @@
 #include <time.h>
 #include <pthread.h>
 #include "version.h"
-#include "FirePiCam.h"
 #include "FireLog.h"
 #include "firefuse.h"
 

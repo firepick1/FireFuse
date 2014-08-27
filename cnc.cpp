@@ -10,7 +10,6 @@
 #include <sstream>
 #include "firefuse.h"
 #include "version.h"
-#include "FirePiCam.h"
 
 bool is_cnc_path(const char *path) {
   for (const char *s = path; s && *s; s++) {

@@ -45,7 +45,7 @@ add_executable(firefuse
   calibrate.cpp
   FireStep.cpp 
   )
-target_link_libraries(firefuse libfirepicam.so lib_firesight.so libjansson.so libfuse.so ${OpenCV_LIBS})
+target_link_libraries(firefuse lib_firesight.so libjansson.so libfuse.so ${OpenCV_LIBS})
 
 add_executable(testfirefuse
   test/test.cpp

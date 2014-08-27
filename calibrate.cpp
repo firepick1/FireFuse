@@ -11,7 +11,6 @@
 #include <unistd.h>
 #include "firefuse.h"
 #include "version.h"
-#include "FirePiCam.h"
 
 ////////////////////////////// SpiralIterator /////////////////////
 

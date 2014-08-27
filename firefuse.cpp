@@ -10,7 +10,6 @@
 #include <sstream>
 #include "firefuse.h"
 #include "version.h"
-#include "FirePiCam.h"
 
 int main(int argc, char *argv[]) {
   return firefuse_main(argc, argv);

@@ -191,16 +191,6 @@ if [ "$(arch)" != "armv6l" ] ;then
 fi
 echo "STATUS	: Raspberry Pi Debian confirmed for installation"
 
-if [ ! -e /usr/lib/libfirepicam.so ]; then
-  echo "INSTALL	: libfirepicam ..."
-  pushd .. > /dev/null
-  git clone git://github.com/firepick1/FirePiCam
-  popd > /dev/null
-  pushd ../FirePiCam > /dev/null
-  sudo -E ./build
-  popd > /dev/null
-fi
-
 #if [ ! -e /opt/node ] ;then
 #  echo "INSTALL	: nodejs ..."
 #  sudo mkdir /opt/node

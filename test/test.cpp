@@ -11,7 +11,6 @@
 #include <unistd.h>
 #include "firefuse.h"
 #include "version.h"
-#include "FirePiCam.h"
 #include <assert.h>
 
 template <class T> class MockValue {
@@ -621,7 +620,7 @@ int testConfig() {
   assert(testString("firesight.json GET","[{\"op\":\"putText\",\"text\":\"one\"}]", one_json));
   assert(200 == cameraWidth);
   assert(800 == cameraHeight);
-  assert(testString("config.json cameraSourceName", "firepicam", cameraSourceName.c_str()));
+  assert(testString("config.json cameraSourceName", "raspistill", cameraSourceName.c_str()));
   assert(testString("config.json cameraSourceConfig", "", cameraSourceConfig.c_str()));
 
   //////////////// properties test

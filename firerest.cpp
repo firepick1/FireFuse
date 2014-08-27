@@ -218,7 +218,7 @@ string FireREST::config_camera(const char*cv_path, json_t *pCamera, const char *
   }
   LOGINFO3("FireREST::config_camera(%s) %dx%d", cameraPath.c_str(), cameraWidth, cameraHeight);
 
-  cameraSourceName = "firepicam";
+  cameraSourceName = "raspistill";
   cameraSourceConfig = "";
   json_t *pSource = json_object_get(pCamera, "source");
   if (json_is_object(pSource)) {

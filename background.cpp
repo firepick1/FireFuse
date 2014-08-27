@@ -10,7 +10,6 @@
 #include <sstream>
 #include "firefuse.h"
 #include "version.h"
-#include "FirePiCam.h"
 
 #include "opencv2/highgui/highgui.hpp"
 
@@ -98,13 +97,9 @@ CameraNode::CameraNode() {
 }
 
 CameraNode::~CameraNode() {
-  if (raspistillPID) {
-    if (raspistillPID > 0) {
-      LOGINFO1("CameraNode::~CameraNode() shutting down raspistill PID:%d", raspistillPID);
-      ASSERTZERO(kill(raspistillPID, SIGKILL));
-    }
-  } else {
-    firepicam_destroy(0);
+  if (raspistillPID > 0) {
+    LOGINFO1("CameraNode::~CameraNode() shutting down raspistill PID:%d", raspistillPID);
+    ASSERTZERO(kill(raspistillPID, SIGKILL));
   }
 }
 
@@ -165,19 +160,10 @@ void CameraNode::init() {
     fclose(fpid);
     sscanf(pidbuf,"%d", &raspistillPID);
     LOGINFO1("CameraNode::init() raspistill PID:%d", raspistillPID);
-  } else { // FirePiCam
-    const char *argv[] = {
-      "CameraNode",
-      "-w", 
-      widthBuf,
-      "-h",
-      heightBuf
-    };
-    ASSERTZERO(firepicam_create(5, argv));
-    LOGINFO2("CameraNode::init() %dx%d", cameraWidth, cameraHeight);
   }
 }
 
+//TODOCAM
 int CameraNode::async_update_camera_jpg() {
   int processed = 0;
   double now = BackgroundWorker::seconds();
@@ -191,38 +177,23 @@ int CameraNode::async_update_camera_jpg() {
     LOGTRACE("async_update_camera_jpg() acquiring image");
     
     SmartPointer<char> jpg = src_camera_jpg.get(); // discard current
-    if (raspistillPID) {
-      if (raspistillPID > 0) {
-	LOGDEBUG1("async_update_camera_jpg() SIGUSR1 -> PID%d", raspistillPID);
-        int rc = kill(raspistillPID, SIGUSR1); 
-	if (rc != 0) {
-	  const char *details;
-	  switch (errno) {
-	    case EPERM: details = "EPERM"; break;
-	    case ESRCH: details = "ESRCH"; break;
-	    case EINVAL: details = "EINVAL"; break;
-	    default: details = "UNKNOWN ERROR"; break;
-	  }
-	  LOGERROR3("CameraNode::async_update_camera_jpg() SIGUSR1->%d: %s %d", 
-	    raspistillPID, details, errno);
-	  exit(-EIO);
+    if (raspistillPID > 0) {
+      LOGDEBUG1("async_update_camera_jpg() SIGUSR1 -> PID%d", raspistillPID);
+      int rc = kill(raspistillPID, SIGUSR1); 
+      if (rc != 0) {
+	const char *details;
+	switch (errno) {
+	  case EPERM: details = "EPERM"; break;
+	  case ESRCH: details = "ESRCH"; break;
+	  case EINVAL: details = "EINVAL"; break;
+	  default: details = "UNKNOWN ERROR"; break;
 	}
-      } else {
-        // raspistill is configured but unavailable
+	LOGERROR3("CameraNode::async_update_camera_jpg() SIGUSR1->%d: %s %d", 
+	  raspistillPID, details, errno);
+	exit(-EIO);
       }
     } else {
-      JPG_Buffer buffer;
-      buffer.pData = NULL;
-      buffer.length = 0;
-      int status = firepicam_acquireImage(&buffer);
-      if (status != 0) {
-	LOGERROR1("async_update_camera_jpg() firepicam_acquireImage() => %d", status);
-	throw "could not acquire image";
-      } 
-      assert(buffer.pData);
-      assert(buffer.length);
-      jpg = SmartPointer<char>((char *)buffer.pData, buffer.length);
-      processed = update_camera_jpg(jpg, processed);
+        // raspistill is configured but unavailable
     }
   }
 
