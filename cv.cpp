@@ -368,10 +368,10 @@ int cve_read(const char *path, char *buf, size_t size, off_t offset, struct fuse
 }
 
 int cve_write(const char *path, const char *buf, size_t bufsize, off_t offset, struct fuse_file_info *fi) {
-  ASSERT(buf!=NULL, "cve_write:buf");
-  ASSERT(bufsize >= 0, "cve_write:bufsize");
+  ASSERTNONZERO(buf);
+  ASSERT(bufsize >= 0);
   if (firefuse_isFile(path, FIREREST_PROPERTIES_JSON)) {
-    ASSERT(offset == 0, "cve_write:offset");
+    ASSERT(offset == 0);
     SmartPointer<char> data((char *) buf, bufsize);
     worker.cve(path).src_properties_json.post(data);
   } else if (firefuse_isFile(path, FIREREST_CAMERA_JPG) || firefuse_isFile(path, FIREREST_CAMERA_JPG_TILDE)) {

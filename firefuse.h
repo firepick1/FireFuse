@@ -168,6 +168,7 @@ int tinyg_hash(const char *value, size_t len);
 #include <map>
 #include <string.h>
 #include <signal.h>
+#include "FireUtils.hpp"
 
 extern int cameraWidth; // config.json provided camera width
 extern int cameraHeight; // config.json provided camera height
@@ -179,14 +180,6 @@ class BackgroundWorker;
 string hexFromRFC4648(const char *rfc);
 string hexToRFC4648(const char *hex);
 SmartPointer<char> loadFile(const char *path, int suffixBytes=0);
-
-inline int fail(int rc, const char *msg="") {
-  LOGERROR2("ASSERT(%d) FAILED. %s", rc, msg);
-  std::cout << "ASSERT(" << rc << ") FAILED. " << msg << std::endl;
-  return FALSE;
-}
-#define ASSERTZERO(exp) {int rc; assert(0==(rc=exp) || fail(rc,"expected:0"));}
-#define ASSERT(exp,msg) {int rc=exp; assert(rc || fail(rc,msg));}
 
 typedef class CVE {
   private: string name;

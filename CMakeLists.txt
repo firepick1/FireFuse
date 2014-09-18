@@ -45,7 +45,7 @@ add_executable(firefuse
   calibrate.cpp
   FireStep.cpp 
   )
-target_link_libraries(firefuse lib_firesight.so libjansson.so libfuse.so ${OpenCV_LIBS})
+target_link_libraries(firefuse lib_firesight.so libjansson.so lib_gfilter.so libfuse.so ${OpenCV_LIBS})
 
 add_executable(testfirefuse
   test/test.cpp
@@ -58,7 +58,7 @@ add_executable(testfirefuse
   calibrate.cpp
   FireStep.cpp 
   )
-target_link_libraries(testfirefuse lib_firesight.so libjansson.so libfuse.so ${OpenCV_LIBS})
+target_link_libraries(testfirefuse lib_firesight.so libjansson.so lib_gfilter.so libfuse.so ${OpenCV_LIBS})
 
 INSTALL(TARGETS firefuse DESTINATION bin)
 INSTALL(PROGRAMS mountfirefuse.sh DESTINATION /etc/init.d/)
