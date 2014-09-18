@@ -48,8 +48,21 @@ inline int fail(int rc) {
     return FALSE;
 }
 #define ASSERTNONZERO(exp) assertnonzero((long) exp, __FILE__, __LINE__)
-#define ASSERTZERO(exp) ASSERTNONZERO(!exp)
+#define ASSERTZERO(exp) assertzero((long) exp, __FILE__, __LINE__)
 #define ASSERT(e) ASSERTNONZERO(e)
+
+inline void
+assertzero(long actual, const char* fname, long line) {
+    if (actual==0) {
+        return;
+    }
+
+    char buf[255];
+    snprintf(buf, sizeof(buf), "%s@%ld expected zero", fname, line);
+    LOGERROR(buf);
+    std::cerr << "***ASSERT FAILED*** " << buf << std::endl;
+    assert(false);
+}
 
 inline void
 assertnonzero(long actual, const char* fname, long line) {
