@@ -167,7 +167,8 @@ if [ -e /var/firefuse/cv ]; then
   sudo rm -rf /var/firefuse/cv
   sudo rm -rf /var/firefuse/sync/cv
 fi
-sudo mkdir -p /var/firefuse
+sudo mkdir -p /var/firefuse/calibration
+sudo chown pi:pi /var/firefuse/calibration
 echo initializing /var/firefuse
 if [ -e /var/firefuse/config.json ]; then
   sudo mv -f /var/firefuse/config.json /var/firefuse/config.json.bak
