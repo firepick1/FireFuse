@@ -419,6 +419,8 @@ string FireREST::config_dce(string dcePath, json_t *jdce) {
   const char *protocolStr = json_is_string(protocol) ? json_string_value(protocol) : "gcode";
   if (0==strcmp("gcode", protocolStr)) {
     create_resource(dcePath + "/gcode.fire", 0666);
+  } else if (0==strcmp("marlin", protocolStr)) {
+    create_resource(dcePath + "/gcode.fire", 0666);
   } else if (0==strcmp("tinyg", protocolStr)) {
     create_resource(dcePath + "/gcode.fire", 0666);
   } else {
