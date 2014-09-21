@@ -202,6 +202,7 @@ typedef class CVE {
 typedef class DCE {
   private: string name;
   private: int serial_fd;
+  private: bool is_sync;
   private: string serial_path;
   private: string serial_stty;
   private: pthread_t tidReader;
@@ -232,6 +233,7 @@ typedef class DCE {
   public: DCE(string name);
   public: ~DCE();
   public: void clear();
+  public: bool isSync() { return is_sync; }
   public: int serial_init();
   public: inline string getName() { return name; }
   public: int gcode(BackgroundWorker *pWorker);
