@@ -124,11 +124,11 @@ int cnc_truncate(const char *path, off_t size) {
 
 DCE::DCE(string name) {
     this->name = name;
-	this->is_sync = strncmp("/sync",name,5) == 0;
+	this->is_sync = strncmp("/sync",name.c_str(),5) == 0;
     this->serial_fd = -1;
     this->jsonBuf = (char*)malloc(JSONMAX+3); // +nl, cr, EOS
     this->inbuf = (char*)malloc(INBUFMAX+1); // +EOS
-	LOGINFO("DCE::DCE(%s) isSync:%d", name, is_sync);
+	LOGINFO2("DCE::DCE(%s) isSync:%d", name.c_str(), is_sync);
     clear();
 }
 
@@ -402,7 +402,8 @@ int DCE::serial_send_eol(const char *buf, size_t bufsize) {
         }
         if (is_sync) {
             time_t starttime = time(NULL);
-            for (time_t now=starttime; activeRequests && difftime(starttime,now)<SERIALTIMEOUT; now=time()) {
+			time_t now;
+            for (now=starttime; activeRequests && difftime(starttime,now)<SERIALTIMEOUT; now=time(NULL)) {
                 sched_yield();
             }
 			if (difftime(starttime,now) > SERIALTIMEOUT) {
