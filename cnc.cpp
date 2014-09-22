@@ -542,8 +542,10 @@ int DCE::serial_read_char(int c) {
         if (inbuflen) { // discard blank lines
             if (strncmp("{\"sr\"",inbuf, 5) == 0) {	// TINYG response
                 LOGDEBUG2("DCE::serial_read_char(%s) %dB", inbuf, inbuflen);
-            } else {
+            } else if (!is_sync || strncmp("ok",inbuf, 2) == 0) {	// Marlin response
                 update_serial_response(inbuf);
+                LOGINFO3("DCE::serial_read_char(%s) ok:%dB activeRequests:%d", inbuf, inbuflen, activeRequests);
+            } else {
                 LOGINFO3("DCE::serial_read_char(%s) %dB activeRequests:%d", inbuf, inbuflen, activeRequests);
             }
         } else {
