@@ -125,7 +125,7 @@ int cnc_truncate(const char *path, off_t size) {
 DCE::DCE(string name) {
     this->name = name;
 	//this->is_sync = strncmp("/sync",name.c_str(),5) == 0;
-	this->is_sync = TRUE; // temporary
+	this->is_sync = FALSE;
     this->serial_fd = -1;
     this->jsonBuf = (char*)malloc(JSONMAX+3); // +nl, cr, EOS
     this->inbuf = (char*)malloc(INBUFMAX+1); // +EOS
