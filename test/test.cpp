@@ -1217,14 +1217,14 @@ int testRFC4648() {
 int testRaspistill() {
     cout << "testRaspistill() -----------------------" << endl;
 
-    SmartPointer<char> noimage = loadFile("/var/firefuse/no-image.jpg");
+    SmartPointer<char> noimage = loadFile("/var/firefuse/no-image.png");
     assert(testNumber(10694l, (long) noimage.size()));
     uchar *pData = (uchar *) noimage.data();
     assert(testNumber(255l, (long) pData[0]));
     assert(testNumber(216l, (long) pData[1]));
     assert(testNumber(255l, (long) pData[2]));
 
-    SmartPointer<char> noimage1 = loadFile("/var/firefuse/no-image.jpg", 1);
+    SmartPointer<char> noimage1 = loadFile("/var/firefuse/no-image.png", 1);
     assert(testNumber(10695l, (long) noimage1.size()));
     uchar *pData1 = (uchar *) noimage1.data();
     assert(testNumber(255l, (long) pData1[0]));

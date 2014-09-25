@@ -118,7 +118,7 @@ void CameraNode::init() {
     if (isRaspistill) {
         struct stat buffer;
         if (0 == stat(raspistill_sh, &buffer)) {
-            SmartPointer<char> jpg = loadFile("/var/firefuse/no-image.jpg");
+            SmartPointer<char> jpg = loadFile("/var/firefuse/no-image.png");
             update_camera_jpg(jpg);
         } else {
             LOGWARN1("CameraNode::init() raspistill camera source is unavailable:%s",

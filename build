@@ -175,7 +175,7 @@ if [ -e /var/firefuse/config.json ]; then
   echo "INFO	: Saved old /var/firefuse/config.json as /var/firefuse/config.json.bak"
 fi
 sudo cp var/firefuse/config.json /var/firefuse/
-sudo cp var/no-image.jpg /var/firefuse/no-image.jpg
+sudo cp var/no-image.png /var/firefuse/no-image.png
 
 if [ "$(arch)" != "armv6l" ] ;then
   echo "----------------------------"
