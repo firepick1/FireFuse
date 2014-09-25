@@ -411,7 +411,7 @@ int cve_release(const char *path, struct fuse_file_info *fi) {
     if (firefuse_isFile(path, FIREREST_CAMERA_JPG) ||
             firefuse_isFile(path, FIREREST_CAMERA_JPG_TILDE)) {
         if ((fi->flags & 3 ) == O_WRONLY) {
-            worker.cameras[0].src_camera_jpg.post(*pSP);
+			worker.cameras[0].update_camera_jpg(*pSP);
             LOGDEBUG3("cve_release(%s,%lx) %ldB->camera_jpg", path, (size_t)pSP->data(), pSP->size());
         } else {
             LOGDEBUG3("cve_release(%s,%lx) %ldB", path, (size_t)pSP->data(), pSP->size());

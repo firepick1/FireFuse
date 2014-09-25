@@ -163,7 +163,6 @@ void CameraNode::init() {
     }
 }
 
-//TODOCAM
 int CameraNode::async_update_camera_jpg() {
     int processed = 0;
     double now = BackgroundWorker::seconds();
@@ -208,7 +207,8 @@ int CameraNode::async_update_camera_jpg() {
     return processed;
 }
 
-int CameraNode::update_camera_jpg(SmartPointer<char> jpg, int processed) {
+int CameraNode::update_camera_jpg(SmartPointer<char> jpg) {
+	int processed = 0;
     src_camera_jpg.post(jpg);
     if (src_camera_mat_bgr.isFresh() && src_camera_mat_gray.isFresh()) {
         // proactively update all decoded images to eliminate post-idle refresh lag
