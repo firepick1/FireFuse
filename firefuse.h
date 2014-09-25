@@ -245,7 +245,7 @@ typedef class DCE {
 } DCE, *DCEPtr;
 
 typedef class CameraNode {
-  private: double camera_update_seconds; // minimum time between updates
+  private: double camera_throttle_seconds; // prevent camera abuse
   private: double camera_seconds; // time of last camera update
   private: double output_seconds; // time of last FireSight pipeline completion
   private: double monitor_duration; // number of seconds to show last output

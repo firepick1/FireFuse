@@ -92,7 +92,7 @@ SmartPointer<char> loadFile(const char *path, int suffixBytes) {
 CameraNode::CameraNode() {
     output_seconds = 0;
     monitor_duration = 3;
-    camera_update_seconds = 1;
+    camera_throttle_seconds = 1;
     clear();
 }
 
@@ -167,13 +167,16 @@ int CameraNode::async_update_camera_jpg() {
     int processed = 0;
     double now = BackgroundWorker::seconds();
     double elapsed = now - camera_seconds;
-    if (elapsed >= camera_update_seconds &&
+    if (elapsed >= camera_throttle_seconds &&
             ( !src_camera_jpg.isFresh() ||
               !src_camera_mat_bgr.isFresh() ||
               !src_camera_mat_gray.isFresh())) {
         camera_seconds = now;
         processed |= 01;
-        LOGTRACE("async_update_camera_jpg() acquiring image");
+        LOGTRACE3("async_update_camera_jpg() acquiring image (fresh jpg:%d bgr:%d gray:%d)",
+                 src_camera_jpg.isFresh(),
+                 src_camera_mat_bgr.isFresh(),
+                 src_camera_mat_gray.isFresh());
 
         SmartPointer<char> jpg = src_camera_jpg.get(); // discard current
         if (raspistillPID > 0) {
@@ -208,7 +211,7 @@ int CameraNode::async_update_camera_jpg() {
 }
 
 int CameraNode::update_camera_jpg(SmartPointer<char> jpg) {
-	int processed = 0;
+    int processed = 0;
     src_camera_jpg.post(jpg);
     if (src_camera_mat_bgr.isFresh() && src_camera_mat_gray.isFresh()) {
         // proactively update all decoded images to eliminate post-idle refresh lag
