@@ -423,6 +423,8 @@ string FireREST::config_dce(string dcePath, json_t *jdce) {
     create_resource(dcePath + "/gcode.fire", 0666);
   } else if (0==strcmp("tinyg", protocolStr)) {
     create_resource(dcePath + "/gcode.fire", 0666);
+  } else if (0==strcmp("none", protocolStr)) {
+  	LOGWARN("CNC protocol is \"none\". All CNC GCODE commands are unavailable.");
   } else {
     errMsg += "FireREST::config_cnc(";
     errMsg += dcePath;
