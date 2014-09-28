@@ -1294,7 +1294,7 @@ int test_gfilter() {
     json_error_t jerr;
     json_t *config = json_loads(json, 0, &jerr);
     StringSink sink;
-    PointOffsetFilter pof(sink, config);
+    MappedPointFilter pof(sink, config);
 
     pof.writeln("G0X0Y0Z1 E3F4");
     ASSERTEQUALS("G0Z1.01E3F4", sink[0].c_str());
