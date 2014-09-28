@@ -275,8 +275,6 @@ if [ $? -ne 0 ]; then
 fi
 echo "STATUS	: FireFUSE installed"
 
-<<<<<<< HEAD
-=======
 if [ -e /var/firefuse/cv ]; then
   sudo rm -rf /var/firefuse/cv
   sudo rm -rf /var/firefuse/sync/cv
@@ -289,7 +287,6 @@ if [ -e /var/firefuse/config.json ]; then
 fi
 sudo cp var/firefuse/config.json /var/firefuse/
 
->>>>>>> refs/remotes/origin/master
 echo "STATUS	: Mounting the multi-threaded firefuse file system on /dev/firefuse"
 echo "COMMAND	: target/firefuse -o allow_other /dev/firefuse"
 sudo target/firefuse -o allow_other /dev/firefuse
