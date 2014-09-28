@@ -1285,11 +1285,11 @@ int test_gfilter() {
 	cout << endl;
 
     const char *json =
-        "{ \"offsets\":[ " \
-        "{\"point\":[0,0,0], \"offset\":[0,0,0]}, " \
-        "{\"point\":[0,0,1], \"offset\":[0,0,0.01]}," \
-        "{\"point\":[0,1,0], \"offset\":[0,0,0.02]}," \
-        "{\"point\":[0,1,1], \"offset\":[0,0,0.02]} " \
+        "{ \"map\":[ " \
+        "{\"domain\":[0,0,0], \"range\":[0,0,0]}, " \
+        "{\"domain\":[0,0,1], \"range\":[0,0,1.01]}," \
+        "{\"domain\":[0,1,0], \"range\":[0,1,0.02]}," \
+        "{\"domain\":[0,1,1], \"range\":[0,1,1.02]} " \
         "]}";
     json_error_t jerr;
     json_t *config = json_loads(json, 0, &jerr);
@@ -1297,9 +1297,9 @@ int test_gfilter() {
     MappedPointFilter pof(sink, config);
 
     pof.writeln("G0X0Y0Z1 E3F4");
-    ASSERTEQUALS("G0Z1.01E3F4", sink[0].c_str());
+    ASSERTEQUALS("G0X0Y0Z1.01E3F4", sink[0].c_str());
     pof.writeln("G28 Z1 Y0");
-    ASSERTEQUALS("G28Y0Z0", sink[1].c_str());
+    ASSERTEQUALS("G28X0Y0Z0", sink[1].c_str());
 
     cout << "test_gfilter() PASS" << endl;
     return 0;
