@@ -460,6 +460,7 @@ double BackgroundWorker::seconds() {
     int64 ticks = getTickCount();
     double ticksPerSecond = getTickFrequency();
     double seconds = ticks/ticksPerSecond;
+    return seconds;
 }
 
 int BackgroundWorker::processLoop() {
