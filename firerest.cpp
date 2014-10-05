@@ -1,3 +1,7 @@
+// NOTE: This file should probably be renamed to "config.cpp" or something similar.  
+// It doesn't really have anything to do with FireREST, except for the fact that it reads
+// the same config.json file that's shared between firefuse and firerest. -- NJ 2014/10/04
+
 #include <string>
 #include <stdio.h>
 #include <errno.h>

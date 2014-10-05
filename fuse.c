@@ -197,21 +197,32 @@ int firefuse_open(const char *path, struct fuse_file_info *fi) {
 
   int result = 0;
   
-  if (strcmp(path, STATUS_PATH) == 0) {
+  if (strcmp(path, STATUS_PATH) == 0)        // "/status"
+ 	{ 
     verifyOpenR_(path, fi, &result);
-  } else if (strcmp(path, CONFIG_PATH) == 0) {
+  } 
+  else if (strcmp(path, CONFIG_PATH) == 0)   // "/config.json"
+  {
     verifyOpenR_(path, fi, &result);
-  } else if (strcmp(path, HOLES_PATH) == 0) {
+  } 
+  else if (strcmp(path, HOLES_PATH) == 0)    // "/holes"
+  {
     verifyOpenR_(path, fi, &result);
     fi->fh = (uint64_t) (size_t) fopen("/var/firefuse/config.json", "r");
     if (!fi->fh) {
       result = -ENOENT;
     }
-  } else if (strcmp(path, ECHO_PATH) == 0) {
+  } 
+  else if (strcmp(path, ECHO_PATH) == 0)     // "/echo"
+  {
     verifyOpenRW(path, fi, &result);
-  } else if (strcmp(path, FIRELOG_PATH) == 0) {
+  } 
+  else if (strcmp(path, FIRELOG_PATH) == 0)  // "/firelog"
+  {
     verifyOpenRW(path, fi, &result);
-  } else if (strcmp(path, FIRESTEP_PATH) == 0) {
+  } 
+  else if (strcmp(path, FIRESTEP_PATH) == 0) // "/firestep"
+  {
     verifyOpenRW(path, fi, &result);
   } else {
     result = -ENOENT;
@@ -422,29 +433,32 @@ bool firefuse_isFile(const char *value, const char * suffix) {
 
 int firefuse_getattr_file(const char *path, struct stat *stbuf, size_t length, int perm) {
   memset(stbuf, 0, sizeof(struct stat));
-  stbuf->st_uid = getuid();
-  stbuf->st_gid = getgid();
+  stbuf->st_uid = getuid();        //User ID of owner
+  stbuf->st_gid = getgid();        //Group ID of owner
+  //atime == time of last access
+  //mtime == time of last modification
+  //ctime == time of last status change
   stbuf->st_atime = stbuf->st_mtime = stbuf->st_ctime = time(NULL);
-  stbuf->st_nlink = 1;
-  stbuf->st_mode = S_IFREG | perm;
-  stbuf->st_size = length;
+  stbuf->st_nlink = 1;             //number of hardlinks
+  stbuf->st_mode = S_IFREG | perm; //protection
+  stbuf->st_size = length;         //total size, in bytes
   return 0;
 }
 
 
 static struct fuse_operations firefuse_oper = {
-  .init    = firefuse_init,
-  .destroy  = firefuse_destroy,
-  .getattr  = firefuse_getattr,
-  .readdir  = firefuse_readdir,
-  .create = firefuse_create,
-  .open    = firefuse_open,
-  .release  = firefuse_release,
-  .read    = firefuse_read,
+  .init      = firefuse_init,
+  .destroy   = firefuse_destroy,
+  .getattr   = firefuse_getattr,
+  .readdir   = firefuse_readdir,
+  .create    = firefuse_create,
+  .open      = firefuse_open,
+  .release   = firefuse_release,
+  .read      = firefuse_read,
   .truncate  = firefuse_truncate,
-  .unlink = firefuse_unlink,
-  .write    = firefuse_write,
-  .rename = firefuse_rename,
+  .unlink    = firefuse_unlink,
+  .write     = firefuse_write,
+  .rename    = firefuse_rename,
 };
 
 int firefuse_main(int argc, char *argv[]) {

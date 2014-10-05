@@ -177,28 +177,37 @@ extern string cameraSourceConfig; // config.json provided camera souce config
 
 void 	cve_process(const char *path, int *pResult);
 class BackgroundWorker;
+
+// firerest.cpp
 string hexFromRFC4648(const char *rfc);
 string hexToRFC4648(const char *hex);
-SmartPointer<char> loadFile(const char *path, int suffixBytes=0);
 
+// background.cpp
+SmartPointer<char> loadFile(const char *path, int suffixBytes=0); //Return allocated memory with contents
+
+// ****************************************************************************
+// cv.cpp - Implementation of Computer Vision Endpoint (https://github.com/firepick1/FireREST/wiki/FireREST-CV)
+// There will be one CVE element for each endpoint in /dev/firefuse.
 typedef class CVE {
-  private: string name;
-  private: bool _isColor;
+  private: string name;                                        // 
+  private: bool _isColor;                                      // TRUE if CVE is a color endpoint, or FALSE if endpoint is grayscale
 
-  public: LIFOCache<SmartPointer<char> > src_saved_png;
-  public: LIFOCache<SmartPointer<char> > src_save_fire;
-  public: LIFOCache<SmartPointer<char> > src_process_fire;
-  public: LIFOCache<SmartPointer<char> > src_firesight_json;
-  public: LIFOCache<SmartPointer<char> > src_properties_json;
-  public: static string cve_path(const char *pPath);
-  public: CVE(string name);
-  public: ~CVE();
+  public: LIFOCache<SmartPointer<char> > src_saved_png;        // Pointer to https://github.com/firepick1/FireREST/wiki/saved.png
+  public: LIFOCache<SmartPointer<char> > src_save_fire;        // Pointer to https://github.com/firepick1/FireREST/wiki/save.fire (grab saved.png when accessed)
+  public: LIFOCache<SmartPointer<char> > src_process_fire;     // Pointer to https://github.com/firepick1/FireREST/wiki/process.fire
+  public: LIFOCache<SmartPointer<char> > src_firesight_json;   // Pointer to https://github.com/firepick1/FireREST/wiki/firesight.json
+  public: LIFOCache<SmartPointer<char> > src_properties_json;  // Pointer to https://github.com/firepick1/FireREST/wiki/properties.json
+  public: static string cve_path(const char *pPath);          // String containing path to Computer Vision Endpoint
+  public: CVE(string name);                                    // Constructor
+  public: ~CVE();                                              // Destructor
   public: inline string getName() { return name; }
   public: int save(BackgroundWorker *pWorker);
   public: int process(BackgroundWorker *pWorker);
-  public: inline bool isColor() { return _isColor; }
+  public: inline bool isColor() { return _isColor; }          // TRUE if CVE is a color endpoint, or FALSE if endpoint is grayscale
 } CVE, *CVEPtr;
 
+// ****************************************************************************
+// cnc.cpp - Implementation of Device Control Endpoint (https://github.com/firepick1/FireREST/wiki/FireREST-CNC)
 typedef class DCE {
   private: string name;
   private: int serial_fd;
@@ -244,6 +253,9 @@ typedef class DCE {
   public: inline vector<string> getSerialDeviceConfig() { return serial_device_config; }
 } DCE, *DCEPtr;
 
+// ****************************************************************************
+// background.cpp - Gets called whenever cve_open() is called.
+// During cve_open (cv.cpp), worker.cameras[] will be populated with a CameraNode object for each camera present.
 typedef class CameraNode {
   private: double camera_throttle_seconds; // prevent camera abuse
   private: double camera_seconds; // time of last camera update
@@ -261,9 +273,9 @@ typedef class CameraNode {
   // For BackgroundWorker use
   public: CameraNode();
   public: ~CameraNode();
-  public: void init();
+  public: void init();                                     //Inits camera.  Starts Raspistill, etc..
   public: void clear();
-  public: int async_update_camera_jpg();
+  public: int async_update_camera_jpg();                   //
   public: int update_camera_jpg(SmartPointer<char> jpg);
   public: int async_update_monitor_jpg();
   public: void setOutput(Mat image);
@@ -271,8 +283,10 @@ typedef class CameraNode {
 
 #define MAX_CAMERAS 1 /* TODO: Make code actually work for multiple cameras */
 
+// ****************************************************************************
+// background.cpp - singleton class 
 typedef class BackgroundWorker {
-  private: double idle_period; // minimum seconds between idle() execution
+  private: double idle_period; // minimum seconds between idle() execution. Gets set by config.json.
   private: std::map<string, CVEPtr> cveMap;
   private: std::map<string, DCEPtr> dceMap;
   private: std::map<string, DCEPtr> serialMap;
@@ -286,7 +300,7 @@ typedef class BackgroundWorker {
 
   public: BackgroundWorker();
   public: ~BackgroundWorker();
-  public: static int callSystem(char *cmdbuf);
+  public: static int callSystem(char *cmdbuf); //Execute a system shell command
   public: CVE& cve(string path, bool create=FALSE);
   public: DCE& dce(string path, bool create=FALSE);
   public: vector<string> getCveNames();
@@ -306,6 +320,8 @@ typedef class BackgroundWorker {
 
 extern BackgroundWorker worker; // BackgroundWorker singleton background worker
 
+// ****************************************************************************
+// firerest.cpp
 typedef class JSONFileSystem {
   private: std::map<string, json_t *> dirMap;
   private: std::map<string, json_t *> fileMap;
@@ -325,6 +341,8 @@ typedef class JSONFileSystem {
   public: int perms(const char *path);
 } JSONFileSystem;
 
+// ****************************************************************************
+// firerest.cpp - read/write/modify of config.json (shared with FireREST et. al.)
 typedef class FireREST {
   private: pthread_mutex_t processMutex;
   private: int processCount;
@@ -352,6 +370,8 @@ typedef class FireREST {
 
 extern FireREST firerest;
 
+// ****************************************************************************
+// Calibrate.cpp
 typedef class SpiralIterator { // simpler than a C++ <iterator>
   private: int x;
   private: int y;
@@ -376,6 +396,6 @@ typedef class SpiralIterator { // simpler than a C++ <iterator>
   public: bool next();
 } SpiralIterator;
 
-#endif
+#endif // __cplusplus
 //////////////////////////////////// FIREFUSE_H ////////////////////////////////////////////////////////
-#endif
+#endif // FIREFUSE_HPP
