@@ -420,9 +420,9 @@ int cve_release(const char *path, struct fuse_file_info *fi) {
             firefuse_isFile(path, FIREREST_CAMERA_JPG_TILDE)) {
         if ((fi->flags & 3 ) == O_WRONLY) {
             worker.cameras[0].update_camera_jpg(*pSP);
-            LOGDEBUG3("cve_release(%s,%lx) %ldB->camera_jpg", path, (size_t)pSP->data(), pSP->size());
+            LOGDEBUG3("cve_release(%s,%lx) W %ldB->camera_jpg", path, (size_t)pSP->data(), pSP->size());
         } else {
-            LOGDEBUG3("cve_release(%s,%lx) %ldB", path, (size_t)pSP->data(), pSP->size());
+            LOGDEBUG3("cve_release(%s,%lx) R %ldB", path, (size_t)pSP->data(), pSP->size());
         }
         delete pSP;
     } else if (
