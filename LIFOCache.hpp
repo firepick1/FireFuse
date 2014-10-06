@@ -115,7 +115,9 @@ template <class T> class LIFOCache {
 						LOGERROR1("get_sync() %dms TIMEOUT EXCEEDED", msTimeout);
                     }
                 }
-            }
+            } else {
+                LOGWARN1("LIFOCache::get_sync(%d) succeeded immediately", msTimeout);
+			}
 
             T result = get();
             return result;

@@ -16,6 +16,8 @@
 using namespace cv;
 using namespace firesight;
 
+#define CAPTURE_MSTIMEOUT 500
+
 #define STATUS_BUFFER_SIZE 1024
 static char status_buffer[STATUS_BUFFER_SIZE];
 
@@ -169,10 +171,9 @@ void CameraNode::init() {
 }
 
 bool CameraNode::capture() {
-	int maxTries = 3;
-	for (int i=0; captureActive && i++ < maxTries; ) {
-		LOGDEBUG2("CameraNode::capture() waiting for capture completion...(%d/%d)", i, maxTries);
-		pthread_yield();
+	if (captureActive) {
+		LOGDEBUG("CameraNode::capture() waiting for capture completion");
+		usleep(CAPTURE_MSTIMEOUT*1000);
 	}
 	if (captureActive) {
 		LOGWARN("CameraNode::capture() PREVIOUS CAPTURE INCOMPLETE: Proceeding with next capture");
