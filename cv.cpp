@@ -265,6 +265,8 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
                 LOGDEBUG2("cve_open(%s, O_WRONLY) new:@%lx", path, (size_t) empty_buffer.data());
             } else { // O_RDONLY
                 if (FireREST::isSync(path)) {
+					LOGDEBUG1("cve_open(%s) capture() for camera", path);
+					worker.cameras[0].capture();
                     fi->fh = (uint64_t) (size_t) 
 						new SmartPointer<char>(camera.src_camera_jpg.get_sync(CAMERA_MSTIMEOUT));
                 } else {
@@ -298,6 +300,8 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
             if (FireREST::isSync(path)) {
                 int count = firerest.incrementProcessCount();
                 if (count == 1) {
+					LOGDEBUG1("cve_open(%s) capture() for process", path);
+					worker.cameras[0].capture();
                     camera.src_camera_jpg.get_sync(CAMERA_MSTIMEOUT);
                     fi->fh = (uint64_t) (size_t) 
 						new SmartPointer<char>(worker.cve(path).src_process_fire.get_sync(PROCESS_MSTIMEOUT));
@@ -311,6 +315,8 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
             }
         } else if (firefuse_isFile(path, FIREREST_SAVE_FIRE)) {
             if (FireREST::isSync(path)) {
+				LOGDEBUG1("cve_open(%s) capture() for save", path);
+				worker.cameras[0].capture();
                 camera.src_camera_jpg.get_sync(CAMERA_MSTIMEOUT);
             }
             fi->fh = (uint64_t) (size_t) 
@@ -353,10 +359,6 @@ int cve_read(const char *path, char *buf, size_t size, off_t offset, struct fuse
     (void) fi;
 
     if ( firefuse_isFile(path, FIREREST_CAMERA_JPG) ){
-		if (FireREST::isSync(path) && offset==0) {
-			LOGDEBUG1("cve_read(%s) capture()", path);
-			worker.cameras[0].capture();
-		}
         SmartPointer<char> *pData = (SmartPointer<char> *) fi->fh;
         sizeOut = firefuse_readBuffer(buf, (char *)pData->data(), size, offset, pData->size());
     } else if ( firefuse_isFile(path, FIREREST_CAMERA_JPG_TILDE)) {
