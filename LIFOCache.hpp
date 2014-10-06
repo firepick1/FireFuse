@@ -99,7 +99,7 @@ template <class T> class LIFOCache {
             struct timespec ts;
             int rc = sem_trywait(&getSem);
             if (rc) {
-                LOGDEBUG("LIFOCache::get_sync() blocked on queue input");
+                LOGDEBUG1("LIFOCache::get_sync(%d) blocked on queue input", msTimeout);
                 if (msTimeout==0 || clock_gettime(CLOCK_REALTIME, &ts) == -1) {
                     rc = sem_wait(&getSem);
                     if (rc) {
@@ -112,7 +112,7 @@ template <class T> class LIFOCache {
                     ts.tv_sec += ns / 1000000000l;
                     rc = sem_timedwait(&getSem, &ts);
                     if (rc) {
-                        throw "get_sync() TIMEOUT EXCEEDED";
+						LOGERROR1("get_sync() %dms TIMEOUT EXCEEDED", msTimeout);
                     }
                 }
             }

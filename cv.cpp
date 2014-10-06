@@ -29,6 +29,10 @@ typedef enum {UI_STILL, UI_VIDEO} UIMode;
 
 size_t MAX_SAVED_IMAGE = 3000000; // empirically chosen to handle 400x400 png images
 
+#define CAMERA_MSTIMEOUT 2000
+#define PROCESS_MSTIMEOUT 15000
+#define SAVE_MSTIMEOUT 1000
+
 /**
  * Return canonical CVE path. E.g.:
  *   /dev/firefuse/sync/cv/1/gray/calc-offset/save.fire => /cv/1/gray/calc-offset
@@ -261,7 +265,8 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
                 LOGDEBUG2("cve_open(%s, O_WRONLY) new:@%lx", path, (size_t) empty_buffer.data());
             } else { // O_RDONLY
                 if (FireREST::isSync(path)) {
-                    fi->fh = (uint64_t) (size_t) new SmartPointer<char>(camera.src_camera_jpg.get_sync());
+                    fi->fh = (uint64_t) (size_t) 
+						new SmartPointer<char>(camera.src_camera_jpg.get_sync(CAMERA_MSTIMEOUT));
                 } else {
                     fi->fh = (uint64_t) (size_t) new SmartPointer<char>(camera.src_camera_jpg.get());
                 }
@@ -293,8 +298,9 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
             if (FireREST::isSync(path)) {
                 int count = firerest.incrementProcessCount();
                 if (count == 1) {
-                    camera.src_camera_jpg.get_sync();
-                    fi->fh = (uint64_t) (size_t) new SmartPointer<char>(worker.cve(path).src_process_fire.get_sync());
+                    camera.src_camera_jpg.get_sync(CAMERA_MSTIMEOUT);
+                    fi->fh = (uint64_t) (size_t) 
+						new SmartPointer<char>(worker.cve(path).src_process_fire.get_sync(PROCESS_MSTIMEOUT));
                 } else {
                     LOGERROR2("cve_open(%s) EAGAIN operation would block (processCount=%d)", path, count);
                     result = -EAGAIN;
@@ -305,9 +311,10 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
             }
         } else if (firefuse_isFile(path, FIREREST_SAVE_FIRE)) {
             if (FireREST::isSync(path)) {
-                camera.src_camera_jpg.get_sync();
+                camera.src_camera_jpg.get_sync(CAMERA_MSTIMEOUT);
             }
-            fi->fh = (uint64_t) (size_t) new SmartPointer<char>(worker.cve(path).src_save_fire.get_sync());
+            fi->fh = (uint64_t) (size_t) 
+				new SmartPointer<char>(worker.cve(path).src_save_fire.get_sync(SAVE_MSTIMEOUT));
         } else if (firefuse_isFile(path, FIREREST_OUTPUT_JPG)) {
             fi->fh = (uint64_t) (size_t) new SmartPointer<char>(camera.src_output_jpg.get());
         } else if (firefuse_isFile(path, FIREREST_MONITOR_JPG)) {
