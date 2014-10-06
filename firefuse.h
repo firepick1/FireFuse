@@ -249,6 +249,7 @@ typedef class CameraNode {
   private: double camera_seconds; // time of last camera update
   private: double output_seconds; // time of last FireSight pipeline completion
   private: double monitor_duration; // number of seconds to show last output
+  private: bool captureActive;
   private: pid_t raspistillPID;
 
   // Common data
@@ -266,6 +267,7 @@ typedef class CameraNode {
   public: ~CameraNode();
   public: void init();
   public: void clear();
+  public: void captureComplete();
   public: int async_update_camera_jpg();
   public: int update_camera_jpg(SmartPointer<char> jpg);
   public: int async_update_monitor_jpg();

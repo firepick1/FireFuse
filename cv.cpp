@@ -29,7 +29,7 @@ typedef enum {UI_STILL, UI_VIDEO} UIMode;
 
 size_t MAX_SAVED_IMAGE = 3000000; // empirically chosen to handle 400x400 png images
 
-#define CAMERA_MSTIMEOUT 2000
+#define CAMERA_MSTIMEOUT 1000
 #define PROCESS_MSTIMEOUT 15000
 #define SAVE_MSTIMEOUT 1000
 
@@ -428,10 +428,11 @@ int cve_release(const char *path, struct fuse_file_info *fi) {
     if (firefuse_isFile(path, FIREREST_CAMERA_JPG) ||
             firefuse_isFile(path, FIREREST_CAMERA_JPG_TILDE)) {
         if ((fi->flags & 3 ) == O_WRONLY) {
-            worker.cameras[0].update_camera_jpg(*pSP);
             LOGDEBUG3("cve_release(%s,%lx) W %ldB->camera_jpg", path, (size_t)pSP->data(), pSP->size());
+            worker.cameras[0].update_camera_jpg(*pSP);
         } else {
             LOGDEBUG3("cve_release(%s,%lx) R %ldB", path, (size_t)pSP->data(), pSP->size());
+			worker.cameras[0].captureComplete();
         }
         delete pSP;
     } else if (

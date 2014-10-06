@@ -92,6 +92,7 @@ SmartPointer<char> loadFile(const char *path, int suffixBytes) {
 CameraNode::CameraNode() {
     output_seconds = 0;
     monitor_duration = 3;
+	captureActive = FALSE;
     camera_idle_capture_seconds = 600; // idle image capture rate
     clear();
 }
@@ -101,6 +102,10 @@ CameraNode::~CameraNode() {
         LOGINFO1("CameraNode::~CameraNode() shutting down raspistill PID:%d", raspistillPID);
         ASSERTZERO(kill(raspistillPID, SIGKILL));
     }
+}
+
+void CameraNode::captureComplete() {
+    captureActive = FALSE;
 }
 
 void CameraNode::clear() {
@@ -164,6 +169,14 @@ void CameraNode::init() {
 }
 
 bool CameraNode::capture() {
+	int maxTries = 3;
+	for (int i=0; captureActive && i++ < maxTries; ) {
+		LOGDEBUG2("CameraNode::capture() waiting for capture completion...(%d/%d)", i, maxTries);
+		pthread_yield();
+	}
+	if (captureActive) {
+		LOGWARN("CameraNode::capture() PREVIOUS CAPTURE INCOMPLETE: Proceeding with next capture");
+	}
     SmartPointer<char> jpg = src_camera_jpg.get(); // discard current
     if (raspistillPID <= 0) {
 		return FALSE; // raspistill is configured but unavailable
@@ -192,6 +205,7 @@ bool CameraNode::capture() {
 		exit(-EIO);
 	}
 
+	captureActive = TRUE;
 	return TRUE;
 }
 
