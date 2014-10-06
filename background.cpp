@@ -92,7 +92,7 @@ SmartPointer<char> loadFile(const char *path, int suffixBytes) {
 CameraNode::CameraNode() {
     output_seconds = 0;
     monitor_duration = 3;
-    camera_throttle_seconds = 1;
+    camera_idle_capture_seconds = 10; // idle image capture rate
     clear();
 }
 
@@ -163,48 +163,54 @@ void CameraNode::init() {
     }
 }
 
+bool CameraNode::capture() {
+    SmartPointer<char> jpg = src_camera_jpg.get(); // discard current
+    if (raspistillPID <= 0) {
+		return FALSE; // raspistill is configured but unavailable
+	}
+
+	LOGDEBUG1("CameraNode::capture() SIGUSR1 -> PID%d", raspistillPID);
+	int rc = kill(raspistillPID, SIGUSR1);
+	if (rc != 0) {
+		const char *details;
+		switch (errno) {
+		case EPERM:
+			details = "EPERM";
+			break;
+		case ESRCH:
+			details = "ESRCH";
+			break;
+		case EINVAL:
+			details = "EINVAL";
+			break;
+		default:
+			details = "UNKNOWN ERROR";
+			break;
+		}
+		LOGERROR3("CameraNode::async_update_camera_jpg() SIGUSR1->%d: %s %d",
+				  raspistillPID, details, errno);
+		exit(-EIO);
+	}
+
+	return TRUE;
+}
+
 int CameraNode::async_update_camera_jpg() {
     int processed = 0;
     double now = BackgroundWorker::seconds();
     double elapsed = now - camera_seconds;
-    if (elapsed >= camera_throttle_seconds &&
+    if (elapsed >= camera_idle_capture_seconds &&
             ( !src_camera_jpg.isFresh() ||
               !src_camera_mat_bgr.isFresh() ||
               !src_camera_mat_gray.isFresh())) {
         camera_seconds = now;
         processed |= 01;
         LOGTRACE3("async_update_camera_jpg() acquiring image (fresh jpg:%d bgr:%d gray:%d)",
-                 src_camera_jpg.isFresh(),
-                 src_camera_mat_bgr.isFresh(),
-                 src_camera_mat_gray.isFresh());
+                  src_camera_jpg.isFresh(),
+                  src_camera_mat_bgr.isFresh(),
+                  src_camera_mat_gray.isFresh());
 
-        SmartPointer<char> jpg = src_camera_jpg.get(); // discard current
-        if (raspistillPID > 0) {
-            LOGDEBUG1("async_update_camera_jpg() SIGUSR1 -> PID%d", raspistillPID);
-            int rc = kill(raspistillPID, SIGUSR1);
-            if (rc != 0) {
-                const char *details;
-                switch (errno) {
-                case EPERM:
-                    details = "EPERM";
-                    break;
-                case ESRCH:
-                    details = "ESRCH";
-                    break;
-                case EINVAL:
-                    details = "EINVAL";
-                    break;
-                default:
-                    details = "UNKNOWN ERROR";
-                    break;
-                }
-                LOGERROR3("CameraNode::async_update_camera_jpg() SIGUSR1->%d: %s %d",
-                          raspistillPID, details, errno);
-                exit(-EIO);
-            }
-        } else {
-            // raspistill is configured but unavailable
-        }
+		capture();
     }
 
     return processed;
@@ -460,7 +466,7 @@ double BackgroundWorker::seconds() {
     int64 ticks = getTickCount();
     double ticksPerSecond = getTickFrequency();
     double seconds = ticks/ticksPerSecond;
-	return seconds;
+    return seconds;
 }
 
 int BackgroundWorker::processLoop() {

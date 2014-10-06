@@ -245,7 +245,7 @@ typedef class DCE {
 } DCE, *DCEPtr;
 
 typedef class CameraNode {
-  private: double camera_throttle_seconds; // prevent camera abuse
+  private: double camera_idle_capture_seconds; 
   private: double camera_seconds; // time of last camera update
   private: double output_seconds; // time of last FireSight pipeline completion
   private: double monitor_duration; // number of seconds to show last output
@@ -257,6 +257,9 @@ typedef class CameraNode {
   public: LIFOCache<Mat> src_camera_mat_bgr;
   public: LIFOCache<SmartPointer<char> > src_monitor_jpg;
   public: LIFOCache<SmartPointer<char> > src_output_jpg;
+
+  // General use
+  public: bool capture();
 
   // For BackgroundWorker use
   public: CameraNode();

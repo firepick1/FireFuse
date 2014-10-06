@@ -345,16 +345,24 @@ int cve_read(const char *path, char *buf, size_t size, off_t offset, struct fuse
     size_t len;
     (void) fi;
 
-    if (firefuse_isFile(path, FIREREST_CAMERA_JPG) ||
-            firefuse_isFile(path, FIREREST_CAMERA_JPG_TILDE) ||
-            firefuse_isFile(path, FIREREST_MONITOR_JPG) ||
-            firefuse_isFile(path, FIREREST_OUTPUT_JPG) ||
-            firefuse_isFile(path, FIREREST_SAVED_PNG) ||
-            firefuse_isFile(path, FIREREST_PROCESS_FIRE) ||
-            firefuse_isFile(path, FIREREST_SAVE_FIRE) ||
-            firefuse_isFile(path, FIREREST_FIRESIGHT_JSON) ||
-            firefuse_isFile(path, FIREREST_PROPERTIES_JSON) ||
-            FALSE) {
+    if ( firefuse_isFile(path, FIREREST_CAMERA_JPG) ){
+		if (FireREST::isSync(path) && offset==0) {
+			LOGDEBUG1("cve_read(%s) capture()", path);
+			worker.cameras[0].capture();
+		}
+        SmartPointer<char> *pData = (SmartPointer<char> *) fi->fh;
+        sizeOut = firefuse_readBuffer(buf, (char *)pData->data(), size, offset, pData->size());
+    } else if ( firefuse_isFile(path, FIREREST_CAMERA_JPG_TILDE)) {
+        SmartPointer<char> *pData = (SmartPointer<char> *) fi->fh;
+        sizeOut = firefuse_readBuffer(buf, (char *)pData->data(), size, offset, pData->size());
+    } else if ( firefuse_isFile(path, FIREREST_MONITOR_JPG) ||
+                firefuse_isFile(path, FIREREST_OUTPUT_JPG) ||
+                firefuse_isFile(path, FIREREST_SAVED_PNG) ||
+                firefuse_isFile(path, FIREREST_PROCESS_FIRE) ||
+                firefuse_isFile(path, FIREREST_SAVE_FIRE) ||
+                firefuse_isFile(path, FIREREST_FIRESIGHT_JSON) ||
+                firefuse_isFile(path, FIREREST_PROPERTIES_JSON) ||
+                FALSE) {
         SmartPointer<char> *pData = (SmartPointer<char> *) fi->fh;
         sizeOut = firefuse_readBuffer(buf, (char *)pData->data(), size, offset, pData->size());
     } else if (fi->fh) { // data file
@@ -411,7 +419,7 @@ int cve_release(const char *path, struct fuse_file_info *fi) {
     if (firefuse_isFile(path, FIREREST_CAMERA_JPG) ||
             firefuse_isFile(path, FIREREST_CAMERA_JPG_TILDE)) {
         if ((fi->flags & 3 ) == O_WRONLY) {
-			worker.cameras[0].update_camera_jpg(*pSP);
+            worker.cameras[0].update_camera_jpg(*pSP);
             LOGDEBUG3("cve_release(%s,%lx) %ldB->camera_jpg", path, (size_t)pSP->data(), pSP->size());
         } else {
             LOGDEBUG3("cve_release(%s,%lx) %ldB", path, (size_t)pSP->data(), pSP->size());
