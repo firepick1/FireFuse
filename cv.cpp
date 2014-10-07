@@ -117,6 +117,7 @@ int cve_rename(const char *path1, const char *path2) {
 
 int cve_getattr(const char *path, struct stat *stbuf) {
     int res = 0;
+	bool trace = FALSE;
 
     if (firefuse_isFile(path, FIREREST_CAMERA_JPG) || firefuse_isFile(path, FIREREST_CAMERA_JPG_TILDE)) {
         res = firefuse_getattr_file(path, stbuf, worker.cameras[0].src_camera_jpg.peek().size(), 0666);
@@ -137,10 +138,15 @@ int cve_getattr(const char *path, struct stat *stbuf) {
     } else if (firefuse_isFile(path, FIREREST_FIRESIGHT_JSON)) {
         res = firefuse_getattr_file(path, stbuf, worker.cve(path).src_firesight_json.peek().size(), 0444);
     } else {
+		trace = TRUE;
         res = firerest_getattr_default(path, stbuf);
     }
 
-	LOGDEBUG3("cve_getattr(%s) stat->st_size:%ldB -> %d", path, (ulong) stbuf->st_size, res);
+	if (trace) {
+		LOGTRACE3("cve_getattr(%s) stat->st_size:%ldB -> %d", path, (ulong) stbuf->st_size, res);
+	} else {
+		LOGDEBUG3("cve_getattr(%s) stat->st_size:%ldB -> %d", path, (ulong) stbuf->st_size, res);
+	}
     return res;
 }
 
@@ -380,7 +386,7 @@ int cve_read(const char *path, char *buf, size_t size, off_t offset, struct fuse
         return -ENOENT;
     }
 
-    LOGTRACE4("cve_read(%s,%ld,%ldB) -> %ldB", path, offset, size, sizeOut);
+    LOGTRACE4("cve_read(%s,%ldB,%ld) -> %ldB", path, (long) size, (long) offset, sizeOut);
     return sizeOut;
 }
 
@@ -394,23 +400,25 @@ int cve_write(const char *path, const char *buf, size_t bufsize, off_t offset, s
     } else if (firefuse_isFile(path, FIREREST_CAMERA_JPG) || firefuse_isFile(path, FIREREST_CAMERA_JPG_TILDE)) {
         SmartPointer<char> * pImage =  (SmartPointer<char> *) fi->fh;
         if (bufsize + offset > pImage->allocated_size()) {
-            LOGERROR1("cve_write(%s) data too large (truncated)", path);
+            LOGWARN4("cve_write(%s,%ldB,%ld) data truncated to fit %ldB", 
+				path, bufsize, offset, pImage->allocated_size());
         } else {
             memcpy(pImage->data()+offset, buf, bufsize);
             pImage->setSize(offset+bufsize);
-            LOGTRACE4("cve_write(%s,%ld,%ldB) %ldB total", path, offset, bufsize, pImage->size());
+            LOGTRACE4("cve_write(%s,%ldB,%ld) %ldB total", path, bufsize, offset, pImage->size());
         }
     } else if (firefuse_isFile(path, FIREREST_SAVED_PNG)) {
         SmartPointer<char> * pImage =  (SmartPointer<char> *) fi->fh;
         if (bufsize + offset > pImage->allocated_size()) {
-            LOGERROR1("cve_write(%s) data too large (truncated)", path);
+            LOGWARN4("cve_write(%s,%ldB,%ld) data truncated to fit %ldB", 
+				path, bufsize, offset, pImage->allocated_size());
         } else {
             memcpy(pImage->data()+offset, buf, bufsize);
             pImage->setSize(offset+bufsize);
-            LOGTRACE4("cve_write(%s,%ld,%ldB) %ldB total", path, offset, bufsize, pImage->size());
+            LOGTRACE4("cve_write(%s,%ldB,%ld) %ldB total", path, bufsize, offset, pImage->size());
         }
     } else {
-        LOGERROR3("cve_write(%s,%ld,%ldB) ENOENT", path, offset, bufsize);
+        LOGERROR3("cve_write(%s,%ldB,%ld) ENOENT", path, bufsize, offset);
         return -ENOENT;
     }
 

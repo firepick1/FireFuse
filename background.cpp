@@ -94,7 +94,6 @@ SmartPointer<char> loadFile(const char *path, int suffixBytes) {
 CameraNode::CameraNode() {
     output_seconds = 0;
     monitor_duration = 3;
-	captureActive = FALSE;
     camera_idle_capture_seconds = 600; // idle image capture rate
     clear();
 }
@@ -113,6 +112,7 @@ void CameraNode::endCapture() {
 
 void CameraNode::clear() {
     raspistillPID = 0;
+	captureActive = FALSE;
 }
 
 void CameraNode::init() {
