@@ -94,6 +94,7 @@ SmartPointer<char> loadFile(const char *path, int suffixBytes) {
 CameraNode::CameraNode() {
     output_seconds = 0;
     monitor_duration = 3;
+	set_min_capture_ms();
     camera_idle_capture_seconds = 600; // idle image capture rate
     clear();
 }
@@ -113,6 +114,7 @@ void CameraNode::endCapture() {
 void CameraNode::clear() {
     raspistillPID = 0;
 	captureActive = FALSE;
+	msCapture = 0;
 }
 
 void CameraNode::init() {
@@ -172,6 +174,12 @@ void CameraNode::init() {
 }
 
 bool CameraNode::capture() {
+	long  msWait = msCapture - ::millis();
+	if (msWait > 0) {
+		LOGDEBUG2("CameraNode::capture() waiting(%ldms) maxfps:%g", msWait, 1000.0/min_capture_ms);
+		usleep(msWait * 1000);
+	}
+	msCapture = millis();
 	if (captureActive) {
 		LOGDEBUG("CameraNode::capture() waiting for capture completion");
 		usleep(CAPTURE_MSTIMEOUT*1000);

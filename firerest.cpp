@@ -25,6 +25,33 @@ string cameraSourceConfig;
 
 FireREST firerest;
 
+//////////////////////// millis ////////////////////////
+#include <sys/time.h>
+#include <ctime>
+
+static struct tm tmLocalNow() {
+    timeval tp;
+    gettimeofday(&tp, 0);
+    time_t curtime = tp.tv_sec;
+    return *localtime(&curtime);
+}
+
+static struct tm tmStart = tmLocalNow();
+
+long millis() {
+    struct tm tmNow = tmLocalNow();
+    long result = tmNow.tm_year - tmStart.tm_year;
+    result = result * 365 + (tmNow.tm_yday - tmStart.tm_yday);
+    result = result * 24 + (tmNow.tm_hour - tmStart.tm_hour);
+    result = result * 60 + (tmNow.tm_min - tmStart.tm_min);
+    result = result * 60 + (tmNow.tm_sec - tmStart.tm_sec);
+
+    timeval tp;
+    gettimeofday(&tp, 0);
+    result = result * 1000 + tp.tv_usec/1000;
+    return result;
+}
+
 /////////////////////////////// JSONFileSystem /////////////////////////////
 
 JSONFileSystem::JSONFileSystem() {
@@ -327,6 +354,12 @@ string FireREST::config_cv(const char* varPath, json_t *pConfig) {
   if (pCv == 0) {
     return string("FireREST::config_cv() missing configuration: cv\n");
   }
+  json_t *pMaxFPS = json_object_get(pCv, "maxfps");
+  if (json_is_real(pMaxFPS)) {
+  	double maxFPS = json_real_value(pMaxFPS);
+	worker.cameras[0].set_min_capture_ms(1000/maxFPS);
+  }
+
   json_t *pCveMap = 0;
   pCveMap = json_object_get(pCv, "cve_map");
   if (!pCveMap) {

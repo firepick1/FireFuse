@@ -162,7 +162,7 @@ int tinyg_hash(const char *value, size_t len);
 
 #ifdef __cplusplus
 //////////////////////////////// C++ DECLARATIONS ///////////////////////////////////////////////////
-} // __cplusplus
+} // extern C
 #include "LIFOCache.hpp"
 #include <vector>
 #include <map>
@@ -249,8 +249,10 @@ typedef class CameraNode {
   private: double camera_seconds; // time of last camera update
   private: double output_seconds; // time of last FireSight pipeline completion
   private: double monitor_duration; // number of seconds to show last output
+  private: int min_capture_ms; // minimum number of milliseconds between captures
   private: bool captureActive;
   private: pid_t raspistillPID;
+  private: long msCapture; // earliest time of next capture
 
   // Common data
   public: LIFOCache<SmartPointer<char> > src_camera_jpg;
@@ -272,6 +274,8 @@ typedef class CameraNode {
   public: int accept_new_image(SmartPointer<char> jpg);
   public: int async_update_monitor_jpg();
   public: void setOutput(Mat image);
+  public: inline int get_min_capture_ms() { return min_capture_ms; }
+  public: inline void set_min_capture_ms(int value = 500) { min_capture_ms = value; }
 } CameraNode;
 
 #define MAX_CAMERAS 1 /* TODO: Make code actually work for multiple cameras */
@@ -380,6 +384,8 @@ typedef class SpiralIterator { // simpler than a C++ <iterator>
   public: inline float getY() { return y*yScale + yOffset; }
   public: bool next();
 } SpiralIterator;
+
+extern long millis();
 
 #endif
 //////////////////////////////////// FIREFUSE_H ////////////////////////////////////////////////////////
