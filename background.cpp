@@ -186,7 +186,6 @@ bool CameraNode::capture() {
 		LOGDEBUG2("CameraNode::capture() Delaying request by %ldms. maxfps:%g", msWait, 1000.0/min_capture_ms);
 		usleep(msWait * 1000);
 	}
-	msCapture = now + min_capture_ms;
 	if (captureActive) {
 		LOGDEBUG("CameraNode::capture() waiting for active capture completion");
 		usleep(CAPTURE_MSTIMEOUT*1000);
@@ -222,6 +221,7 @@ bool CameraNode::capture() {
 		exit(-EIO);
 	}
 
+	msCapture = millis() + min_capture_ms;
 	captureActive = TRUE;
 	return TRUE;
 }
