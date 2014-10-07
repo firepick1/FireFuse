@@ -107,6 +107,7 @@ CameraNode::~CameraNode() {
 }
 
 void CameraNode::captureComplete() {
+	LOGDEBUG1("CameraNode::captureComplete() captureActive %d->0", captureActive);
     captureActive = FALSE;
 }
 
@@ -126,7 +127,7 @@ void CameraNode::init() {
         struct stat buffer;
         if (0 == stat(raspistill_sh, &buffer)) {
             SmartPointer<char> jpg = loadFile("/var/firefuse/no-image.png");
-            update_camera_jpg(jpg);
+            accept_new_image(jpg);
         } else {
             LOGWARN1("CameraNode::init() raspistill camera source is unavailable:%s",
                      raspistill_sh);
@@ -231,8 +232,9 @@ int CameraNode::async_update_camera_jpg() {
     return processed;
 }
 
-int CameraNode::update_camera_jpg(SmartPointer<char> jpg) {
+int CameraNode::accept_new_image(SmartPointer<char> jpg) {
     int processed = 0;
+	captureComplete();
     src_camera_jpg.post(jpg);
     if (src_camera_mat_bgr.isFresh() && src_camera_mat_gray.isFresh()) {
         // proactively update all decoded images to eliminate post-idle refresh lag
@@ -241,7 +243,7 @@ int CameraNode::update_camera_jpg(SmartPointer<char> jpg) {
     } else {
         // To eliminate unnecessary conversion we will only update active Mat
     }
-    LOGDEBUG3("CameraNode::update_camera_jpg() src_camera_jpg.post(%ldB) %0lx [0]:%0x",
+    LOGDEBUG3("CameraNode::accept_new_image() src_camera_jpg.post(%ldB) %0lx [0]:%0x",
               (ulong) jpg.size(), (ulong) jpg.data(), (int) *jpg.data());
 
     std::vector<uchar> vJPG((uchar *)jpg.data(), (uchar *)jpg.data() + jpg.size());
@@ -249,14 +251,14 @@ int CameraNode::update_camera_jpg(SmartPointer<char> jpg) {
         processed |= 02;
         Mat image = imdecode(vJPG, CV_LOAD_IMAGE_COLOR);
         src_camera_mat_bgr.post(image);
-        LOGTRACE2("CameraNode::update_camera_jpg() src_camera_mat_bgr.post(%dx%d)",
+        LOGTRACE2("CameraNode::accept_new_image() src_camera_mat_bgr.post(%dx%d)",
                   image.rows, image.cols);
     }
     if (!src_camera_mat_gray.isFresh()) {
         processed |= 04;
         Mat image = imdecode(vJPG, CV_LOAD_IMAGE_GRAYSCALE);
         src_camera_mat_gray.post(image);
-        LOGTRACE2("CameraNode::update_camera_jpg() src_camera_mat_gray.post(%dx%d)",
+        LOGTRACE2("CameraNode::accept_new_image() src_camera_mat_gray.post(%dx%d)",
                   image.rows, image.cols);
     }
 

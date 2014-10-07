@@ -526,7 +526,7 @@ int testCamera() {
 
     // simulate raspistill
     SmartPointer<char> image0 = loadFile("test/headcam0.jpg");
-    assert(testNumber(00006l, (long)worker.cameras[0].update_camera_jpg(image0)));
+    assert(testNumber(00006l, (long)worker.cameras[0].accept_new_image(image0)));
 
     assert(testProcess(02000));
     assert(!worker.cameras[0].src_camera_jpg.isFresh());
@@ -541,7 +541,7 @@ int testCamera() {
 
     // simulate raspistill
     SmartPointer<char> image1 = loadFile("test/headcam1.jpg");
-    assert(testNumber(00006l, (long)worker.cameras[0].update_camera_jpg(image1)));
+    assert(testNumber(00006l, (long)worker.cameras[0].accept_new_image(image1)));
 
     assert(worker.cameras[0].src_camera_jpg.isFresh());
     assert(worker.cameras[0].src_camera_mat_gray.isFresh());
@@ -584,7 +584,7 @@ int testCamera() {
     assert_headcam(jpg, 1);
 
     // simulate raspistill
-    assert(testNumber(00006l, (long)worker.cameras[0].update_camera_jpg(image0)));
+    assert(testNumber(00006l, (long)worker.cameras[0].accept_new_image(image0)));
 
     assert(testProcess(00));
     assert(worker.cameras[0].src_camera_jpg.isFresh());
@@ -601,7 +601,7 @@ int testCamera() {
     assert(800 == grayImage.cols);
 
     // simulate raspistill
-    assert(testNumber(00004l, (long)worker.cameras[0].update_camera_jpg(image1)));
+    assert(testNumber(00004l, (long)worker.cameras[0].accept_new_image(image1)));
 
     assert(testProcess(00));
     assert(worker.cameras[0].src_camera_jpg.isFresh());

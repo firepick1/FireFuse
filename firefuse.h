@@ -269,7 +269,7 @@ typedef class CameraNode {
   public: void clear();
   public: void captureComplete();
   public: int async_update_camera_jpg();
-  public: int update_camera_jpg(SmartPointer<char> jpg);
+  public: int accept_new_image(SmartPointer<char> jpg);
   public: int async_update_monitor_jpg();
   public: void setOutput(Mat image);
 } CameraNode;

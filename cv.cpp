@@ -120,7 +120,6 @@ int cve_getattr(const char *path, struct stat *stbuf) {
 
     if (firefuse_isFile(path, FIREREST_CAMERA_JPG) || firefuse_isFile(path, FIREREST_CAMERA_JPG_TILDE)) {
         res = firefuse_getattr_file(path, stbuf, worker.cameras[0].src_camera_jpg.peek().size(), 0666);
-        LOGDEBUG2("cve_getattr(%s) %ldB", path, stbuf->st_size);
     } else if (firefuse_isFile(path, FIREREST_PROPERTIES_JSON)) {
         res = firefuse_getattr_file(path, stbuf, worker.cve(path).src_properties_json.peek().size(), 0666);
     } else if (firefuse_isFile(path, FIREREST_OUTPUT_JPG)) {
@@ -141,9 +140,7 @@ int cve_getattr(const char *path, struct stat *stbuf) {
         res = firerest_getattr_default(path, stbuf);
     }
 
-    if (res == 0) {
-        LOGTRACE2("cve_getattr(%s) stat->st_size:%ldB -> OK", path, (ulong) stbuf->st_size);
-    }
+	LOGDEBUG3("cve_getattr(%s) stat->st_size:%ldB -> %d", path, (ulong) stbuf->st_size, res);
     return res;
 }
 
@@ -265,14 +262,15 @@ int cve_open(const char *path, struct fuse_file_info *fi) {
                 LOGDEBUG2("cve_open(%s, O_WRONLY) new:@%lx", path, (size_t) empty_buffer.data());
             } else { // O_RDONLY
                 if (FireREST::isSync(path)) {
-					LOGDEBUG1("cve_open(%s) capture() for camera", path);
+					LOGDEBUG1("cve_open(%s,O_RDONLY) sync capture() for camera", path);
 					worker.cameras[0].capture();
                     fi->fh = (uint64_t) (size_t) 
 						new SmartPointer<char>(camera.src_camera_jpg.get_sync(CAMERA_MSTIMEOUT));
+					LOGDEBUG2("cve_open(%s,O_RDONLY) sync capture() peek:%ldB", path, (long) camera.src_camera_jpg.peek().size());
                 } else {
                     fi->fh = (uint64_t) (size_t) new SmartPointer<char>(camera.src_camera_jpg.get());
+					LOGDEBUG2("cve_open(%s,O_RDONLY) %ldB", path, (long) camera.src_camera_jpg.peek().size());
                 }
-                LOGDEBUG2("cve_open(%s,O_RDONLY) %ldB", path, (long) camera.src_camera_jpg.peek().size());
             }
         }
     } else if (firefuse_isFile(path, FIREREST_SAVED_PNG)) {
@@ -382,7 +380,7 @@ int cve_read(const char *path, char *buf, size_t size, off_t offset, struct fuse
         return -ENOENT;
     }
 
-    LOGTRACE3("cve_read(%s, %ldB) -> %ldB", path, size, sizeOut);
+    LOGTRACE4("cve_read(%s,%ld,%ldB) -> %ldB", path, offset, size, sizeOut);
     return sizeOut;
 }
 
@@ -400,7 +398,7 @@ int cve_write(const char *path, const char *buf, size_t bufsize, off_t offset, s
         } else {
             memcpy(pImage->data()+offset, buf, bufsize);
             pImage->setSize(offset+bufsize);
-            LOGTRACE3("cve_write(%s,%ldB) %ldB total", path, bufsize, pImage->size());
+            LOGTRACE4("cve_write(%s,%ld,%ldB) %ldB total", path, offset, bufsize, pImage->size());
         }
     } else if (firefuse_isFile(path, FIREREST_SAVED_PNG)) {
         SmartPointer<char> * pImage =  (SmartPointer<char> *) fi->fh;
@@ -409,10 +407,10 @@ int cve_write(const char *path, const char *buf, size_t bufsize, off_t offset, s
         } else {
             memcpy(pImage->data()+offset, buf, bufsize);
             pImage->setSize(offset+bufsize);
-            LOGTRACE3("cve_write(%s,%ldB) %ldB total", path, bufsize, pImage->size());
+            LOGTRACE4("cve_write(%s,%ld,%ldB) %ldB total", path, offset, bufsize, pImage->size());
         }
     } else {
-        LOGERROR2("cve_write(%s,%ldB) ENOENT", path, bufsize);
+        LOGERROR3("cve_write(%s,%ld,%ldB) ENOENT", path, offset, bufsize);
         return -ENOENT;
     }
 
@@ -428,11 +426,10 @@ int cve_release(const char *path, struct fuse_file_info *fi) {
     if (firefuse_isFile(path, FIREREST_CAMERA_JPG) ||
             firefuse_isFile(path, FIREREST_CAMERA_JPG_TILDE)) {
         if ((fi->flags & 3 ) == O_WRONLY) {
-            LOGDEBUG3("cve_release(%s,%lx) W %ldB->camera_jpg", path, (size_t)pSP->data(), pSP->size());
-            worker.cameras[0].update_camera_jpg(*pSP);
+            LOGDEBUG3("cve_release(%s,%lx) write:%ldB->camera_jpg", path, (size_t)pSP->data(), pSP->size());
+            worker.cameras[0].accept_new_image(*pSP);
         } else {
-            LOGDEBUG3("cve_release(%s,%lx) R %ldB", path, (size_t)pSP->data(), pSP->size());
-			worker.cameras[0].captureComplete();
+            LOGDEBUG3("cve_release(%s,%lx) read:%ldB", path, (size_t)pSP->data(), pSP->size());
         }
         delete pSP;
     } else if (
@@ -453,9 +450,11 @@ int cve_release(const char *path, struct fuse_file_info *fi) {
 
 int cve_truncate(const char *path, off_t size) {
     if (firefuse_isFile(path, FIREREST_SAVED_PNG)) {
-        LOGTRACE2("cve_truncate(%s) %ldB", path, size);
+        LOGDEBUG2("cve_truncate(%s) %ldB", path, size);
         worker.cve(path).src_saved_png.peek().setSize(size);
-    }
+    } else {
+        LOGDEBUG2("cve_truncate(%s) %ldB ignored", path, size);
+	}
     return 0;
 }
 
