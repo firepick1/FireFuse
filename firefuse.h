@@ -267,7 +267,7 @@ typedef class CameraNode {
   public: ~CameraNode();
   public: void init();
   public: void clear();
-  public: void captureComplete();
+  public: void endCapture();
   public: int async_update_camera_jpg();
   public: int accept_new_image(SmartPointer<char> jpg);
   public: int async_update_monitor_jpg();
