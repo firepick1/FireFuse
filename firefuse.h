@@ -275,7 +275,7 @@ typedef class CameraNode {
   public: int async_update_monitor_jpg();
   public: void setOutput(Mat image);
   public: inline int get_min_capture_ms() { return min_capture_ms; }
-  public: inline void set_min_capture_ms(int value = 500) { min_capture_ms = value; }
+  public: void set_min_capture_ms(int value = 500);
 } CameraNode;
 
 #define MAX_CAMERAS 1 /* TODO: Make code actually work for multiple cameras */
