@@ -174,14 +174,14 @@ void CameraNode::init() {
 }
 
 bool CameraNode::capture() {
-	long  msWait = msCapture - ::millis();
+	long  msWait = msCapture - millis();
 	if (msWait > 0) {
-		LOGDEBUG2("CameraNode::capture() waiting(%ldms) maxfps:%g", msWait, 1000.0/min_capture_ms);
+		LOGDEBUG2("CameraNode::capture() Delaying request by %ldms. maxfps:%g", msWait, 1000.0/min_capture_ms);
 		usleep(msWait * 1000);
 	}
-	msCapture = millis();
+	msCapture = millis() + min_capture_ms;
 	if (captureActive) {
-		LOGDEBUG("CameraNode::capture() waiting for capture completion");
+		LOGDEBUG("CameraNode::capture() waiting for active capture completion");
 		usleep(CAPTURE_MSTIMEOUT*1000);
 	}
 	if (captureActive) {

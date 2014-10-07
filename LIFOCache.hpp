@@ -99,7 +99,7 @@ template <class T> class LIFOCache {
             struct timespec ts;
             int rc = sem_trywait(&getSem);
             if (rc) {
-                LOGDEBUG1("LIFOCache::get_sync(%d) blocked on queue input", msTimeout);
+                LOGDEBUG1("LIFOCache::get_sync() Waiting for queue input. timeout:%dms", msTimeout);
                 if (msTimeout==0 || clock_gettime(CLOCK_REALTIME, &ts) == -1) {
                     rc = sem_wait(&getSem);
                     if (rc) {
