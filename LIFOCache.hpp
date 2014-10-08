@@ -57,16 +57,16 @@ template <class T> class LIFOCache {
     public:
         T peek() {
             /////////////// CRITICAL SECTION BEGIN ///////////////
-            pthread_mutex_lock(&readerMutex);			//
-            int valueIndex = writeCount - readCount;		//
-            T result;						//
-            if (valueIndex > 0) {				//
-                valueIndex = 1;					//
-                result = values[valueIndex];			//
-            } else {						//
-                result = values[0];				//
-            }							//
-            pthread_mutex_unlock(&readerMutex);			//
+            pthread_mutex_lock(&readerMutex);			
+            int valueIndex = writeCount - readCount;
+            T result;						
+            if (valueIndex > 0) {		
+                valueIndex = 1;		
+                result = values[valueIndex];			
+            } else {						
+                result = values[0];		
+            }						
+            pthread_mutex_unlock(&readerMutex);			
             /////////////// CRITICAL SECTION END /////////////////
             return result;
         }
@@ -75,15 +75,15 @@ template <class T> class LIFOCache {
     public:
         T get() {
             /////////////// CRITICAL SECTION BEGIN ///////////////
-            pthread_mutex_lock(&readerMutex);			//
-            int valueIndex = writeCount - readCount;		//
-            if (valueIndex > 0) {				//
-                valueIndex = 1;					//
-                values[0] = values[valueIndex];			//
-            }							//
-            readCount = writeCount;				//
-            T result = values[0];				//
-            pthread_mutex_unlock(&readerMutex);			//
+            pthread_mutex_lock(&readerMutex);		
+            int valueIndex = writeCount - readCount;
+            if (valueIndex > 0) {				
+                valueIndex = 1;				
+                values[0] = values[valueIndex];
+            }							
+            readCount = writeCount;	
+            T result = values[0];
+            pthread_mutex_unlock(&readerMutex);			
             /////////////// CRITICAL SECTION END /////////////////
             return result;
         }
@@ -91,10 +91,10 @@ template <class T> class LIFOCache {
     public:
         T get_sync(int msTimeout=0) {
             /////////////// CRITICAL SECTION BEGIN ///////////////
-            pthread_mutex_lock(&readerMutex);			//
-            readCount = writeCount;				//
-            syncCount++;					//
-            pthread_mutex_unlock(&readerMutex);			//
+            pthread_mutex_lock(&readerMutex);		
+            readCount = writeCount;				
+            syncCount++;					
+            pthread_mutex_unlock(&readerMutex);			
             /////////////// CRITICAL SECTION END /////////////////
             struct timespec ts;
             int rc = sem_trywait(&getSem);
@@ -127,18 +127,18 @@ template <class T> class LIFOCache {
         void post(T value) {
             bool postGetSem = FALSE;
             /////////////// CRITICAL SECTION BEGIN ///////////////
-            pthread_mutex_lock(&readerMutex);			//
-            int valueIndex = writeCount - readCount + 1;	//
-            if (valueIndex >= 2) {				//
-                valueIndex = 1; // overwrite existing		//
-            }							//
-            values[valueIndex] = value;				//
-            writeCount++;					//
-            if (syncCount > 0) {				//
-                syncCount--;					//
-                postGetSem = TRUE;				//
-            }							//
-            pthread_mutex_unlock(&readerMutex);			//
+            pthread_mutex_lock(&readerMutex);			
+            int valueIndex = writeCount - readCount + 1;
+            if (valueIndex >= 2) {				
+                valueIndex = 1; // overwrite existing		
+            }							
+            values[valueIndex] = value;	
+            writeCount++;			
+            if (syncCount > 0) {
+                syncCount--;
+                postGetSem = TRUE;				
+            }							
+            pthread_mutex_unlock(&readerMutex);			
             /////////////// CRITICAL SECTION END /////////////////
             if (postGetSem) {
                 sem_post(&getSem);

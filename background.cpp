@@ -74,7 +74,7 @@ SmartPointer<char> loadFile(const char *path, int suffixBytes) {
         ASSERTZERO(-ENOENT);
     }
     fseek(file, 0, SEEK_END);
-    size_t length = ftell(file);
+    size_t length = ftell(file);  //obtains the current value of the file position indicator for the stream pointed to by stream. 
     fseek(file, 0, SEEK_SET);
     SmartPointer<char> result(NULL, length+suffixBytes);
     assert(result);
@@ -327,13 +327,14 @@ int CameraNode::async_update_monitor_jpg() {
 /////////////////////////// BackgroundWorker ///////////////////////////////////
 
 BackgroundWorker::BackgroundWorker() {
-    idle_seconds = BackgroundWorker::seconds();
-    idle_period = 15;
+    idle_seconds = BackgroundWorker::seconds(); // set time of last idle() execution to current second count
+    idle_period = 15; // minimum seconds between idle() execution
 }
 
 BackgroundWorker::~BackgroundWorker() {
 }
 
+//Execute a system shell command
 int BackgroundWorker::callSystem(char *cmdbuf) {
     int rc = 0;
     rc = system(cmdbuf);
@@ -443,6 +444,8 @@ CVE& BackgroundWorker::cve(string path, bool create) {
 void BackgroundWorker::idle() {
     LOGTRACE("BackgroundWorker::idle()");
     idle_seconds = BackgroundWorker::seconds();
+    //it consumes any fresh monitor.jpg and therefore makes the monitor queue be stale.
+    //It is a signal to downstream sync methods to wait for the fresh
     SmartPointer<char> discard = cameras[0].src_monitor_jpg.get();
     idle_seconds = BackgroundWorker::seconds();
     LOGINFO2("BackgroundWorker::idle() src_monitor_jpg.get() -> %ldB@%0lx discarded", (ulong) discard.size(), (ulong) discard.data());
