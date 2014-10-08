@@ -197,32 +197,21 @@ int firefuse_open(const char *path, struct fuse_file_info *fi) {
 
   int result = 0;
   
-  if (strcmp(path, STATUS_PATH) == 0)        // "/status"
- 	{ 
+  if (strcmp(path, STATUS_PATH) == 0)        { // "/status"
     verifyOpenR_(path, fi, &result);
-  } 
-  else if (strcmp(path, CONFIG_PATH) == 0)   // "/config.json"
-  {
+  } else if (strcmp(path, CONFIG_PATH) == 0)   {// "/config.json"
     verifyOpenR_(path, fi, &result);
-  } 
-  else if (strcmp(path, HOLES_PATH) == 0)    // "/holes"
-  {
+  } else if (strcmp(path, HOLES_PATH) == 0)    {// "/holes"
     verifyOpenR_(path, fi, &result);
     fi->fh = (uint64_t) (size_t) fopen("/var/firefuse/config.json", "r");
     if (!fi->fh) {
       result = -ENOENT;
     }
-  } 
-  else if (strcmp(path, ECHO_PATH) == 0)     // "/echo"
-  {
+  } else if (strcmp(path, ECHO_PATH) == 0)     { // "/echo"
     verifyOpenRW(path, fi, &result);
-  } 
-  else if (strcmp(path, FIRELOG_PATH) == 0)  // "/firelog"
-  {
+  } else if (strcmp(path, FIRELOG_PATH) == 0)  { // "/firelog"
     verifyOpenRW(path, fi, &result);
-  } 
-  else if (strcmp(path, FIRESTEP_PATH) == 0) // "/firestep"
-  {
+  } else if (strcmp(path, FIRESTEP_PATH) == 0) { // "/firestep"
     verifyOpenRW(path, fi, &result);
   } else {
     result = -ENOENT;

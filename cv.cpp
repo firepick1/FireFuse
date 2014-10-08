@@ -372,42 +372,29 @@ int cve_read(const char *path, char *buf, size_t size, off_t offset, struct fuse
 int cve_write(const char *path, const char *buf, size_t bufsize, off_t offset, struct fuse_file_info *fi) {
     ASSERTNONZERO(buf);
     ASSERT(bufsize >= 0);
-    if (firefuse_isFile(path, FIREREST_PROPERTIES_JSON)) //properties.json??
-    {
+    if (firefuse_isFile(path, FIREREST_PROPERTIES_JSON)) { //properties.json??
         ASSERT(offset == 0);
         SmartPointer<char> data((char *) buf, bufsize);
         worker.cve(path).src_properties_json.post(data);
-    } 
-    else if (firefuse_isFile(path, FIREREST_CAMERA_JPG) || firefuse_isFile(path, FIREREST_CAMERA_JPG_TILDE)) //camera.jpg??
-    {
+    } else if (firefuse_isFile(path, FIREREST_CAMERA_JPG) || firefuse_isFile(path, FIREREST_CAMERA_JPG_TILDE)) {//camera.jpg??
         SmartPointer<char> * pImage =  (SmartPointer<char> *) fi->fh;
-        if (bufsize + offset > pImage->allocated_size())
-        {
+        if (bufsize + offset > pImage->allocated_size()) {
             LOGERROR1("cve_write(%s) data too large (truncated)", path);
-        } 
-        else 
-        {
+        } else {
             memcpy(pImage->data()+offset, buf, bufsize);
             pImage->setSize(offset+bufsize);
             LOGTRACE3("cve_write(%s,%ldB) %ldB total", path, bufsize, pImage->size());
         }
-    } 
-    else if (firefuse_isFile(path, FIREREST_SAVED_PNG))  //saved.png?
-    {
+    } else if (firefuse_isFile(path, FIREREST_SAVED_PNG))  { //saved.png?  
         SmartPointer<char> * pImage =  (SmartPointer<char> *) fi->fh;
-        if (bufsize + offset > pImage->allocated_size()) 
-        {
+        if (bufsize + offset > pImage->allocated_size()) {
             LOGERROR1("cve_write(%s) data too large (truncated)", path);
-        } 
-        else 
-        {
+        } else {
             memcpy(pImage->data()+offset, buf, bufsize);
             pImage->setSize(offset+bufsize);
             LOGTRACE3("cve_write(%s,%ldB) %ldB total", path, bufsize, pImage->size());
         }
-    } 
-    else 
-    {
+    } else {
         LOGERROR2("cve_write(%s,%ldB) ENOENT", path, bufsize);
         return -ENOENT;
     }
@@ -424,7 +411,7 @@ int cve_release(const char *path, struct fuse_file_info *fi) {
     if (firefuse_isFile(path, FIREREST_CAMERA_JPG) ||
             firefuse_isFile(path, FIREREST_CAMERA_JPG_TILDE)) {
         if ((fi->flags & 3 ) == O_WRONLY) {
-			worker.cameras[0].update_camera_jpg(*pSP);
+            worker.cameras[0].update_camera_jpg(*pSP);
             LOGDEBUG3("cve_release(%s,%lx) %ldB->camera_jpg", path, (size_t)pSP->data(), pSP->size());
         } else {
             LOGDEBUG3("cve_release(%s,%lx) %ldB", path, (size_t)pSP->data(), pSP->size());
