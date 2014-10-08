@@ -249,7 +249,6 @@ int CameraNode::async_update_camera_jpg() {
 
 int CameraNode::accept_new_image(SmartPointer<char> jpg) {
     int processed = 0;
-	endCapture();
     src_camera_jpg.post(jpg);
     if (src_camera_mat_bgr.isFresh() && src_camera_mat_gray.isFresh()) {
         // proactively update all decoded images to eliminate post-idle refresh lag
