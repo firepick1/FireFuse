@@ -48,7 +48,7 @@ inline int fail(int rc) {
     std::cout << "***ASSERT FAILED*** expected:0 actual:" << rc << std::endl;
     return FALSE;
 }
-#define ASSERTFAIL (throw "***ASSERTION FAILED***")
+#define ASSERTFAIL(msg) (throw "***ASSERTION FAILED*** " msg)
 #define ASSERT(e) ASSERTNONZERO(e)
 #define ASSERTNOERRNO(exp) assertnoerrno((long) (exp), __FILE__,__LINE__)
 #define ASSERTNONZERO(exp) assertnonzero((long) (exp), __FILE__, __LINE__)
@@ -79,7 +79,7 @@ assertnoerrno(long actual, const char* fname, long line) {
 		fname, line, actual, errstr, errno);
     LOGERROR(buf);
     std::cerr << "***ASSERT FAILED*** " << buf << std::endl;
-    ASSERTFAIL;
+    ASSERTFAIL("system errno");
 }
 
 inline void
@@ -92,7 +92,7 @@ assertzero(long actual, const char* fname, long line) {
     snprintf(buf, sizeof(buf), "%s@%ld expected zero", fname, line);
     LOGERROR(buf);
     std::cerr << "***ASSERT FAILED*** " << buf << std::endl;
-    ASSERTFAIL;
+    ASSERTFAIL("expected zero");
 }
 
 inline void
@@ -105,7 +105,7 @@ assertnonzero(long actual, const char* fname, long line) {
     snprintf(buf, sizeof(buf), "%s@%ld expected non-zero", fname, line);
     LOGERROR(buf);
     std::cerr << "***ASSERT FAILED*** " << buf << std::endl;
-    ASSERTFAIL;
+    ASSERTFAIL("expected nonzero");
 }
 
 inline void
@@ -126,7 +126,7 @@ assertEqual(double expected, double actual, double tolerance, const char* contex
 	}
     LOGERROR(buf);
     std::cerr << "***ASSERT FAILED*** " << buf << std::endl;
-    ASSERTFAIL;
+    ASSERTFAIL("expected equal");
 }
 
 #define ASSERTEQUALS(e,a) assertEqual(e,a,__FILE__,__LINE__)
@@ -144,7 +144,7 @@ assertEqual(const char* expected, const char* actual, const char* context, int l
     }
     LOGERROR(buf);
     std::cerr << "***ASSERT FAILED*** " << buf << std::endl;
-    ASSERTFAIL;
+    ASSERTFAIL("expected equal strings");
 }
 
 #endif

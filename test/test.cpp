@@ -707,15 +707,15 @@ int testSerial() {
     assert(testString("TEST fuse_root", "/dev/firefuse", fuse_root));
 
     /////////// config test
-    const char *caughtEx = NULL;
+    const char *caughtExStr = NULL;
     char *configJson;
     try {
         configJson = firerest.configure_path("test/testserial.json");
         assert(configJson);
     } catch (const char * ex) {
-        caughtEx = ex;
+        caughtExStr = ex;
     }
-    assert(testString("TEST testSerial()", "FATAL\t: FireREST::config_cnc_serial() configuration conflict", caughtEx));
+    ASSERTEQUALS("***ASSERTION FAILED*** device path cannot be shared by two DCEs", caughtExStr);
     free(configJson);
 
     cout << "testSerial() PASS" << endl;
@@ -738,6 +738,8 @@ int testCve() {
     sResult = CVE::cve_path(expectedPath);
     LOGINFO1("TEST CVE::cve_path(/cv/1/gray/cve/two) -> %s", sResult.c_str());
     assert(0 == strcmp(expectedPath, sResult.c_str()));
+	ASSERTEQUALS("", CVE::cve_path("/sync/cv/1/camera.jpg").c_str());
+	ASSERTEQUALS("/cv/1/gray/cve/asdf", CVE::cve_path("/sync/cv/1/gray/cve/asdf").c_str());
 
     //////////// cveNames
     vector<string> cveNames = worker.getCveNames();
@@ -948,6 +950,10 @@ int testCnc() {
         string sResult = DCE::dce_path("a/b/c/cnc/tinyg/gcode.fire");
         assert(testString("TEST dce_path(1)", expectedPath, sResult.c_str()));
         sResult = DCE::dce_path(expectedPath);
+		ASSERTEQUALS("/cnc/foo", DCE::dce_path("/sync/cnc/foo").c_str());
+		ASSERTEQUALS("/cnc/foo", DCE::dce_path("/sync/cnc/foo/fee").c_str());
+		ASSERTEQUALS("/cnc/foo", DCE::dce_path("/cnc/foo").c_str());
+		ASSERTEQUALS("/cnc/foo", DCE::dce_path("/cnc/foo/fee").c_str());
         assert(testString("TEST dce_path(2)", expectedPath, sResult.c_str()));
         assert(is_cnc_path(expectedPath));
         assert(!is_cnc_path("/cv"));
@@ -960,6 +966,7 @@ int testCnc() {
         assert(is_cnc_path("/a/cnc/"));
         assert(is_cnc_path("/a/cnc/x"));
         assert(is_cnc_path("/a/cnc/x/y/z"));
+        assert(is_cnc_path("/sync/a/cnc/x/y/z"));
 
         //////////// dceNames
         vector<string> dceNames = worker.getDceNames();

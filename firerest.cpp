@@ -435,7 +435,7 @@ string FireREST::config_cnc_serial(string dcePath, json_t *pSerial) {
     if (pDceConflict && pDceConflict != &dce) {
         LOGERROR3("FireREST::config_cnc_serial(%s) serial path conflict with dce(%s): %s",
                   dcePath.c_str(), pDceConflict->getName().c_str(), serialPath.c_str());
-        throw "FATAL	: FireREST::config_cnc_serial() configuration conflict";
+        ASSERTFAIL("device path cannot be shared by two DCEs");
     }
     worker.setSerialDCE(serialPath, &dce);
     dce.setSerialPath(serialPath.c_str());
@@ -539,7 +539,7 @@ void FireREST::configure_json(const char *pJson) {
     json_t *pConfig = json_loads(pJson, 0, &jerr);
     if (pConfig == 0) {
         LOGERROR3("FireREST::configure_json() cannot parse json: %s src:%s line:%d", jerr.text, jerr.source, jerr.line);
-        throw jerr;
+        ASSERTFAIL("invalid JSON");
     }
 
     errMsg += config_cv("/", pConfig);
@@ -566,7 +566,7 @@ void FireREST::configure_json(const char *pJson) {
     }
     if (!errMsg.empty()) {
         LOGERROR1("FireREST::configure_json() -> %s", errMsg.c_str());
-        throw errMsg;
+        ASSERTFAIL("configuration error");
     }
 }
 

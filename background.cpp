@@ -423,7 +423,7 @@ CVE& BackgroundWorker::cve(string path, bool create) {
         err += path;
         err += ") invalid CVE path";
         LOGERROR1("%s", err.c_str());
-        throw err;
+        ASSERTFAIL();
     }
     CVEPtr pCve = cveMap[cvePath];
     if (!pCve) {

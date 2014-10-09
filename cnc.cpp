@@ -159,7 +159,7 @@ void DCE::clear() {
 
 /**
  * Return canonical DCE path. E.g.:
- *   /dev/firefuse/sync/cnc/marlin/gcode.fire => /sync/cnc/marlin
+ *   /dev/firefuse/sync/cnc/marlin/gcode.fire => /cnc/marlin
  *   /dev/firefuse/cnc/marlin/gcode.fire => /cnc/marlin
  *
  * Return empty string if path is not a canonical DCE path
@@ -168,21 +168,21 @@ string DCE::dce_path(const char *pPath) {
     if (pPath == NULL) {
         return string();
     }
-    const char *pSlash = pPath;
+    const char *pSlash = NULL;
     const char *pDce = NULL;
     for (const char *s=pPath; *s; s++) {
         if (*s == '/') {
             pSlash = s;
             if (strncmp("/cnc/", s, 5) == 0) {
                 pDce = s;
-                s += 5;
+                s += 4;
             } else if (pDce) {
                 break;
             }
         }
     }
     if (!pDce) {
-        return string();
+        return string(); // invalid
     }
     if (pSlash <= pDce) {
         return string(pDce);
