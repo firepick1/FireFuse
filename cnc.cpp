@@ -11,7 +11,7 @@
 #include "firefuse.h"
 #include "version.h"
 
-int SERIALTIMEOUT = 10;
+int SERIAL_TIMEOUT_SECS = 10;
 
 bool is_cnc_path(const char *path) {
     for (const char *s = path; s && *s; s++) {
@@ -124,8 +124,7 @@ int cnc_truncate(const char *path, off_t size) {
 
 DCE::DCE(string name) {
     this->name = name;
-	//this->is_sync = strncmp("/sync",name.c_str(),5) == 0;
-	this->is_sync = FALSE;
+	this->is_sync = strncmp("/sync",name.c_str(),5) == 0;
     this->serial_fd = -1;
     this->jsonBuf = (char*)malloc(JSONMAX+3); // +nl, cr, EOS
     this->inbuf = (char*)malloc(INBUFMAX+1); // +EOS
@@ -252,8 +251,8 @@ int DCE::serial_init() {
         }
         LOGINFO1("DCE::serial_init(%s) opened for write", path);
 
-        LOGRC(rc, "pthread_create(serial_reader) -> ", pthread_create(&tidReader, NULL, &serial_reader, this));
-        LOGINFO("DCE::serial_init() yielding to serial_reader");
+        LOGRC(rc, "pthread_create(serial_reader_thread) -> ", pthread_create(&tidReader, NULL, &serial_reader_thread, this));
+        LOGINFO("DCE::serial_init() yielding to serial_reader_thread");
         sched_yield();
 
         LOGINFO("DCE::serial_init() sending device_config");
@@ -320,7 +319,7 @@ int DCE::gcode(BackgroundWorker *pWorker) {
     return 0;
 }
 
-int DCE::update_serial_response(const char *serial_data) {
+int DCE::end_serial_response(const char *serial_data) {
     json_t *response = json_object();
     if (activeRequests > 0) {
         json_object_set(response, "status", json_string("DONE"));
@@ -330,7 +329,7 @@ int DCE::update_serial_response(const char *serial_data) {
     }
     json_object_set(response, "response", json_string(serial_data));
     char * responseStr = json_dumps(response, JSON_PRESERVE_ORDER|JSON_COMPACT|JSON_INDENT(0));
-    LOGDEBUG1("DCE::update_serial_response(%s)", responseStr);
+    LOGDEBUG1("DCE::end_serial_response(%s)", responseStr);
     src_gcode_fire.post(SmartPointer<char>(responseStr, strlen(responseStr), SmartPointer<char>::MANAGE));
     json_decref(response);
 
@@ -358,12 +357,14 @@ const char * DCE::read_json() {
 int DCE::serial_send(const char *buf, size_t bufsize) {
 #define LOGBUFMAX 100
     char logmsg[LOGBUFMAX+4];
-    for (; bufsize > 0; bufsize--) {
+    for (; bufsize > 0; bufsize--) { // strip leading whitespace
         char c = buf[bufsize-1];
         if (c!='\n' && c!='\r' && c!='\t' && c!=' ') {
             break;
         }
     }
+
+	// compute character XOR
     int ckxor = 0;
     for (int i=0; i < bufsize; i++) {
         uchar c = (uchar) buf[i];
@@ -373,7 +374,8 @@ int DCE::serial_send(const char *buf, size_t bufsize) {
         }
     }
     ckxor &= 0xff;
-    if (bufsize > LOGBUFMAX) {
+
+    if (bufsize > LOGBUFMAX) { // add ... when logging long text
         logmsg[LOGBUFMAX] = '.';
         logmsg[LOGBUFMAX+1] = '.';
         logmsg[LOGBUFMAX+2] = '.';
@@ -404,11 +406,11 @@ int DCE::serial_send_eol(const char *buf, size_t bufsize) {
         if (is_sync) {
             time_t starttime = time(NULL);
 			time_t now;
-            for (now=starttime; activeRequests && difftime(starttime,now)<SERIALTIMEOUT; now=time(NULL)) {
+            for (now=starttime; activeRequests && difftime(starttime,now)<SERIAL_TIMEOUT_SECS; now=time(NULL)) {
                 sched_yield();
             }
-			if (difftime(starttime,now) > SERIALTIMEOUT) {
-				LOGERROR("DCE::serial_send_eol() serial timeout");
+			if (difftime(starttime,now) > SERIAL_TIMEOUT_SECS) {
+				LOGERROR1("DCE::serial_send_eol() SERIAL TIMEOUT:%ds", SERIAL_TIMEOUT_SECS);
 			}
         }
     }
@@ -541,14 +543,21 @@ int DCE::serial_read_char(int c) {
     case '\n':
         inbuf[inbuflen] = 0;
         if (inbuflen) { // discard blank lines
+			serial_reader_buf += inbuf;
             if (strncmp("{\"sr\"",inbuf, 5) == 0) {	// TINYG response
                 LOGDEBUG2("DCE::serial_read_char(%s) %dB", inbuf, inbuflen);
             } else if (!is_sync || strncmp("ok",inbuf, 2) == 0) {	// Marlin response
-                update_serial_response(inbuf);
-                LOGINFO3("DCE::serial_read_char(%s) ok:%dB activeRequests:%d", inbuf, inbuflen, activeRequests);
+                const char *s = serial_reader_buf.c_str();
+                end_serial_response(s);
+                LOGINFO3("DCE::serial_read_char(%s) complete. rcvd:%ldB activeRequests:%d", 
+					inbuf, strlen(s), activeRequests);
+				serial_reader_buf = "";
             } else {
                 LOGINFO3("DCE::serial_read_char(%s) %dB activeRequests:%d", inbuf, inbuflen, activeRequests);
             }
+			if (serial_reader_buf.size() > 0) {
+				serial_reader_buf += '\n';
+			}
         } else {
             inbufEmptyLine++;
             if (inbufEmptyLine % 1000 == 0) {
@@ -568,12 +577,12 @@ int DCE::serial_read_char(int c) {
     return 1;
 }
 
-void * DCE::serial_reader(void *arg) {
+void * DCE::serial_reader_thread(void *arg) {
 #define READBUFLEN 100
     char readbuf[READBUFLEN];
     DCE *pDce = (DCE*) arg;
 
-    LOGINFO("DCE::serial_reader() listening...");
+    LOGINFO("DCE::serial_reader_thread() listening...");
 
     if (pDce->serial_fd >= 0) {
         char c;
@@ -585,7 +594,7 @@ void * DCE::serial_reader(void *arg) {
                     sched_yield();
                     continue;
                 }
-                LOGERROR2("DCE::serial_reader(%s) [ERRNO:%d]", pDce->inbuf, errno);
+                LOGERROR2("DCE::serial_reader_thread(%s) [ERRNO:%d]", pDce->inbuf, errno);
                 break;
             } else if (rc == 0) {
                 sched_yield(); // nothing available to read
@@ -601,7 +610,7 @@ void * DCE::serial_reader(void *arg) {
         }
     }
 
-    LOGINFO("DCE::serial_reader(EXIT) ////////////////// SERIAL PORT WILL NO LONGER BE READ //////////////////>");
+    LOGINFO("DCE::serial_reader_thread(EXIT) /////// SERIAL PORT LISTENER STOPPED /////////");
     return NULL;
 }
 

@@ -223,11 +223,12 @@ typedef class DCE {
   private: char *inbuf;
   private: int inbuflen;
   private: int inbufEmptyLine;
+  private: string serial_reader_buf;
   private: int serial_send_eol(const char *buf, size_t bufsize);
   private: int serial_send(const char *data, size_t length);
   private: int serial_read_char(int c);
-  private: int update_serial_response(const char *serial_data);
-  private: static void * serial_reader(void *arg);
+  private: int end_serial_response(const char *serial_data);
+  private: static void * serial_reader_thread(void *arg);
   private: const char * read_json();
 
   protected: virtual void send(string request, json_t*response);
