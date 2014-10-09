@@ -715,7 +715,7 @@ int testSerial() {
     } catch (const char * ex) {
         caughtExStr = ex;
     }
-    ASSERTEQUALS("***ASSERTION FAILED*** configuration error", caughtExStr);
+    ASSERTEQUALS("***ASSERTION FAILED*** serial port must have dedicated DCE", caughtExStr);
     free(configJson);
 
     cout << "testSerial() PASS" << endl;
@@ -950,8 +950,8 @@ int testCnc() {
         string sResult = DCE::dce_path("a/b/c/cnc/tinyg/gcode.fire");
         assert(testString("TEST dce_path(1)", expectedPath, sResult.c_str()));
         sResult = DCE::dce_path(expectedPath);
-		ASSERTEQUALS("/sync/cnc/foo", DCE::dce_path("/sync/cnc/foo").c_str());
-		ASSERTEQUALS("/sync/cnc/foo", DCE::dce_path("/sync/cnc/foo/fee").c_str());
+		ASSERTEQUALS("/cnc/foo", DCE::dce_path("/sync/cnc/foo").c_str());
+		ASSERTEQUALS("/cnc/foo", DCE::dce_path("/sync/cnc/foo/fee").c_str());
 		ASSERTEQUALS("/cnc/foo", DCE::dce_path("/cnc/foo").c_str());
 		ASSERTEQUALS("/cnc/foo", DCE::dce_path("/cnc/foo/fee").c_str());
         assert(testString("TEST dce_path(2)", expectedPath, sResult.c_str()));

@@ -162,6 +162,10 @@ void DCE::clear() {
  *   /dev/firefuse/sync/cnc/marlin/gcode.fire => /cnc/marlin
  *   /dev/firefuse/cnc/marlin/gcode.fire => /cnc/marlin
  *
+ * There can be at most one DCE for each serial port,
+ * since the serial_reader_thread must have exclusive access
+ * to that port.
+ *
  * Return empty string if path is not a canonical DCE path
  */
 string DCE::dce_path(const char *pPath) {
@@ -170,15 +174,10 @@ string DCE::dce_path(const char *pPath) {
     }
     const char *pSlash = NULL;
     const char *pDce = NULL;
-	const char *pSync = NULL;
     for (const char *s=pPath; *s; s++) {
         if (*s == '/') {
             pSlash = s;
-            if (strncmp("/sync/cnc/", s, 10) == 0) {
-                pDce = s+5;
-				pSync = s;
-                s += 9;
-            } else if (strncmp("/cnc/", s, 5) == 0) {
+            if (strncmp("/cnc/", s, 5) == 0) {
                 pDce = s;
                 s += 4;
             } else if (pDce) {
@@ -189,15 +188,9 @@ string DCE::dce_path(const char *pPath) {
     if (!pDce) {						// not a cnc path => ""
         return string(); 
     }
-    if (pSync && pSlash <= pSync) {		// e.g., /sync/cnc/marlin => "/sync/cnc/marlin"
-        return string(pSync);
-    }
-    if (pSlash <= pDce) {				// e.g., /cnc/marlin => "/cnc/marlin"
+    if (pSlash <= pDce) {				// e.g., /sync/cnc/marlin => "/cnc/marlin"
         return string(pDce);
     }
-	if (pSync) {						// e.g., /sync/cnc/marlin/gcode.fire => "/sync/cnc/marlin"
-		return string(pSync, pSlash-pSync);
-	}
     return string(pDce, pSlash-pDce);	// e.g., /cnc/marlin/gcode.fire => "/cnc/marlin"
 }
 

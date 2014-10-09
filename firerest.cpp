@@ -433,8 +433,9 @@ string FireREST::config_cnc_serial(string dcePath, json_t *pSerial) {
 
     DCEPtr pDceConflict = worker.getSerialDCE(serialPath);
     if (pDceConflict && pDceConflict != &dce) {
-        LOGINFO3("FireREST::config_cnc_serial(%s) serial path shared with dce(%s): %s",
+        LOGERROR3("FireREST::config_cnc_serial(%s) serial path conflict with dce(%s): %s",
                   dcePath.c_str(), pDceConflict->getName().c_str(), serialPath.c_str());
+		ASSERTFAIL("serial port must have dedicated DCE");
     }
     worker.setSerialDCE(serialPath, &dce);
     dce.setSerialPath(serialPath.c_str());
