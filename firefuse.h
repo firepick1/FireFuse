@@ -298,6 +298,8 @@ typedef class DCE {
         inline bool isSync() {
             return is_sync;
         }
+	public:
+		void setSync(bool value);
     public:
         inline void set_gcode_finish(const char *value="G4P0") {
             gcode_finish = value;

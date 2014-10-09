@@ -81,9 +81,11 @@ int cnc_write(const char *path, const char *buf, size_t bufsize, off_t offset, s
     assert(bufsize >= 0);
     SmartPointer<char> data((char *) buf, bufsize);
     if (firefuse_isFile(path, FIREREST_GCODE_FIRE)) {
-        worker.dce(path).snk_gcode_fire.post(data);
+		DCE &dce = worker.dce(path);
+		dce.setSync(FireREST::isSync(path));
+        dce.snk_gcode_fire.post(data);
         string cmd(buf, bufsize);
-        LOGTRACE1("DCE::cnc_write() %s", cmd.c_str());
+        LOGTRACE2("DCE::cnc_write(%s) sync:%d", cmd.c_str(), dce.isSync());
         json_t * response = json_object();
         json_object_set(response, "status", json_string("ACTIVE"));
         json_object_set(response, "gcode", json_string(cmd.c_str()));
@@ -124,11 +126,11 @@ int cnc_truncate(const char *path, off_t size) {
 
 DCE::DCE(string name) {
     this->name = name;
-	this->is_sync = strncmp("/sync",name.c_str(),5) == 0;
+	this->is_sync = FALSE;
     this->serial_fd = -1;
     this->jsonBuf = (char*)malloc(JSONMAX+3); // +nl, cr, EOS
     this->inbuf = (char*)malloc(INBUFMAX+1); // +EOS
-	LOGINFO2("DCE::DCE(%s) isSync:%d", name.c_str(), is_sync);
+	LOGTRACE2("DCE::DCE(%s) isSync:%d", name.c_str(), is_sync);
     clear();
 }
 
@@ -139,6 +141,17 @@ DCE::~DCE() {
     if (inbuf) {
         free(inbuf);
     }
+}
+
+void DCE::setSync(bool value) {
+	if (value != is_sync) {
+		if (activeRequests > 0) {
+			LOGERROR2("DCE::setSync(%d) ignoring setSync with activeRequests:%d", value, activeRequests);
+		} else {
+			is_sync = value;
+			LOGINFO1("DCE::setSync(%d)", value);
+		}
+	}
 }
 
 void DCE::clear() {
