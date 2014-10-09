@@ -170,10 +170,15 @@ string DCE::dce_path(const char *pPath) {
     }
     const char *pSlash = NULL;
     const char *pDce = NULL;
+	const char *pSync = NULL;
     for (const char *s=pPath; *s; s++) {
         if (*s == '/') {
             pSlash = s;
-            if (strncmp("/cnc/", s, 5) == 0) {
+            if (strncmp("/sync/cnc/", s, 10) == 0) {
+                pDce = s+5;
+				pSync = s;
+                s += 9;
+            } else if (strncmp("/cnc/", s, 5) == 0) {
                 pDce = s;
                 s += 4;
             } else if (pDce) {
@@ -181,13 +186,19 @@ string DCE::dce_path(const char *pPath) {
             }
         }
     }
-    if (!pDce) {
-        return string(); // invalid
+    if (!pDce) {						// not a cnc path => ""
+        return string(); 
     }
-    if (pSlash <= pDce) {
+    if (pSync && pSlash <= pSync) {		// e.g., /sync/cnc/marlin => "/sync/cnc/marlin"
+        return string(pSync);
+    }
+    if (pSlash <= pDce) {				// e.g., /cnc/marlin => "/cnc/marlin"
         return string(pDce);
     }
-    return string(pDce, pSlash-pDce);
+	if (pSync) {						// e.g., /sync/cnc/marlin/gcode.fire => "/sync/cnc/marlin"
+		return string(pSync, pSlash-pSync);
+	}
+    return string(pDce, pSlash-pDce);	// e.g., /cnc/marlin/gcode.fire => "/cnc/marlin"
 }
 
 json_t *json_string(char *value, size_t length) {

@@ -433,9 +433,8 @@ string FireREST::config_cnc_serial(string dcePath, json_t *pSerial) {
 
     DCEPtr pDceConflict = worker.getSerialDCE(serialPath);
     if (pDceConflict && pDceConflict != &dce) {
-        LOGERROR3("FireREST::config_cnc_serial(%s) serial path conflict with dce(%s): %s",
+        LOGINFO3("FireREST::config_cnc_serial(%s) serial path shared with dce(%s): %s",
                   dcePath.c_str(), pDceConflict->getName().c_str(), serialPath.c_str());
-        ASSERTFAIL("device path cannot be shared by two DCEs");
     }
     worker.setSerialDCE(serialPath, &dce);
     dce.setSerialPath(serialPath.c_str());

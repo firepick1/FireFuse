@@ -48,7 +48,7 @@ inline int fail(int rc) {
     std::cout << "***ASSERT FAILED*** expected:0 actual:" << rc << std::endl;
     return FALSE;
 }
-#define ASSERTFAIL(msg) (throw "***ASSERTION FAILED*** " msg)
+#define ASSERTFAIL(msg) {LOGERROR3("***ASSERTION FAILED*** %s in %s:%d",msg,__FILE__,__LINE__); throw "***ASSERTION FAILED*** " msg;}
 #define ASSERT(e) ASSERTNONZERO(e)
 #define ASSERTNOERRNO(exp) assertnoerrno((long) (exp), __FILE__,__LINE__)
 #define ASSERTNONZERO(exp) assertnonzero((long) (exp), __FILE__, __LINE__)
