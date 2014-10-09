@@ -4,14 +4,15 @@
     "provider": "Demo",
     "version": {
       "major": "0",
-      "minor": "12",
-      "patch": "1"
+      "minor": "13",
+      "patch": "7"
     }
   },
   "background-worker": {
     "idle-period": 900
   },
   "cv": {
+    "maxfps": 1.4,
     "cve_map": {
       "calc-offset": {
         "firesight": [
@@ -190,7 +191,8 @@
       "protocol": "marlin",
       "gcode": {
         "move": "G0{{axis_scale}}",
-        "home": "G28.2{{home_scale}}"
+        "home": "G28Z0",
+        "finish": "G4P0"
       },
       "axes": [
         {
@@ -241,12 +243,12 @@
       ],
       "serial": {
         "path": "/dev/ttyACM0",
-        "stty": "cs8 115200"
+        "stty": "cs8 115200",
+        "ack": "ok"
       },
       "device-config": [
-        "TBD",
-        "TBD",
-        "TBD"
+        "G4P0",
+        "M114"
       ]
     }
   }
