@@ -319,19 +319,33 @@ int DCE::gcode(BackgroundWorker *pWorker) {
     return 0;
 }
 
-int DCE::end_serial_response(const char *serial_data) {
-    json_t *response = json_object();
-    if (activeRequests > 0) {
-        json_object_set(response, "status", json_string("DONE"));
-        activeRequests--;
-    } else {
-        json_object_set(response, "status", json_string("STATUS"));
+int DCE::post_serial_status(const char *line) {
+	bool isAck = serial_ack.compare(0,serial_ack.size(),inbuf) == 0;
+
+	if (serial_reader_buf.size() > 0) { // Accumulate multi-line sync response
+		serial_reader_buf += "\n";
+	}
+	serial_reader_buf += line;
+
+	const char * status = "ACTIVE";
+    if (isAck) { // requested action is complete
+		status = "ACK";
+		activeRequests = max(0,--activeRequests);
     }
-    json_object_set(response, "response", json_string(serial_data));
-    char * responseStr = json_dumps(response, JSON_PRESERVE_ORDER|JSON_COMPACT|JSON_INDENT(0));
-    LOGDEBUG1("DCE::end_serial_response(%s)", responseStr);
-    src_gcode_fire.post(SmartPointer<char>(responseStr, strlen(responseStr), SmartPointer<char>::MANAGE));
-    json_decref(response);
+
+	if (!is_sync || isAck) {
+		const char *s = serial_reader_buf.c_str();
+		json_t *response = json_object();
+		json_object_set(response, "status", json_string(status));
+		json_object_set(response, "response", json_string(s));
+		char * responseStr = json_dumps(response, JSON_PRESERVE_ORDER|JSON_COMPACT|JSON_INDENT(0));
+		src_gcode_fire.post(SmartPointer<char>(responseStr, strlen(responseStr), SmartPointer<char>::MANAGE));
+		json_decref(response);
+		LOGDEBUG2("DCE::post_serial_status(%s) activeRequests:%d", responseStr, activeRequests);
+		serial_reader_buf = "";	
+	} else {
+		LOGTRACE2("DCE::post_serial_status(%s) activeRequests:%d", line, activeRequests);
+	}
 
     return 0;
 }
@@ -543,21 +557,7 @@ int DCE::serial_read_char(int c) {
     case '\n':
         inbuf[inbuflen] = 0;
         if (inbuflen) { // discard blank lines
-			serial_reader_buf += inbuf;
-            if (strncmp("{\"sr\"",inbuf, 5) == 0) {	// TINYG response
-                LOGDEBUG2("DCE::serial_read_char(%s) %dB", inbuf, inbuflen);
-            } else if (!is_sync || strncmp("ok",inbuf, 2) == 0) {	// Marlin response
-                const char *s = serial_reader_buf.c_str();
-                end_serial_response(s);
-                LOGINFO3("DCE::serial_read_char(%s) complete. rcvd:%ldB activeRequests:%d", 
-					inbuf, strlen(s), activeRequests);
-				serial_reader_buf = "";
-            } else {
-                LOGINFO3("DCE::serial_read_char(%s) %dB activeRequests:%d", inbuf, inbuflen, activeRequests);
-            }
-			if (serial_reader_buf.size() > 0) {
-				serial_reader_buf += '\n';
-			}
+			post_serial_status(inbuf);
         } else {
             inbufEmptyLine++;
             if (inbufEmptyLine % 1000 == 0) {
