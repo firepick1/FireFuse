@@ -270,13 +270,16 @@ int DCE::serial_init() {
 
         LOGRC(rc, "pthread_create(serial_reader_thread) -> ", pthread_create(&tidReader, NULL, &serial_reader_thread, this));
         LOGINFO("DCE::serial_init() yielding to serial_reader_thread");
-        sched_yield();
+		usleep(500*1000);
 
         LOGINFO("DCE::serial_init() sending device_config");
+		int curLogLevel = logLevel;
+		firelog_level(FIRELOG_TRACE);
         for (int i=0; i < serial_device_config.size(); i++) {
             string config = serial_device_config[i];
             serial_send(config.c_str(), config.size());
         }
+		firelog_level(curLogLevel);
     } else {
         LOGERROR1("DCE::serial_init(%s) No device", path);
     }
