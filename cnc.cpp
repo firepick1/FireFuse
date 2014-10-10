@@ -398,6 +398,7 @@ int DCE::serial_send(const char *buf, size_t bufsize) {
         }
     }
 
+#ifdef XOR
 	// compute character XOR
     int ckxor = 0;
     for (int i=0; i < bufsize; i++) {
@@ -408,6 +409,7 @@ int DCE::serial_send(const char *buf, size_t bufsize) {
         }
     }
     ckxor &= 0xff;
+#endif
 
     if (bufsize > LOGBUFMAX) { // add ... when logging long text
         logmsg[LOGBUFMAX] = '.';
@@ -418,7 +420,7 @@ int DCE::serial_send(const char *buf, size_t bufsize) {
         logmsg[bufsize] = 0;
     }
     activeRequests++;
-    LOGINFO4("DCE::serial_send(%s) %ldB ckxor:%d activeRequests:%d", logmsg, bufsize, ckxor, activeRequests);
+    LOGINFO4("DCE::serial_send(%s) %ldB sync:%d activeRequests:%d", logmsg, bufsize, is_sync, activeRequests);
     size_t rc = write(serial_fd, buf, bufsize);
     if (rc == bufsize) {
         rc = serial_send_eol(buf, bufsize);
@@ -431,7 +433,7 @@ int DCE::serial_send(const char *buf, size_t bufsize) {
 int DCE::serial_send_eol(const char *buf, size_t bufsize) {
     char lastChar = buf[bufsize-1];
     if (lastChar != '\r' && lastChar != '\n') {
-        LOGTRACE("DCE::serial_send_eol()");
+        LOGTRACE2("DCE::serial_send_eol() sync:%d activeRequests:%d", is_sync, activeRequests);
         size_t rc = write(serial_fd, "\r", 1);
         if (rc != 1) {
             LOGERROR1("DCE::serial_send_eol() -> [%ld]", rc);
@@ -439,12 +441,16 @@ int DCE::serial_send_eol(const char *buf, size_t bufsize) {
         }
         if (is_sync) {
             time_t starttime = time(NULL);
-			time_t now;
-            for (now=starttime; activeRequests && difftime(starttime,now)<SERIAL_TIMEOUT_SECS; now=time(NULL)) {
-                sched_yield();
+			double seconds = difftime(time(NULL), starttime);
+			while (activeRequests > 0 && seconds < SERIAL_TIMEOUT_SECS) {
+				LOGTRACE1("DCE::serial_send_eol() waiting for activeRequets:%d", activeRequests);
+				usleep(100*1000);
+				seconds = difftime(time(NULL), starttime);
             }
-			if (difftime(starttime,now) > SERIAL_TIMEOUT_SECS) {
+			if (activeRequests > 0 && seconds > SERIAL_TIMEOUT_SECS) {
 				LOGERROR1("DCE::serial_send_eol() SERIAL TIMEOUT:%ds", SERIAL_TIMEOUT_SECS);
+			} else {
+				LOGDEBUG1("DCE::serial_send_eol() request acknowledged activeRequests:%d", activeRequests);
 			}
         }
     }
