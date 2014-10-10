@@ -75,6 +75,7 @@ int cnc_read(const char *path, char *buf, size_t size, off_t offset, struct fuse
     return sizeOut;
 }
 
+// FireFUSE handler for cnc path 
 int cnc_write(const char *path, const char *buf, size_t bufsize, off_t offset, struct fuse_file_info *fi) {
     assert(offset == 0);
     assert(buf != NULL);
@@ -83,7 +84,7 @@ int cnc_write(const char *path, const char *buf, size_t bufsize, off_t offset, s
     if (firefuse_isFile(path, FIREREST_GCODE_FIRE)) {
 		DCE &dce = worker.dce(path);
 		dce.setSync(FireREST::isSync(path));
-		dce.send(data);
+		dce.send_request(data);
         string cmd(buf, bufsize);
         LOGTRACE2("DCE::cnc_write(%s) sync:%d", cmd.c_str(), dce.isSync());
         json_t * response = json_object();
@@ -170,7 +171,7 @@ void DCE::init() {
     activeRequests = 0;
 }
 
-void DCE::send(SmartPointer<char> &data) {
+void DCE::send_request(SmartPointer<char> &data) {
 	long msStart = millis();
 	snk_gcode_fire.post(data);
 	if (is_sync) {
@@ -183,9 +184,9 @@ void DCE::send(SmartPointer<char> &data) {
 			usleep(100*1000);
 		}
 		if (activeRequests > 0 && seconds > SERIAL_TIMEOUT_SECS) {
-			LOGERROR1("DCE::send() SERIAL TIMEOUT:%ds", SERIAL_TIMEOUT_SECS);
+			LOGERROR1("DCE::send_request() SERIAL TIMEOUT:%ds", SERIAL_TIMEOUT_SECS);
 		} else {
-			LOGDEBUG2("DCE::send() request complete:%gs activeRequests:%d", seconds, activeRequests);
+			LOGDEBUG2("DCE::send_request() complete:%gs activeRequests:%d", seconds, activeRequests);
 		}
 	}
 }
@@ -307,13 +308,13 @@ int DCE::serial_init() {
     return rc;
 }
 
-void DCE::send(string request, json_t*response) {
+void DCE::send_line(string request, json_t*response) {
     if (serial_path.empty()) {
-        LOGWARN1("DCE::send(%s) serial_path has not been configured", request.c_str());
+        LOGWARN1("DCE::send_line(%s) serial_path has not been configured", request.c_str());
         json_object_set(response, "status", json_string("WARNING"));
         json_object_set(response, "response", json_string("Serial path not configured"));
     } else if (0==serial_path.compare("mock")) {
-        LOGTRACE2("DCE::send(%s) serial_path:%s", request.c_str(), serial_path.c_str());
+        LOGTRACE2("DCE::send_line(%s) serial_path:%s", request.c_str(), serial_path.c_str());
         json_object_set(response, "status", json_string("DONE"));
         json_object_set(response, "response", json_string("Mock response"));
     } else {
@@ -347,7 +348,7 @@ int DCE::gcode(BackgroundWorker *pWorker) {
             json_t *json_cmd = json_string(lines[i].c_str());
             json_object_set(response, "gcode", json_cmd);
 
-            send(lines[i], response);
+            send_line(lines[i], response);
 
             char * responseStr = json_dumps(response, JSON_PRESERVE_ORDER|JSON_COMPACT|JSON_INDENT(0));
             LOGDEBUG2("DCE::gcode(%s) -> %s", json_string_value(json_cmd), responseStr);
@@ -434,7 +435,7 @@ int DCE::serial_send(const char *buf, size_t bufsize) {
         logmsg[bufsize] = 0;
     }
     activeRequests++;
-    LOGINFO4("DCE::serial_send(%s) %ldB sync:%d activeRequests:%d", logmsg, bufsize, is_sync, activeRequests);
+    LOGDEBUG4("DCE::serial_send(%s) %ldB sync:%d activeRequests:%d", logmsg, bufsize, is_sync, activeRequests);
     size_t rc = write(serial_fd, buf, bufsize);
     if (rc == bufsize) {
         rc = serial_send_eol(buf, bufsize);

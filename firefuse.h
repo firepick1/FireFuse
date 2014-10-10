@@ -275,7 +275,7 @@ typedef class DCE {
         const char * read_json();
 
     protected:
-        virtual void send(string request, json_t*response);
+        virtual void send_line(string request, json_t*response);
 
         // Common data
     public:
@@ -295,7 +295,7 @@ typedef class DCE {
     public:
         void init();
 	public:
-		void send(SmartPointer<char> &data);
+		void send_request(SmartPointer<char> &data);
     public:
         inline bool isSync() {
             return is_sync;
