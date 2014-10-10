@@ -146,20 +146,20 @@ DCE::~DCE() {
 void DCE::setSync(bool value) {
 	if (value != is_sync) {
 		if (activeRequests > 0) {
-			LOGERROR2("DCE::setSync(%d) ignoring setSync with activeRequests:%d", value, activeRequests);
-		} else {
-			is_sync = value;
-			LOGINFO1("DCE::setSync(%d)", value);
-		}
+			LOGWARN2("DCE::setSync(%d) clearing activeRequests:%d", value, activeRequests);
+			activeRequests = 0;
+		} 
+		is_sync = value;
+		LOGINFO1("DCE::setSync(%d)", value);
 	}
 }
 
 void DCE::clear() {
-    LOGTRACE1("DCE::clear(%s)", name.c_str());
+    LOGINFO1("DCE::clear(%s)", name.c_str());
     const char *emptyJson = "{}";
     src_gcode_fire.post(SmartPointer<char>((char *)emptyJson, strlen(emptyJson)));
     if (serial_fd >= 0) {
-        LOGTRACE2("DCE::clear(%s) close serial port: %s", name.c_str(), serial_path.c_str());
+        LOGINFO2("DCE::clear(%s) close serial port: %s", name.c_str(), serial_path.c_str());
         close(serial_fd);
         serial_fd = -1;
     }
