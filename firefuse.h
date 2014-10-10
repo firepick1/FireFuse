@@ -293,7 +293,9 @@ typedef class DCE {
     public:
         ~DCE();
     public:
-        void clear();
+        void init();
+	public:
+		void send(SmartPointer<char> &data);
     public:
         inline bool isSync() {
             return is_sync;

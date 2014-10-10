@@ -1000,10 +1000,10 @@ int testCnc() {
         char * configJson = firerest.configure_path("test/testconfig-cnc.json");
         assert(configJson);
         free(configJson);
-        worker.dce(gcodePath).clear();
+        worker.dce(gcodePath).init();
         assert(!worker.dce(gcodePath).snk_gcode_fire.isFresh());
         assert(worker.dce(gcodePath).src_gcode_fire.isFresh());
-        assert(testString("TEST gcode_fire.clear()", "{}", worker.dce(gcodePath).src_gcode_fire.get()));
+        assert(testString("TEST gcode_fire.close()", "{}", worker.dce(gcodePath).src_gcode_fire.get()));
         string g0x1y2z3("G0X1Y2Z3");
         worker.dce(gcodePath).snk_gcode_fire.post(SmartPointer<char>((char *)g0x1y2z3.c_str(), g0x1y2z3.size()));
         assert(worker.dce(gcodePath).snk_gcode_fire.isFresh());

@@ -83,7 +83,7 @@ int cnc_write(const char *path, const char *buf, size_t bufsize, off_t offset, s
     if (firefuse_isFile(path, FIREREST_GCODE_FIRE)) {
 		DCE &dce = worker.dce(path);
 		dce.setSync(FireREST::isSync(path));
-        dce.snk_gcode_fire.post(data);
+		dce.send(data);
         string cmd(buf, bufsize);
         LOGTRACE2("DCE::cnc_write(%s) sync:%d", cmd.c_str(), dce.isSync());
         json_t * response = json_object();
@@ -131,7 +131,7 @@ DCE::DCE(string name) {
     this->jsonBuf = (char*)malloc(JSONMAX+3); // +nl, cr, EOS
     this->inbuf = (char*)malloc(INBUFMAX+1); // +EOS
 	LOGTRACE2("DCE::DCE(%s) isSync:%d", name.c_str(), is_sync);
-    clear();
+    init();
 }
 
 DCE::~DCE() {
@@ -154,12 +154,12 @@ void DCE::setSync(bool value) {
 	}
 }
 
-void DCE::clear() {
-    LOGINFO1("DCE::clear(%s)", name.c_str());
+void DCE::init() {
+    LOGINFO1("DCE::init(%s)", name.c_str());
     const char *emptyJson = "{}";
     src_gcode_fire.post(SmartPointer<char>((char *)emptyJson, strlen(emptyJson)));
     if (serial_fd >= 0) {
-        LOGINFO2("DCE::clear(%s) close serial port: %s", name.c_str(), serial_path.c_str());
+        LOGINFO2("DCE::init(%s) close serial port: %s", name.c_str(), serial_path.c_str());
         close(serial_fd);
         serial_fd = -1;
     }
@@ -168,6 +168,26 @@ void DCE::clear() {
     inbuflen = 0;
     inbufEmptyLine = 0;
     activeRequests = 0;
+}
+
+void DCE::send(SmartPointer<char> &data) {
+	snk_gcode_fire.post(data);
+	if (is_sync) {
+		time_t starttime = time(NULL);
+		double seconds = 0;
+		while (snk_gcode_fire.isFresh() || activeRequests > 0) {
+			seconds = difftime(time(NULL), starttime);
+			if (seconds > SERIAL_TIMEOUT_SECS) {
+				break;
+			}
+			usleep(100*1000);
+		}
+		if (activeRequests > 0 && seconds > SERIAL_TIMEOUT_SECS) {
+			LOGERROR1("DCE::serial_send_eol() SERIAL TIMEOUT:%ds", SERIAL_TIMEOUT_SECS);
+		} else {
+			LOGDEBUG2("DCE::serial_send_eol() request complete:%gs activeRequests:%d", seconds, activeRequests);
+		}
+	}
 }
 
 /**
@@ -398,18 +418,12 @@ int DCE::serial_send(const char *buf, size_t bufsize) {
         }
     }
 
-#ifdef XOR
-	// compute character XOR
-    int ckxor = 0;
     for (int i=0; i < bufsize; i++) {
         uchar c = (uchar) buf[i];
-        ckxor ^= c;
         if (i < LOGBUFMAX) {
             logmsg[i] = c;
         }
     }
-    ckxor &= 0xff;
-#endif
 
     if (bufsize > LOGBUFMAX) { // add ... when logging long text
         logmsg[LOGBUFMAX] = '.';
@@ -438,20 +452,6 @@ int DCE::serial_send_eol(const char *buf, size_t bufsize) {
         if (rc != 1) {
             LOGERROR1("DCE::serial_send_eol() -> [%ld]", rc);
             return -EIO;
-        }
-        if (is_sync) {
-            time_t starttime = time(NULL);
-			double seconds = difftime(time(NULL), starttime);
-			while (activeRequests > 0 && seconds < SERIAL_TIMEOUT_SECS) {
-				LOGTRACE1("DCE::serial_send_eol() waiting for activeRequets:%d", activeRequests);
-				usleep(100*1000);
-				seconds = difftime(time(NULL), starttime);
-            }
-			if (activeRequests > 0 && seconds > SERIAL_TIMEOUT_SECS) {
-				LOGERROR1("DCE::serial_send_eol() SERIAL TIMEOUT:%ds", SERIAL_TIMEOUT_SECS);
-			} else {
-				LOGDEBUG1("DCE::serial_send_eol() request acknowledged activeRequests:%d", activeRequests);
-			}
         }
     }
     return 0;
