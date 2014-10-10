@@ -171,21 +171,21 @@ void DCE::init() {
 }
 
 void DCE::send(SmartPointer<char> &data) {
+	long msStart = millis();
 	snk_gcode_fire.post(data);
 	if (is_sync) {
-		time_t starttime = time(NULL);
 		double seconds = 0;
 		while (snk_gcode_fire.isFresh() || activeRequests > 0) {
-			seconds = difftime(time(NULL), starttime);
+			seconds = (millis() - msStart)/1000.0;
 			if (seconds > SERIAL_TIMEOUT_SECS) {
 				break;
 			}
 			usleep(100*1000);
 		}
 		if (activeRequests > 0 && seconds > SERIAL_TIMEOUT_SECS) {
-			LOGERROR1("DCE::serial_send_eol() SERIAL TIMEOUT:%ds", SERIAL_TIMEOUT_SECS);
+			LOGERROR1("DCE::send() SERIAL TIMEOUT:%ds", SERIAL_TIMEOUT_SECS);
 		} else {
-			LOGDEBUG2("DCE::serial_send_eol() request complete:%gs activeRequests:%d", seconds, activeRequests);
+			LOGDEBUG2("DCE::send() request complete:%gs activeRequests:%d", seconds, activeRequests);
 		}
 	}
 }
