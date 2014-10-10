@@ -351,7 +351,7 @@ int DCE::gcode(BackgroundWorker *pWorker) {
             send_line(lines[i], response);
 
             char * responseStr = json_dumps(response, JSON_PRESERVE_ORDER|JSON_COMPACT|JSON_INDENT(0));
-            LOGDEBUG2("DCE::gcode(%s) -> %s", json_string_value(json_cmd), responseStr);
+            LOGTRACE2("DCE::gcode(%s) -> %s", json_string_value(json_cmd), responseStr);
             src_gcode_fire.post(SmartPointer<char>(responseStr, strlen(responseStr), SmartPointer<char>::MANAGE));
             json_decref(response);
         }
@@ -382,7 +382,7 @@ int DCE::post_serial_status(const char *line) {
 		char * responseStr = json_dumps(response, JSON_PRESERVE_ORDER|JSON_COMPACT|JSON_INDENT(0));
 		src_gcode_fire.post(SmartPointer<char>(responseStr, strlen(responseStr), SmartPointer<char>::MANAGE));
 		json_decref(response);
-		LOGDEBUG2("DCE::post_serial_status(%s) activeRequests:%d", responseStr, activeRequests);
+		LOGTRACE2("DCE::post_serial_status(%s) activeRequests:%d", responseStr, activeRequests);
 		serial_reader_buf = "";	
 	} else {
 		LOGTRACE2("DCE::post_serial_status(%s) activeRequests:%d", line, activeRequests);
