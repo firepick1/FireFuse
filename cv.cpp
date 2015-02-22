@@ -426,7 +426,7 @@ int cve_release(const char *path, struct fuse_file_info *fi) {
         return 0;
     }
     SmartPointer<char> *pSP = (SmartPointer<char> *) fi->fh;
-    if (firefuse_isFile(path, FIREREST_CAMERA_JPG) {
+    if (firefuse_isFile(path, FIREREST_CAMERA_JPG)) {
         if ((fi->flags & 3 ) == O_WRONLY) {
             LOGDEBUG3("cve_release(%s,%lx) write:%ldB->camera_jpg", 
 				path, (size_t)pSP->data(), pSP->size());
