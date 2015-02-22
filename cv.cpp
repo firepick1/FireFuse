@@ -456,20 +456,27 @@ int cve_release(const char *path, struct fuse_file_info *fi) {
 }
 
 int cve_truncate(const char *path, off_t size) {
+	if (size != 0) {
+		LOGERROR2("cve_truncate(%s,%ldB) ignoring size", path, size):
+	}
+	CameraNode &camera = worker.cameras[0];
     if (firefuse_isFile(path, FIREREST_SAVED_PNG)) {
-        LOGDEBUG2("cve_truncate(%s) %ldB", path, size);
+        LOGDEBUG1("cve_truncate(%s)", path);
         worker.cve(path).src_saved_png.peek().setSize(size);
     } else if (firefuse_isFile(path, FIREREST_CAMERA_JPG)) {
-		if (worker.cameras[0].isCapturing()) {
-			LOGDEBUG2("cve_truncate(%s) %ldB ignored (capture in progress)", path, size);
+		if (camera.isCapturing()) {
+			LOGWARN1("cve_truncate(%s) ignored (capture in progress)", path);
 		} else {
-			LOGDEBUG1("cve_truncate(%s) => blocking for capture()", path);
-			CameraNode &camera = worker.cameras[0];
+			LOGDEBUG1("cve_truncate(%s) => truncated and blocking for capture()", path);
+			camera.src_camera_jpg.peek().setSize(0);
 			camera.capture();
 			camera.src_camera_jpg.get_sync(CAMERA_MSTIMEOUT);
 		}
+    } else if (firefuse_isFile(path, FIREREST_CAMERA_JPG_TILDE)) {
+        LOGDEBUG1("cve_truncate(%s) camera temp file", path);
+		camera.src_camera_jpg.peek().setSize(0);
     } else {
-        LOGDEBUG2("cve_truncate(%s) %ldB ignored", path, size);
+        LOGDEBUG2("cve_truncate(%s,%ldB) ignored", path, size);
 	}
     return 0;
 }
