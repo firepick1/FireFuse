@@ -457,7 +457,7 @@ int cve_release(const char *path, struct fuse_file_info *fi) {
 
 int cve_truncate(const char *path, off_t size) {
 	if (size != 0) {
-		LOGERROR2("cve_truncate(%s,%ldB) ignoring size", path, size):
+		LOGERROR2("cve_truncate(%s,%ldB) ignoring size", path, size);
 	}
 	CameraNode &camera = worker.cameras[0];
     if (firefuse_isFile(path, FIREREST_SAVED_PNG)) {
