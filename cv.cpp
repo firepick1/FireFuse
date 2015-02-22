@@ -459,7 +459,7 @@ int cve_truncate(const char *path, off_t size) {
     if (firefuse_isFile(path, FIREREST_SAVED_PNG)) {
         LOGDEBUG2("cve_truncate(%s) %ldB", path, size);
         worker.cve(path).src_saved_png.peek().setSize(size);
-    } else if (firefuse_isFile(path, FIREREST_CAMERA_PNG)) {
+    } else if (firefuse_isFile(path, FIREREST_CAMERA_JPG)) {
 		if (worker.cameras[0].isCapturing()) {
 			LOGDEBUG2("cve_truncate(%s) %ldB ignored (capture in progress)", path, size);
 		} else {
