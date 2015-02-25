@@ -106,7 +106,7 @@ CameraNode::~CameraNode() {
     }
 }
 
-void CameraNode::isCapturing() {
+bool CameraNode::isCapturing() {
 	if (!captureActive) {
 		return false;
 	}
