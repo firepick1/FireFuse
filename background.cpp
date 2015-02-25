@@ -106,6 +106,18 @@ CameraNode::~CameraNode() {
     }
 }
 
+void CameraNode::isCapturing() {
+	if (!captureActive) {
+		return false;
+	}
+	long now = millis();
+	if (msCapture <= now) {
+		LOGWARN("isCapturing() capture TIMEOUT");
+		return false;
+	}
+	return true;
+}
+
 void CameraNode::endCapture() {
 	LOGDEBUG1("CameraNode::endCapture() captureActive %d->0", captureActive);
     captureActive = FALSE;

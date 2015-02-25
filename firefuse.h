@@ -386,7 +386,7 @@ typedef class CameraNode {
         bool capture();
 
 	public:
-		bool isCapturing() { return captureActive; } 
+		bool isCapturing();
 
         // For BackgroundWorker use
     public:
