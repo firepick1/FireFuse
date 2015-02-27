@@ -79,13 +79,13 @@ int cnc_read(const char *path, char *buf, size_t size, off_t offset, struct fuse
 int cnc_write(const char *path, const char *buf, size_t bytes, off_t offset, struct fuse_file_info *fi) {
     assert(buf != NULL);
     assert(bytes >= 0);
-	const char * bufStart = buf; // + offset;
-    SmartPointer<char> data((char *) bufStart, bytes);
+    SmartPointer<char> data((char *) buf, bytes);
     if (firefuse_isFile(path, FIREREST_GCODE_FIRE)) {
 		DCE &dce = worker.dce(path);
 		dce.setSync(FireREST::isSync(path));
 		dce.send_request(data);
-        string cmd(bufStart, bytes);
+        string cmd(buf, bytes);
+		// ignore offset because we're writing to a raw output-only device that is not random-access
         LOGTRACE3("DCE::cnc_write(%s) offset:%ld sync:%d", cmd.c_str(), (long) offset, dce.isSync());
         json_t * response = json_object();
         json_object_set(response, "status", json_string("ACTIVE"));
