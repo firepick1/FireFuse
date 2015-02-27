@@ -76,17 +76,17 @@ int cnc_read(const char *path, char *buf, size_t size, off_t offset, struct fuse
 }
 
 // FireFUSE handler for cnc path 
-int cnc_write(const char *path, const char *buf, size_t bufsize, off_t offset, struct fuse_file_info *fi) {
-    assert(offset == 0);
+int cnc_write(const char *path, const char *buf, size_t bytes, off_t offset, struct fuse_file_info *fi) {
     assert(buf != NULL);
-    assert(bufsize >= 0);
-    SmartPointer<char> data((char *) buf, bufsize);
+    assert(bytes >= 0);
+	const char * bufStart = buf + offset;
+    SmartPointer<char> data((char *) bufStart, bytes);
     if (firefuse_isFile(path, FIREREST_GCODE_FIRE)) {
 		DCE &dce = worker.dce(path);
 		dce.setSync(FireREST::isSync(path));
 		dce.send_request(data);
-        string cmd(buf, bufsize);
-        LOGTRACE2("DCE::cnc_write(%s) sync:%d", cmd.c_str(), dce.isSync());
+        string cmd(bufStart, bytes);
+        LOGTRACE3("DCE::cnc_write(%s) offset:%ld sync:%d", cmd.c_str(), (long) offset, dce.isSync());
         json_t * response = json_object();
         json_object_set(response, "status", json_string("ACTIVE"));
         json_object_set(response, "gcode", json_string(cmd.c_str()));
@@ -95,11 +95,11 @@ int cnc_write(const char *path, const char *buf, size_t bufsize, off_t offset, s
 			SmartPointer<char>(responseStr, strlen(responseStr), SmartPointer<char>::MANAGE));
         json_decref(response);
     } else {
-        LOGERROR2("cnc_write(%s,%ldB) ENOENT", path, bufsize);
+        LOGERROR2("cnc_write(%s,%ldB) ENOENT", path, bytes);
         return -ENOENT;
     }
 
-    return bufsize;
+    return bytes;
 }
 
 int cnc_release(const char *path, struct fuse_file_info *fi) {

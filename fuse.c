@@ -324,12 +324,12 @@ int firefuse_write(const char *path, const char *buf, size_t bufsize, off_t offs
     if (is_cv_path(path)) {
         return cve_write(path, buf, bufsize, offset, fi);
     }
+    if (is_cnc_path(path)) {
+        return cnc_write(path, buf, bufsize, offset, fi);
+    }
     if (offset) {
         LOGERROR2("firefuse_write %s -> non-zero offset:%ld", path, (long) offset);
         return EINVAL;
-    }
-    if (is_cnc_path(path)) {
-        return cnc_write(path, buf, bufsize, offset, fi);
     }
 
     LOGTRACE1("firefuse_write(%s)", path);
