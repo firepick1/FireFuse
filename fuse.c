@@ -325,15 +325,17 @@ int firefuse_write(const char *path, const char *buf, size_t bufsize, off_t offs
         return cve_write(path, buf, bufsize, offset, fi);
     }
 
-	char temp[256];
-	size_t bytes = (bufsize >= 255) ? 255 : bufsize;
-	memcpy(temp, buf, bytes);
-	temp[bytes] = 0;
-    if (offset) {
-        LOGERROR3("firefuse_write %s -> %s offset:%ld IGNORING OFFSET", path, temp, (long) offset);
-	} else {
-        LOGINFO3("firefuse_write %s -> %s offset:%ld", path, temp, (long) offset);
-    }
+	if (offset || logLvl > FIRELOG_INFO) {
+		char temp[256];
+		size_t bytes = (bufsize >= 255) ? 255 : bufsize;
+		memcpy(temp, buf, bytes);
+		temp[bytes] = 0;
+		if (offset) {
+			LOGERROR3("firefuse_write %s -> %s offset:%ld IGNORING OFFSET", path, temp, (long) offset);
+		} else {
+			LOGDEBUG3("firefuse_write %s -> %s offset:%ld", path, temp, (long) offset);
+		}
+	}
 
     if (is_cnc_path(path)) {
         return cnc_write(path, buf, bufsize, offset, fi);
