@@ -325,8 +325,11 @@ int firefuse_write(const char *path, const char *buf, size_t bufsize, off_t offs
         return cve_write(path, buf, bufsize, offset, fi);
     }
     if (offset) {
-		string temp((char *) buf, bufsize);
-        LOGERROR3("firefuse_write %s -> %s non-zero offset:%ld", path, temp.c_str(), (long) offset);
+		char temp[256];
+		size_t bytes = (bufsize >= 255) ? 255 : bufsize;
+		memcpy(temp, buf, bytes);
+		temp[bytes] = 0;
+        LOGERROR3("firefuse_write %s -> %s non-zero offset:%ld", path, temp, (long) offset);
         return EINVAL;
     }
     if (is_cnc_path(path)) {
