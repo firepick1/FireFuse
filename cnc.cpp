@@ -86,7 +86,7 @@ int cnc_write(const char *path, const char *buf, size_t bytes, off_t offset, str
 		dce.setSync(FireREST::isSync(path));
 		dce.send_request(data);
         string cmd(bufStart, bytes);
-        LOGINFO3("DCE::cnc_write(%s) offset:%ld sync:%d", cmd.c_str(), (long) offset, dce.isSync());
+        LOGTRACE3("DCE::cnc_write(%s) offset:%ld sync:%d", cmd.c_str(), (long) offset, dce.isSync());
         json_t * response = json_object();
         json_object_set(response, "status", json_string("ACTIVE"));
         json_object_set(response, "gcode", json_string(cmd.c_str()));
