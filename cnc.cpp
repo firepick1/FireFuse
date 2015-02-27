@@ -79,7 +79,7 @@ int cnc_read(const char *path, char *buf, size_t size, off_t offset, struct fuse
 int cnc_write(const char *path, const char *buf, size_t bytes, off_t offset, struct fuse_file_info *fi) {
     assert(buf != NULL);
     assert(bytes >= 0);
-	const char * bufStart = buf + offset;
+	const char * bufStart = buf; // + offset;
     SmartPointer<char> data((char *) bufStart, bytes);
     if (firefuse_isFile(path, FIREREST_GCODE_FIRE)) {
 		DCE &dce = worker.dce(path);
