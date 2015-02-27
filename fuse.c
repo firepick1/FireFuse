@@ -325,7 +325,7 @@ int firefuse_write(const char *path, const char *buf, size_t bufsize, off_t offs
         return cve_write(path, buf, bufsize, offset, fi);
     }
 
-	if (offset || logLvl > FIRELOG_INFO) {
+	if (offset || logLevel > FIRELOG_INFO) {
 		char temp[256];
 		size_t bytes = (bufsize >= 255) ? 255 : bufsize;
 		memcpy(temp, buf, bytes);
