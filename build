@@ -86,7 +86,7 @@ fi
 if [ ! -e /usr/local/include/jansson.h ] ; then
   echo "INSTALL	: jansson ..."
   sudo apt-get -y install dh-autoreconf
-  git clone git://github.com/akheron/jansson jannson
+  git clone git://github.com/firepick1/jansson jannson
   pushd jannson > /dev/null
   autoreconf -i
   ./configure
